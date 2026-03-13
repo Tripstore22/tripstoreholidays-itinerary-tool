@@ -1,0 +1,1842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trip Store | Itinerary Architect</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+    body { background: #f1f5f9; font-family: 'Inter', sans-serif; color: #1e293b; overflow-x: hidden; width: 100%; }
+    .trip-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 11px; table-layout: fixed; }
+    .trip-table th, .trip-table td { border: 1px solid #94a3b8; padding: 8px 10px; text-align: left; word-wrap: break-word; }
+    .header-blue { background-color: #87CEEB !important; color: #000; font-weight: bold; text-transform: uppercase; text-align: center; }
+    .glass { background: white; border: 1px solid #e2e8f0; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+    
+    #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+    .toast { padding: 12px 24px; border-radius: 8px; color: white; margin-bottom: 10px; font-weight: 600; font-size: 14px; animation: slideIn 0.3s ease-out; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2); }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    #main-wrapper { display: none; }
+
+    /* Updated Responsive PDF Scaling */
+    .pdf-viewport {
+        width: 100%;
+        overflow: hidden;
+        background: transparent; /* Removed background to hide 'borders' */
+        padding: 0; /* Removed padding */
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+    }
+
+    #pdf-content {
+        background: white;
+        width: 850px; 
+        min-width: 850px;
+        margin: 0 auto;
+        transform-origin: top center;
+        flex-shrink: 0;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Scaling and Negative Margin adjustments to kill ghost space */
+    @media (max-width: 1024px) {
+        #pdf-content { transform: scale(0.85); margin-bottom: -150px; }
+    }
+    @media (max-width: 768px) {
+        .pdf-viewport { background: transparent; }
+        #pdf-content { transform: scale(0.65); margin-bottom: -400px; }
+        .trip-table { font-size: 10px; }
+    }
+    @media (max-width: 480px) {
+        #pdf-content { transform: scale(0.40); margin-bottom: -650px; }
+    }
+
+    @media print { 
+        .no-print { display: none !important; } 
+        body { background: white; padding: 0 !important; overflow: visible !important; }
+        #pdf-content { 
+            width: 100% !important; 
+            min-width: 100% !important; 
+            padding: 10mm !important; 
+            transform: scale(1) !important; 
+            margin: 0 !important; 
+            box-shadow: none !important;
+        }
+        .price-col, .price-tag { display: none !important; }
+    }
+
+    .pdf-section { page-break-inside: avoid !important; break-inside: avoid !important; display: block; margin-bottom: 20px; }
+    tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+    thead { display: table-header-group; }
+
+    @media print {
+    .price-col, .price-tag, .no-print { display: none !important; }
+    .pdf-input { border: none !important; background: none !important; color: black !important; }
+}
+
+#undo-bar {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 12px 25px;
+    border-radius: 30px;
+    display: none; /* Default hidden */
+    z-index: 10000;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    align-items: center;
+    gap: 15px;
+}
+#undo-bar button {
+    background: #fbbf24; /* Yellow color */
+    color: #000;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+    
+</style>
+</head>
+<body class="p-2 md:p-8">
+
+    <div id="toast-container"></div>
+
+    <div id="login-screen" class="fixed inset-0 bg-slate-900 flex items-center justify-center z-[1000] p-4">
+        <div class="bg-white p-6 md:p-10 rounded-3xl shadow-2xl w-full max-w-md text-center">
+            <div class="flex justify-center mb-4">
+                <img src="images/tripstorelogo.png" alt="TRIP STORE" class="h-12" onerror="this.outerHTML='<h1 class=\'text-3xl font-black text-blue-600 italic\'>TRIP STORE</h1>'">
+            </div>
+            
+            <div class="flex bg-slate-100 p-1 rounded-xl mb-6">
+                <button id="tab-login" onclick="toggleAuthMode('login')" class="flex-1 py-2 rounded-lg font-bold text-sm bg-white shadow-sm">Login</button>
+                <button id="tab-signup" onclick="toggleAuthMode('signup')" class="flex-1 py-2 rounded-lg font-bold text-sm text-slate-500">Sign Up</button>
+            </div>
+
+            <div id="auth-fields" class="space-y-4">
+                <input type="text" id="userInput" class="w-full p-4 border-2 border-slate-100 rounded-2xl text-center font-bold focus:border-blue-500 outline-none transition-all" placeholder="Username">
+                <input type="password" id="passInput" class="w-full p-4 border-2 border-slate-100 rounded-2xl text-center text-xl tracking-[0.3em] focus:border-blue-500 outline-none transition-all" placeholder="••••">
+            </div>
+
+            <button id="authBtn" onclick="handleAuth()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold mt-6 hover:bg-blue-700 transition-all shadow-lg">Unlock System</button>
+            
+            <p id="loginError" class="text-red-500 text-xs mt-4 font-bold hidden"></p>
+            <p id="signupSuccess" class="text-green-600 text-xs mt-4 font-bold hidden">✅ Request sent! Contact Admin for approval.</p>
+        </div>
+    </div>
+
+    <div id="main-wrapper">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <div class="lg:col-span-4 space-y-4 no-print">
+                
+                <div class="glass p-5">
+                    <div class="flex justify-between items-start mb-6">
+                        <img src="images/tripstorelogo.png" alt="TRIP STORE" class="h-10" onerror="this.outerHTML='<h1 class=\'text-2xl font-black text-blue-600 italic\'>TRIP STORE</h1>'">
+                        
+                        <div class="flex flex-col items-end gap-2">
+                            <span id="roleBadge" class="px-3 py-1 bg-slate-100 text-[9px] font-bold rounded-full uppercase text-slate-500">User Mode</span>
+                            
+                            <button onclick="handleLogout()" class="text-[9px] font-bold text-red-500 hover:text-red-700 border border-red-100 px-2 py-1 rounded bg-red-50 transition-all uppercase">
+                                Logout ⎋
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase">Traveler Details</label>
+                        <input type="text" id="paxNameInput" oninput="updatePaxHeader()" class="w-full p-2 border rounded text-xs" placeholder="Name of Pax">
+                        <input type="number" id="paxCountInput" oninput="handlePaxChange(true, true)" class="w-full p-2 border rounded text-xs" placeholder="Number of Pax" value="2">
+                        
+                        <hr class="border-slate-100 my-2">
+                        
+                        <label class="text-[10px] font-bold text-gray-400 uppercase">Route Details</label>
+                        <input type="text" list="cityList" id="cityInput" class="w-full p-2 border rounded" placeholder="Enter City">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-[9px] font-bold">Check-in</label>
+                                <input type="date" id="checkinInput" class="w-full p-2 border rounded text-xs">
+                            </div>
+                            <div>
+                                <label class="text-[9px] font-bold">Check-out</label>
+                                <input type="date" id="checkoutInput" class="w-full p-2 border rounded text-xs">
+                            </div>
+                        </div>
+                        <button onclick="addCityToRoute()" class="w-full bg-slate-800 text-white py-2 rounded font-bold mt-2 hover:bg-black transition-colors">+ Add Stop</button>
+                        <div id="routeList" class="space-y-1 mt-4"></div>
+                    </div>
+                </div>
+
+                <div id="adminPanel" class="glass p-5 bg-blue-50 border-blue-200 hidden">
+                    <h2 class="text-[10px] font-black text-blue-600 uppercase mb-3 tracking-widest">Admin Control</h2>
+                    <div class="flex gap-2">
+                        <select id="adminUserSelect" class="flex-1 p-2 border rounded text-xs font-bold outline-none focus:ring-2 ring-blue-500">
+                            <option value="">Loading Users...</option>
+                        </select>
+                        <button onclick="adminLoadUser()" class="bg-blue-600 text-white px-4 py-2 rounded text-[10px] font-bold">LOAD</button>
+                    </div>
+                </div>
+
+                <div class="glass p-5 space-y-3">
+                    <h2 class="font-bold border-b pb-2 text-sm uppercase text-blue-600">Cloud Storage</h2>
+                    <div class="flex gap-2">
+                        <input type="text" id="searchInput" class="flex-1 p-2 border rounded text-xs" placeholder="Search Pax Name">
+                        <button onclick="searchItinerary(document.getElementById('searchInput').value)" id="btnSearch" class="bg-blue-600 text-white px-4 py-2 rounded text-[10px] font-bold">LOAD</button>
+                    </div>
+                    <button onclick="saveItinerary()" id="btnSave" class="w-full bg-green-600 text-white py-2 rounded font-bold text-xs uppercase hover:bg-green-700">Save Itinerary</button>
+                </div>
+
+                <div class="glass p-5 space-y-4">
+                    <h2 class="font-bold border-b pb-2 text-sm uppercase text-slate-600">Pricing Controls</h2>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label id="hotelBudgetLabel" class="text-[9px] font-bold text-gray-500 uppercase">Hotel Budget</label>
+                            <input type="number" id="hotelBudget" oninput="runOptimizer(true, true)" class="w-full p-2 border rounded font-bold" value="30000">
+                        </div>
+                        <div>
+                            <label id="sightBudgetLabel" class="text-[9px] font-bold text-gray-500 uppercase">Sight Budget</label>
+                            <input type="number" id="sightBudget" oninput="runOptimizer(true, true)" class="w-full p-2 border rounded font-bold" value="20000">
+                        </div>
+                        <!-- Transfers -->
+                        <div>
+                            <label class="text-[9px] font-bold text-gray-500 uppercase">Transfer Budget</label>
+                            <input type="number" id="transferBudget" oninput="runOptimizer(true, true)" class="w-full p-2 border rounded font-bold" value="10000">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="number" id="markupInput" oninput="calculateBudgetInvestment()" class="p-2 border rounded" value="15">
+                        <input type="number" id="gstInput" oninput="calculateBudgetInvestment()" class="p-2 border rounded" value="5">
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="window.print()" class="bg-slate-700 text-white py-2 rounded font-bold text-[9px] uppercase">Print</button>
+                        <button onclick="downloadPDF()" class="bg-orange-500 text-white py-2 rounded font-bold text-[9px] uppercase">PDF</button>
+                        <button onclick="downloadExcel()" class="bg-green-600 text-white py-2 rounded font-bold text-[9px] uppercase">Excel</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-8">
+                <div class="pdf-viewport">
+                    <div id="pdf-content" class="p-4 md:p-12 shadow-2xl rounded-sm">
+                        <div class="flex justify-between items-center mb-8 border-b pb-6">
+                            <div class="text-left">
+                                <h2 class="text-2xl font-black uppercase text-slate-800">Travel Proposal</h2>
+                                <p class="text-[10px] text-slate-400 font-bold" id="currentDate"></p>
+                            </div>
+                            <img src="images/tripstorelogo.png" alt="Trip Store" class="h-14 w-auto" onerror="this.style.display='block'">
+                        </div>
+
+                        <table class="trip-table">
+                            <tr>
+                                <td class="header-blue w-1/4">NAME OF PAX:</td>
+                                <td class="text-center font-bold uppercase" id="resPaxName">---</td>
+                                <td class="header-blue w-1/4">NUMBER OF PAX:</td>
+                                <td class="text-center font-bold uppercase" id="resPaxCount">2</td>
+                            </tr>
+                            <tr>
+                                <td class="header-blue w-1/4">DESTINATION:</td>
+                                <td class="text-center font-bold uppercase" id="resDest">---</td>
+                                <td class="header-blue w-1/4">TOTAL DURATION:</td>
+                                <td class="text-center font-bold" id="resDuration">0 NIGHTS</td>
+                            </tr>
+                            <tr>
+                                <td class="header-blue">GRAND TOTAL QUOTATION:</td>
+                                <td class="text-center font-black text-blue-700 text-3xl" colspan="3" id="resGrandTotal">₹0</td>
+                            </tr>
+                        </table>
+
+                        <h3 class="text-[10px] font-black uppercase mb-2 mt-6 text-blue-800 tracking-widest">01. Hotel Stays</h3>
+                        <table class="trip-table">
+                            <thead><tr class="header-blue">
+                                <th style="width:12%">City</th>
+                                <th style="width:12%">Check In</th>
+                                <th style="width:12%">Check Out</th>
+                                <th style="width:5%">Nts</th>
+                                <th style="width:25%">Hotel Name</th>
+                                <th style="width:15%">Room Type</th>
+                                <th class="price-col" style="width:12%">Total Stay</th>
+                                <th class="no-print" style="width:8%">Swap</th>
+                            </tr></thead>
+                            <tbody id="hotelTableBody"></tbody>
+                        </table>
+
+                        <h3 class="text-[10px] font-black uppercase mb-2 mt-8 text-blue-800 tracking-widest">02. Day-wise Itinerary</h3>
+                        <table class="trip-table">
+                            <thead><tr class="header-blue">
+                                <th style="width:15%">Date</th><th style="width:60%">Planned Activities</th><th style="width:15%">City</th><th class="no-print" style="width:10%">Edit</th>
+                            </tr></thead>
+                            <tbody id="sightTableBody"></tbody>
+                        </table>
+                        <!-- Car Transfer -->
+                        <h3 class="text-[10px] font-black uppercase mb-2 mt-8 text-blue-800 tracking-widest">03. Transfers / CAR</h3>
+                        <table class="trip-table">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 uppercase text-[10px]">
+                                    <th class="p-2 border">Date</th>
+                                    <th class="p-2 border">City</th> 
+                                    <th class="p-2 border">From</th>
+                                    <th class="p-2 border">To</th>
+                                    <th class="p-2 border">Details</th>
+                                    <th class="p-2 border text-right">Cost</th>
+                                    <th class="p-2 border no-print">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transferTableBody">
+                                </tbody>
+                        </table>
+                        <!-- 04 Bus Ferry and Train Transfers -->
+                         <h3 class="text-[10px] font-black uppercase mb-2 mt-8 text-blue-800 tracking-widest">04. Train / Ferry / Bus</h3>
+                        <table class="trip-table">
+                            <thead>
+                                <tr class="header-blue">
+                                    <th style="width:10%">Date</th>
+                                    <th style="width:20%">Mode</th>
+                                    <th style="width:25%">Route (From - To)</th>
+                                    <th style="width:25%">Schedule/Notes</th>
+                                    <th class="price-col" style="width:15%">Estimated Price</th>
+                                    <th class="no-print" style="width:15%">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ferryBusTableBody">
+                                </tbody>
+                        </table>
+
+                        <!-- <div class="no-print mb-8">
+                            <button onclick="openIntercitySwap()" class="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-[10px] font-bold border border-blue-200 hover:bg-blue-200 transition-all">
+                                + SWAP FERRY / BUS / OTHER
+                            </button>
+                        </div> -->
+
+                        <div class="mt-12 pt-6 border-t border-dashed no-print">
+                            <h3 class="text-[9px] font-bold text-slate-400 uppercase mb-3 tracking-widest">Profitability Analysis (Internal)</h3>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                <div class="bg-blue-50 p-2 rounded border border-blue-100"><p class="text-[8px] font-bold uppercase text-blue-400">Hotel Net</p><p id="netH" class="font-bold">₹0</p></div>
+                                <div class="bg-blue-50 p-2 rounded border border-blue-100"><p id="labelS" class="text-[8px] font-bold uppercase text-blue-400">Sights Net</p><p id="netS" class="font-bold">₹0</p></div>
+                                <div class="bg-blue-50 p-2 rounded border border-blue-100"><p id="labelT" class="text-[8px] font-bold uppercase text-blue-400">Transfers Net</p><p id="netT" class="font-bold">₹0</p></div>
+                                <div class="bg-slate-50 p-2 rounded border border-slate-200"><p class="text-[8px] font-bold uppercase text-slate-400">Markup</p><p id="valM" class="font-bold">₹0</p></div>
+                                <div class="bg-slate-50 p-2 rounded border border-slate-200"><p class="text-[8px] font-bold uppercase text-slate-400">GST</p><p id="valG" class="font-bold">₹0</p></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="swapModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+            <div class="bg-white w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+                <div class="bg-blue-600 text-white p-5 font-bold flex justify-between items-center flex-shrink-0">
+                    <span id="modalHeading">Manage Selection</span>
+                    <button onclick="closeModal()" class="text-3xl">&times;</button>
+                </div>
+                <div id="modalContent" class="p-4 overflow-y-auto space-y-4 bg-slate-50"></div>
+                <div class="p-4 bg-white border-t text-right flex-shrink-0">
+                    <button onclick="closeModal()" class="bg-blue-600 text-white px-8 py-2 rounded font-bold uppercase text-xs">Close</button>
+                </div>
+            </div>
+        </div>
+        <datalist id="cityList"></datalist>
+    </div>
+    <!-- Delete & Undo Transfers  -->
+    <div id="undo-bar">
+    <span id="undo-msg">Transfer removed</span>
+    <button onclick="undoDelete()">UNDO</button>
+</div>
+
+<button onclick="alert(JSON.stringify(masterData.transfers.slice(0,3), null, 2))" 
+        style="position:fixed; top:10px; right:10px; z-index:9999; background:red; color:white; padding:5px;">
+    Check Database Data
+</button>
+    
+
+<script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbyAvUG51fgLBx32QfNtTEZ9FDarDmIVZfrVK7zosGMan8gELIxTbphR2n47it8V453NGA/exec"
+    
+    let masterData = { hotels: [], sights: [] };
+    let selectedRoute = []; 
+    let currentPlan = [];
+    let isAdmin = false;
+    let authMode = 'login'; // Track if user is logging in or signing up
+    let selectedTransfers = []; // Stores manually picked or edited transfers
+    let selectedIntercity = []; // Stores manually picked or edited intercity options
+
+    // --- TOAST SYSTEM ---
+    function showToast(msg, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type === 'success' ? 'bg-green-600' : 'bg-red-600'}`;
+        toast.innerText = msg;
+        container.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 500); }, 3000);
+    }
+
+    // --- AUTHENTICATION UI TOGGLE ---
+    function toggleAuthMode(mode) {
+        authMode = mode;
+        const isLogin = mode === 'login';
+        
+        // Update Tabs
+        document.getElementById('tab-login').className = isLogin ? "flex-1 py-2 rounded-lg font-bold text-sm bg-white shadow-sm" : "flex-1 py-2 rounded-lg font-bold text-sm text-slate-500";
+        document.getElementById('tab-signup').className = !isLogin ? "flex-1 py-2 rounded-lg font-bold text-sm bg-white shadow-sm" : "flex-1 py-2 rounded-lg font-bold text-sm text-slate-500";
+        
+        // Update Button and Messages
+        document.getElementById('authBtn').innerText = isLogin ? "Unlock System" : "Request Access";
+        document.getElementById('loginError').classList.add('hidden');
+        if(document.getElementById('signupSuccess')) document.getElementById('signupSuccess').classList.add('hidden');
+    }
+
+    async function handleAuth() {
+        if (authMode === 'login') {
+            await checkLogin();
+        } else {
+            await handleSignup();
+        }
+        
+    }
+
+    // --- LOGIN LOGIC ---
+    // --- LOGIN LOGIC (UPDATED) ---
+async function checkLogin() {
+    const user = document.getElementById('userInput').value.trim();
+    const pass = document.getElementById('passInput').value.trim();
+    const loginBtn = document.getElementById('authBtn');
+    const errorMsg = document.getElementById('loginError');
+    
+    if(!user || !pass) return showToast("Enter credentials", "error");
+
+    loginBtn.innerText = "VERIFYING...";
+    errorMsg.classList.add('hidden');
+
+    try {
+        const res = await fetch(`${API_URL}?action=checkLogin&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`);
+        const status = await res.text();
+
+        if (status === "ADMIN" || status === "USER") {
+            // Save Session to LocalStorage
+            const sessionData = {
+                isLoggedIn: true,
+                isAdmin: (status === "ADMIN"),
+                modeText: status === "ADMIN" ? "ADMIN MODE" : "USER MODE"
+            };
+            localStorage.setItem("tripstore_session", JSON.stringify(sessionData));
+            
+            isAdmin = sessionData.isAdmin;
+            launchApp(sessionData.modeText);
+        } else if (status === "PENDING_APPROVAL") {
+            errorMsg.innerText = "⏳ Account pending admin approval";
+            errorMsg.classList.remove('hidden');
+        } else {
+            errorMsg.innerText = "❌ Invalid Credentials";
+            errorMsg.classList.remove('hidden');
+        }
+    } catch (e) {
+        showToast("Connection Error", "error");
+    } finally {
+        loginBtn.innerText = "Unlock System";
+    }
+}
+
+    // --- SIGNUP LOGIC ---
+    async function handleSignup() {
+        const user = document.getElementById('userInput').value.trim();
+        const pass = document.getElementById('passInput').value.trim();
+        const loginBtn = document.getElementById('authBtn');
+        
+        if(!user || !pass) return showToast("Fill all fields", "error");
+        
+        loginBtn.innerText = "SENDING REQUEST...";
+
+        try {
+            const response = await fetch(API_URL, {
+                method: "POST",
+                body: JSON.stringify({
+                    action: "signup",
+                    username: user,
+                    password: pass
+                })
+            });
+            const result = await response.text();
+            
+            if (result.includes("Successful")) {
+                document.getElementById('signupSuccess').classList.remove('hidden');
+                document.getElementById('loginError').classList.add('hidden');
+                showToast("Request Sent Successfully");
+            } else {
+                document.getElementById('loginError').innerText = "❌ " + result;
+                document.getElementById('loginError').classList.remove('hidden');
+            }
+        } catch (e) {
+            showToast("Signup Failed", "error");
+        } finally {
+            loginBtn.innerText = "Request Access";
+        }
+    }
+
+    // --- LAUNCH APP (UPDATED) ---
+    function launchApp(modeText) {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('main-wrapper').style.display = 'block';
+        document.getElementById('roleBadge').innerText = modeText;
+        
+        if(isAdmin) {
+            document.getElementById('adminPanel').classList.remove('hidden');
+            refreshAdminList();
+        }
+        init();
+        showToast(`System Unlocked: ${modeText}`);
+    }
+
+    function handleLogout() {
+    // 1. Browser ki memory se session delete karein
+    localStorage.removeItem("tripstore_session");
+    
+    // 2. Page ko reload karein taaki user wapas login screen par chala jaye
+    showToast("Logging out...", "error");
+    setTimeout(() => {
+        location.reload();
+    }, 1000);
+}
+
+    // --- ADMIN PANEL LOGIC ---
+    async function refreshAdminList() {
+        try {
+            const res = await fetch(`${API_URL}?action=getAllSaved`);
+            const names = await res.json();
+            const select = document.getElementById('adminUserSelect');
+            select.innerHTML = '<option value="">Select a Saved User...</option>' + 
+                               names.map(n => `<option value="${n}">${n}</option>`).join('');
+        } catch(e) { console.error(e); }
+    }
+
+    function adminLoadUser() {
+        const name = document.getElementById('adminUserSelect').value;
+        if(name) searchItinerary(name);
+    }
+
+    // --- CORE INITIALIZATION ---
+    async function init() {
+        try {
+            const res = await fetch(API_URL);
+            masterData = await res.json();
+            const cities = [...new Set(masterData.hotels.map(h => h.city))];
+            document.getElementById('cityList').innerHTML = cities.map(c => `<option value="${c}">`).join('');
+            document.getElementById('currentDate').innerText = `DATE: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()}`;
+            handlePaxChange();
+        } catch (e) { showToast("Data Load Failed", "error"); }
+    }
+
+    // --- CLOUD STORAGE FUNCTIONS ---
+    async function saveItinerary() {
+        const paxName = document.getElementById('paxNameInput').value.trim();
+        if (!paxName) return showToast("Enter Pax Name to save", "error");
+        
+        const btn = document.getElementById('btnSave');
+        btn.innerText = "SAVING...";
+        btn.disabled = true;
+
+        const data = {
+            action: "saveItinerary", // Explicitly define action for backend
+            paxName: paxName,
+            payload: {
+                paxCount: document.getElementById('paxCountInput').value,
+                hotelBudget: document.getElementById('hotelBudget').value,
+                sightBudget: document.getElementById('sightBudget').value,
+                selectedTransfers: selectedTransfers, // Yeh line add karein
+                markup: document.getElementById('markupInput').value,
+                gst: document.getElementById('gstInput').value,
+                selectedRoute: selectedRoute,
+                currentPlan: currentPlan,
+                selectedTransfers: selectedTransfers, // Add this to payload so that transfers are also saved
+                selectedIntercity: selectedIntercity // --- ADDED THIS LINE ---
+            }
+        };
+
+        try {
+            await fetch(API_URL, { method: "POST", body: JSON.stringify(data) });
+            showToast("Saved Successfully");
+            if(isAdmin) refreshAdminList();
+        } catch (e) { showToast("Save Failed", "error"); } 
+        finally {
+            btn.innerText = "SAVE TO GOOGLE SHEETS";
+            btn.disabled = false;
+        }
+    }
+
+    async function searchItinerary(query) {
+    if (!query) return;
+    const btn = document.getElementById('btnSearch');
+    btn.innerText = "...";
+    showToast("Searching Cloud...");
+    
+    try {
+        const response = await fetch(`${API_URL}?action=search&name=${encodeURIComponent(query)}`);
+        const text = await response.text();
+
+        if (text === "Not Found") return showToast("No record found", "error");
+
+        const data = JSON.parse(text);
+        
+        // --- Input Fields Update ---
+        document.getElementById('paxNameInput').value = query;
+        document.getElementById('paxCountInput').value = data.paxCount;
+        document.getElementById('hotelBudget').value = data.hotelBudget;
+        document.getElementById('sightBudget').value = data.sightBudget;
+        
+        if(data.transferBudget) {
+            document.getElementById('transferBudget').value = data.transferBudget;
+        }
+
+        document.getElementById('markupInput').value = data.markup;
+        document.getElementById('gstInput').value = data.gst;
+
+        // --- Global Variables Update ---
+        selectedRoute = data.selectedRoute || [];
+        currentPlan = data.currentPlan || [];
+        selectedTransfers = data.selectedTransfers || []; 
+        selectedIntercity = data.selectedIntercity || []; // --- ADDED THIS LINE ---
+
+        // --- UI Refresh ---
+        updatePaxHeader();
+        renderRouteInputs();
+        
+        // Important: renderTables handles Hotel, Sights, Transfers, AND Intercity
+        renderTables(); 
+        
+        showToast("Itinerary Loaded!");
+    } catch (e) { 
+        console.error(e);
+        showToast("Error loading itinerary", "error"); 
+    } finally { 
+        btn.innerText = "LOAD"; 
+    }
+}
+
+    // --- EXISTING CORE LOGIC ---
+    function handlePaxChange() {
+        const pax = Number(document.getElementById('paxCountInput').value) || 1;
+        document.getElementById('hotelBudgetLabel').innerText = `Hotel Budget (${pax} Pax)`;
+        document.getElementById('sightBudgetLabel').innerText = `Sight Budget (${pax} Pax)`;
+        runOptimizer();
+    }
+
+    function updatePaxHeader() {
+        document.getElementById('resPaxName').innerText = document.getElementById('paxNameInput').value || "---";
+    }
+
+    function addCityToRoute() {
+        const city = document.getElementById('cityInput').value.trim();
+        const checkin = document.getElementById('checkinInput').value;
+        const checkout = document.getElementById('checkoutInput').value;
+        if(!city || !checkin || !checkout) return;
+        const nights = Math.ceil((new Date(checkout) - new Date(checkin)) / (1000 * 60 * 60 * 24));
+        if(nights <= 0) return;
+        selectedRoute.push({ id: Date.now(), city, cin: checkin, cout: checkout, nights });
+        selectedRoute.sort((a, b) => new Date(a.cin) - new Date(b.cin)); 
+        renderRouteInputs();
+        runOptimizer();
+    }
+
+    function renderRouteInputs() {
+        document.getElementById('routeList').innerHTML = selectedRoute.map(r => `
+            <div class="flex justify-between items-center bg-white p-2 rounded text-[10px] border">
+                <span><b>${r.city}</b> (${r.nights}N)</span>
+                <button onclick="removeRoute(${r.id})" class="text-red-500 font-bold px-2">✕</button>
+            </div>
+        `).join('');
+    }
+
+    function removeRoute(id) {
+        selectedRoute = selectedRoute.filter(r => r.id !== id);
+        renderRouteInputs();
+        runOptimizer();
+    }
+
+// --- GLOBAL STATE ---
+// Ensure this is declared at the top of your script
+// let selectedTransfers = []; 
+
+/// --- 1. THE OPTIMIZER ---
+function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRouteId = null, skipDayIdx = null) {
+    // 1. Reset everything if no route exists
+    if (!selectedRoute || selectedRoute.length === 0) { 
+        currentPlan = []; 
+        selectedTransfers = [];
+        selectedIntercity = []; // FIX: Reset Section 04 as well
+        renderTables(); 
+        return; 
+    }
+
+    const paxCount = Number(document.getElementById('paxCountInput').value) || 1;
+    const hBudgetTotal = Number(document.getElementById('hotelBudget').value) || 0;
+    const sBudgetTotal = Number(document.getElementById('sightBudget').value) || 0;
+    const tBudgetTotal = Number(document.getElementById('transferBudget')?.value) || 0;
+
+    // A. Calculate Spent Budget (Manual items only)
+    let spentHotelBudget = 0;
+    let systemHotelCitiesCount = 0;
+    let spentSightBudget = 0;
+
+    currentPlan.forEach(route => {
+        if (route.hotel && route.isHotelManual) {
+            spentHotelBudget += (Number(route.hotel.cost) * route.nights);
+        } else {
+            systemHotelCitiesCount++;
+        }
+        // Ensure sights exists before looping
+        if (route.sights && Array.isArray(route.sights)) {
+            route.sights.forEach(s => {
+                if (s.isManual) spentSightBudget += (Number(s.price) * paxCount);
+            });
+        }
+    });
+
+    const totalTripDays = selectedRoute.reduce((sum, r) => sum + (Number(r.nights) + 1), 0);
+    const remainingHBudget = Math.max(0, hBudgetTotal - spentHotelBudget);
+    const hCapPerSystemCity = systemHotelCitiesCount > 0 ? remainingHBudget / systemHotelCitiesCount : 0;
+    
+    const dailyGroupAllowance = totalTripDays > 0 ? (Math.max(0, sBudgetTotal - spentSightBudget) / totalTripDays) : 0;
+
+    // B. Rebuild Hotels & Sights
+    currentPlan = selectedRoute.map((sourceRoute) => {
+        const cityName = sourceRoute.city.toLowerCase();
+        const existingRoute = currentPlan.find(p => p.id === sourceRoute.id) || { 
+            ...sourceRoute, hotel: null, sights: [], isHotelManual: false 
+        };
+
+        let finalHotel = existingRoute.hotel;
+        let isHotelManual = existingRoute.isHotelManual;
+
+        if (!isHotelManual && (reoptimizeHotels || !finalHotel)) {
+            const cityHotels = masterData.hotels.filter(h => h.city.toLowerCase() === cityName);
+            if (cityHotels.length > 0) {
+                cityHotels.sort((a, b) => b.cost - a.cost); 
+                finalHotel = cityHotels.find(h => (Number(h.cost) * sourceRoute.nights) <= hCapPerSystemCity) || cityHotels[cityHotels.length - 1];
+            }
+        }
+
+        let finalSights = [...(existingRoute.sights || [])];
+        if (reoptimizeSights || finalSights.length === 0) {
+            finalSights = finalSights.filter(s => s.isManual);
+            const citySights = masterData.sights
+                .filter(s => s.city.toLowerCase().includes(cityName) && Number(s.price) > 0)
+                .sort((a, b) => b.price - a.price);
+
+            let usedInCity = new Set(finalSights.map(s => s.info));
+            const daysInThisCity = Number(sourceRoute.nights) + 1;
+
+            for (let d = 0; d < daysInThisCity; d++) {
+                let daySpent = finalSights.filter(s => s.assignedDay === d).reduce((sum, s) => sum + (Number(s.price) * paxCount), 0);
+                for (let s of citySights) {
+                    const sGroupPrice = Number(s.price) * paxCount;
+                    if (!usedInCity.has(s.info) && (daySpent + sGroupPrice) <= dailyGroupAllowance) {
+                        finalSights.push({ ...s, price: Number(s.price), instanceId: Date.now() + Math.random(), assignedDay: d, isManual: false });
+                        usedInCity.add(s.info);
+                        daySpent += sGroupPrice;
+                    }
+                }
+            }
+        }
+        return { ...sourceRoute, hotel: finalHotel, isHotelManual, sights: finalSights.sort((a, b) => a.assignedDay - b.assignedDay) };
+    });
+
+    // C. Optimize Transfers (Intra-city)
+    optimizeTransfers(tBudgetTotal, paxCount);
+
+    // D. Optimize Intercity (Train/Bus/Ferry between cities)
+    optimizeIntercity(tBudgetTotal, paxCount);
+
+    renderTables();
+    showToast("Plan generated successfully", "success");
+}
+
+// --- 2. TRANSFER ENGINE (N+2 Logic & Auto-Fill) ---
+// --- 2. TRANSFER ENGINE (City-Based & Auto-Budget Logic) ---
+// --- FULL OPTIMIZER ---
+function optimizeTransfers(tBudgetTotal, paxCount) {
+    if (!masterData.transfers || masterData.transfers.length === 0) {
+        console.error("Master data khali hai!");
+        return;
+    }
+
+    const manualTransfers = selectedTransfers.filter(t => t.isManual);
+    let newLegs = [];
+    
+    const totalLegsNeeded = currentPlan.length + 1; 
+    const limit = tBudgetTotal > 0 ? (tBudgetTotal / totalLegsNeeded) : 9999999;
+
+    /**
+     * @param {string} targetCity - City Name
+     * @param {string} fromMatch - Expected 'From' (e.g., 'Airport')
+     * @param {string} toMatch - Expected 'To' (e.g., 'Hotel')
+     */
+    const findCityMatch = (targetCity, fromMatch, toMatch) => {
+        if (!targetCity) return null;
+        const sCity = targetCity.toLowerCase().trim();
+        const sFrom = fromMatch.toLowerCase().trim();
+        const sTo = toMatch.toLowerCase().trim();
+
+        // 1. STRIKT FILTER: City, From, aur To teeno match hone chahiye
+        let matches = masterData.transfers.filter(t => {
+            const dbCity = (t.city || "").toLowerCase().trim();
+            const dbFrom = (t.from || "").toLowerCase().trim();
+            const dbTo = (t.to || "").toLowerCase().trim();
+
+            return (dbCity === sCity || dbCity.includes(sCity)) && 
+                   dbFrom.includes(sFrom) && 
+                   dbTo.includes(sTo);
+        });
+
+        // 2. FALLBACK: Agar exact sequence nahi mila toh sirf City match dhoondo
+        if (matches.length === 0) {
+            matches = masterData.transfers.filter(t => (t.city || "").toLowerCase().trim().includes(sCity));
+        }
+
+        if (matches.length === 0) return null;
+
+        // 3. SORT: Sabse sasta record pehle (Index 4/avgPrice logic)
+        matches.sort((a, b) => (Number(a.avgPrice) || 0) - (Number(b.avgPrice) || 0));
+
+        // 4. BUDGET CHECK: Limit ke andar wala dhoondo, warna sabse sasta
+        let found = matches.find(t => (Number(t.avgPrice) * paxCount) <= limit);
+        return found || matches[0]; 
+    };
+
+    // --- PROCESS EACH LEG ---
+    const firstCity = currentPlan[0].city;
+    const lastCity = currentPlan[currentPlan.length - 1].city;
+
+    // 1. Arrival Leg (Airport -> Hotel)
+    let arrivalMatch = manualTransfers.find(t => t.legId === `arrival-${firstCity}`) || 
+                       findCityMatch(firstCity, "Airport", "Hotel");
+    
+    newLegs.push({
+        legId: `arrival-${firstCity}`,
+        date: currentPlan[0].cin,
+        city: firstCity,
+        from: arrivalMatch ? arrivalMatch.from : "Airport",
+        to: arrivalMatch ? arrivalMatch.to : "Hotel",
+        details: arrivalMatch ? (arrivalMatch.duration || arrivalMatch.details) : `Standard Arrival in ${firstCity}`,
+        avgPrice: arrivalMatch ? Number(arrivalMatch.avgPrice) : 0, // Index 4 Price
+        isManual: arrivalMatch ? arrivalMatch.isManual : false
+    });
+
+    // 2. Inter-City Legs
+    for (let i = 0; i < currentPlan.length - 1; i++) {
+        const fromC = currentPlan[i].city;
+        const toC = currentPlan[i+1].city;
+        const legKey = `inter-${fromC}-${toC}`;
+        let interMatch = manualTransfers.find(t => t.legId === legKey) || findCityMatch(fromC, fromC, toC);
+        
+        newLegs.push({
+            legId: legKey,
+            date: currentPlan[i].cout,
+            city: fromC,
+            from: interMatch ? interMatch.from : fromC,
+            to: interMatch ? interMatch.to : toC,
+            details: interMatch ? (interMatch.duration || interMatch.details) : `Transfer: ${fromC} to ${toC}`,
+            avgPrice: interMatch ? Number(interMatch.avgPrice) : 0, // Index 4 Price
+            isManual: interMatch ? interMatch.isManual : false
+        });
+    }
+
+    // 3. Departure Leg (Hotel -> Airport)
+    let departureMatch = manualTransfers.find(t => t.legId === `departure-${lastCity}`) || 
+                         findCityMatch(lastCity, "Hotel", "Airport");
+
+    newLegs.push({
+        legId: `departure-${lastCity}`,
+        date: currentPlan[currentPlan.length - 1].cout,
+        city: lastCity,
+        from: departureMatch ? departureMatch.from : "Hotel",
+        to: departureMatch ? departureMatch.to : "Airport",
+        details: departureMatch ? (departureMatch.duration || departureMatch.details) : `Standard Departure from ${lastCity}`,
+        avgPrice: departureMatch ? Number(departureMatch.avgPrice) : 0, // Index 4 Price
+        isManual: departureMatch ? departureMatch.isManual : false
+    });
+
+    selectedTransfers = newLegs;
+    if (typeof renderTables === "function") renderTables(); // Refresh Table
+}
+
+// Helper function to keep code clean
+function formatLeg(dbMatch, legId, date, defFrom, defTo) {
+    return {
+        legId: legId,
+        date: date,
+        city: dbMatch ? dbMatch.city : (defFrom === "Airport" ? currentPlan[0].city : defFrom),
+        from: dbMatch ? dbMatch.from : defFrom,
+        to: dbMatch ? dbMatch.to : defTo,
+        details: dbMatch ? dbMatch.details : `Standard Transfer: ${defFrom} to ${defTo}`,
+        avgPrice: dbMatch ? Number(dbMatch.avgPrice) : 0,
+        isManual: dbMatch ? dbMatch.isManual : false
+    };
+}
+// --- 2. RENDER TABLE (WITH EDITABLE INPUTS) ---
+function renderTables() {
+    let hHtml = ""; let sHtml = ""; 
+    const paxCount = Number(document.getElementById('paxCountInput').value) || 1;
+    if(document.getElementById('resPaxCount')) document.getElementById('resPaxCount').innerText = paxCount;
+
+    // Hotel & Sightseeing Render
+    currentPlan.forEach((item) => {
+        const hotelCostTotal = (Number(item.hotel?.cost) || 0) * item.nights;
+        hHtml += `<tr><td class="font-bold uppercase">${item.city}</td><td>${formatDate(item.cin)}</td><td>${formatDate(item.cout)}</td><td class="text-center font-bold">${item.nights}</td><td><b class="uppercase text-[10px]">${item.hotel?.name || '---'}</b></td><td><span class="text-blue-600 italic text-[9px]">${item.hotel?.type || '---'}</span></td><td class="text-center font-bold">₹${hotelCostTotal.toLocaleString()}</td><td class="no-print"><button onclick="openHotelSwap(${item.id})" class="text-blue-600 underline text-[10px]">SWAP</button></td></tr>`;
+        
+        for(let d=0; d <= item.nights; d++){
+            const activities = item.sights.filter(s => s.assignedDay === d);
+            const curDate = new Date(item.cin); curDate.setDate(curDate.getDate() + d);
+            const acts = activities.map(s => `<div class="flex justify-between text-[10px]"><span>• ${s.info}</span><span class="text-slate-400">₹${(s.price * paxCount).toLocaleString()}</span></div>`).join('') || '<span class="text-slate-300 italic text-[10px]">Free Day</span>';
+            sHtml += `<tr><td class="text-center font-bold text-[10px]">${formatDate(curDate)}</td><td>${acts}</td><td class="font-bold uppercase text-center text-[10px]">${item.city}</td><td class="no-print"><button onclick="openSightSwap(${item.id})" class="text-blue-600 underline text-[10px]">EDIT</button></td></tr>`;
+        }
+    });
+
+    // Transfers Table Render
+    const tBody = document.getElementById('transferTableBody');
+    if (tBody) {
+        tBody.innerHTML = selectedTransfers.map((t, idx) => {
+            const totalCost = Math.round(Number(t.avgPrice || 0) * paxCount);
+            return `
+                <tr class="${t.isManual ? 'bg-blue-50/50' : ''}">
+                    <td class="p-2 border text-[10px] font-bold">${formatDate(t.date)}</td>
+                    <td class="p-2 border text-[10px] font-black text-blue-700 uppercase">${t.city || '---'}</td>
+                    <td class="p-2 border"><input type="text" value="${t.from || ''}" onchange="editTransfer(${idx}, 'from', this.value)" class="w-full bg-transparent outline-none uppercase font-bold text-[10px]"></td>
+                    <td class="p-2 border"><input type="text" value="${t.to || ''}" onchange="editTransfer(${idx}, 'to', this.value)" class="w-full bg-transparent outline-none uppercase font-bold text-[10px]"></td>
+                    <td class="p-2 border"><textarea onchange="editTransfer(${idx}, 'details', this.value)" class="w-full bg-transparent outline-none italic text-[9px] leading-tight resize-none">${t.details || ''}</textarea></td>
+                    <td class="p-2 border font-bold text-right text-blue-900 text-xs">
+                        <div class="flex items-center justify-end"><span>₹</span><input type="number" value="${totalCost}" onchange="editTransfer(${idx}, 'avgPrice', this.value)" class="w-20 text-right bg-transparent outline-none font-bold"></div>
+                    </td>
+                    <td class="p-2 border text-center no-print"><button onclick="deleteTransferLeg(${idx})" class="text-red-400 mr-2">✕</button><button onclick="openTransferSwap('${t.legId}')" class="text-blue-600 font-bold text-[10px]">SWAP</button></td>
+                </tr>`;
+        }).join('');
+    }
+
+    // Intercity Render
+    const icBody = document.getElementById('ferryBusTableBody');
+    if (icBody) {
+        icBody.innerHTML = selectedIntercity.map((ic, idx) => `
+            <tr><td class="p-2 border text-[10px] font-bold">${formatDate(ic.date)}</td><td class="p-2 border"><input type="text" value="${ic.mode}" onchange="editIntercity(${idx}, 'mode', this.value)" class="w-full bg-transparent outline-none font-bold text-blue-700 uppercase text-[10px]"></td><td class="p-2 border"><input type="text" value="${ic.fromTo}" onchange="editIntercity(${idx}, 'fromTo', this.value)" class="w-full bg-transparent outline-none font-medium text-[10px]"></td><td class="p-2 border"><input type="text" value="${ic.notes}" onchange="editIntercity(${idx}, 'notes', this.value)" class="w-full bg-transparent outline-none italic text-slate-500 text-[10px]"></td><td class="p-2 border font-bold text-right text-[11px]"><div class="flex items-center justify-end"><span>₹</span><input type="number" value="${Math.round(ic.price * paxCount)}" onchange="editIntercity(${idx}, 'price', this.value)" class="w-20 text-right bg-transparent outline-none font-bold text-blue-800"></div></td><td class="p-2 border text-center no-print"><button onclick="selectedIntercity.splice(${idx}, 1); renderTables();" class="text-red-500 font-bold mr-2">✕</button></td></tr>
+        `).join('');
+    }
+
+    document.getElementById('hotelTableBody').innerHTML = hHtml;
+    document.getElementById('sightTableBody').innerHTML = sHtml;
+    if(typeof calculateBudgetInvestment === "function") calculateBudgetInvestment();
+}
+// --- 1. OPEN SWAP MODAL ---
+function openTransferSwap(legId) {
+    window.activeLegId = legId; 
+    
+    const modalHeading = document.getElementById('modalHeading');
+    const modalContent = document.getElementById('modalContent');
+
+    if (!modalHeading || !modalContent) return;
+
+    modalHeading.innerText = `Select Transfer Option`;
+    modalContent.innerHTML = `
+        <div class="p-4 bg-white sticky top-0 border-b space-y-3 z-10">
+            <input type="text" id="transferSearch" placeholder="Search City, Airport or Station..." 
+                oninput="applyTransferFilters()" class="w-full p-2 border rounded-xl text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+            <div class="flex justify-between items-center text-[10px]">
+                <span class="font-bold text-slate-500 uppercase tracking-wider">Sort By Price:</span>
+                <select id="transferSort" onchange="applyTransferFilters()" class="border rounded p-1 font-semibold text-slate-700">
+                    <option value="low">Low to High</option>
+                    <option value="high">High to Low</option>
+                </select>
+            </div>
+        </div>
+        <div id="transferListContainer" class="p-4 overflow-y-auto max-h-[420px] bg-slate-50"></div>
+    `;
+    
+    toggleModal(true);
+    
+    // Auto-fill the search box with the current leg's city to show relevant results immediately
+    const currentLeg = selectedTransfers.find(t => t.legId === legId);
+    if (currentLeg && currentLeg.city) {
+        const searchBox = document.getElementById('transferSearch');
+        searchBox.value = currentLeg.city;
+    }
+    
+    setTimeout(applyTransferFilters, 10); 
+}
+
+// --- 2. APPLY FILTERS (Fixes Details and Cost) ---
+// ==========================================
+// --- SECTION 03: TRANSFERS FINAL WORKING CODE ---
+// ==========================================
+
+// 1. SELECT FUNCTION (Fixes City NA & Price 0)
+function selectManualTransfer(from, to, price, details, city) {
+    if (!window.activeLegId) return;
+    
+    const idx = selectedTransfers.findIndex(t => t.legId === window.activeLegId);
+    if (idx !== -1) {
+        // Create new object with forced values
+        const updatedLeg = {
+            ...selectedTransfers[idx],
+            from: from,
+            to: to,
+            avgPrice: Number(price),
+            details: details,
+            city: (city && city !== 'undefined') ? city : selectedTransfers[idx].city,
+            isManual: true
+        };
+        
+        selectedTransfers[idx] = updatedLeg;
+        
+        console.log("Saving Selection:", updatedLeg); // Debug line
+        
+        toggleModal(false);
+        renderTables();
+        if (typeof calculateBudgetInvestment === "function") calculateBudgetInvestment();
+        showToast("Transfer updated!", "success");
+    }
+}
+
+function applyTransferFilters() {
+    const queryInput = document.getElementById('transferSearch');
+    const container = document.getElementById('transferListContainer');
+    const sort = document.getElementById('transferSort')?.value || 'low';
+    const paxCount = Number(document.getElementById('paxCountInput')?.value) || 1;
+    
+    if (!queryInput || !container || !masterData.transfers) return;
+    const query = queryInput.value.toLowerCase().trim();
+    
+    // Filtering strictly based on your Master Sheet Columns
+    let filtered = masterData.transfers.filter(t => {
+        const city = (t.city || "").toLowerCase();
+        const fromLoc = (t.from || "").toLowerCase();
+        const toLoc = (t.to || "").toLowerCase();
+        return city.includes(query) || fromLoc.includes(query) || toLoc.includes(query);
+    });
+
+    // Sorting
+    filtered.sort((a, b) => (Number(a.avgPrice || 0)) - (Number(b.avgPrice || 0)));
+    if (sort === "high") filtered.reverse();
+
+    container.innerHTML = filtered.map(t => {
+        const unitPrice = parseFloat(t.avgPrice) || 0;
+        const totalCost = Math.round(unitPrice * paxCount);
+        const esc = (s) => String(s || "").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+
+        return `
+        <div class="bg-white border border-slate-200 p-3 rounded-xl mb-2 hover:border-blue-500 cursor-pointer shadow-sm group" 
+             onclick="selectManualTransfer('${esc(t.from)}', '${esc(t.to)}', ${unitPrice}, '${esc(t.duration)}', '${esc(t.city)}')">
+            <div class="flex justify-between items-center">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="bg-blue-600 text-white text-[9px] px-2 py-0.5 rounded font-black uppercase">${t.city || 'N/A'}</span>
+                        <span class="text-slate-500 text-[10px] font-bold uppercase">${t.from} ➔ ${t.to}</span>
+                    </div>
+                    <p class="text-[11px] text-slate-800 font-bold leading-tight">${t.duration || 'Transfer Details'}</p>
+                </div>
+                <div class="text-right min-w-[90px]">
+                    <p class="text-sm font-black text-blue-700">₹${totalCost.toLocaleString()}</p>
+                    <p class="text-[8px] text-slate-400 uppercase font-bold tracking-tighter">Total (${paxCount} Pax)</p>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+function updateTransferTableUI() {
+    const tBody = document.getElementById('transferTableBody');
+    if (!tBody) return;
+    
+    const paxCount = Number(document.getElementById('paxCountInput').value) || 1;
+    
+    tBody.innerHTML = selectedTransfers.map((t, idx) => {
+        const unitCost = Number(t.avgPrice) || 0;
+        const totalCost = Math.round(unitCost * paxCount);
+        // Use duration if details is undefined (as seen in your image)
+        const finalDetails = t.details || t.duration || '---';
+        
+        return `
+            <tr class="${t.isManual ? 'bg-blue-50' : 'bg-white'}">
+                <td class="p-2 border text-[10px] font-medium text-slate-500">${formatDate(t.date)}</td>
+                <td class="p-2 border text-[10px] font-black text-blue-800 uppercase">${t.city || t.from || 'N/A'}</td>
+                <td class="p-2 border text-[10px] font-bold text-slate-700 uppercase">${t.from || '---'}</td>
+                <td class="p-2 border text-[10px] font-bold text-slate-700 uppercase">${t.to || '---'}</td>
+                <td class="p-2 border text-[10px] italic text-slate-500 leading-tight">${finalDetails}</td>
+                <td class="p-2 border text-[11px] font-black text-right text-slate-900">
+                    <div>₹${totalCost.toLocaleString()}</div>
+                    <div class="text-[8px] text-slate-400 font-normal italic">₹${unitCost.toLocaleString()} / pax</div>
+                </td>
+                <td class="p-2 border text-center no-print">
+                    <div class="flex gap-2 justify-center">
+                        <button onclick="deleteTransferLeg(${idx})" class="text-red-500 font-bold text-xs hover:scale-125 transition">✕</button>
+                        <button onclick="openTransferSwap('${t.legId}')" class="text-blue-600 font-black text-[9px] border-b border-blue-600 hover:bg-blue-50">SWAP</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+// ==========================================
+// --- HELPERS & ACTIONS ---
+// ==========================================
+
+function editTransfer(index, field, value) {
+    const paxCount = Number(document.getElementById('paxCountInput').value) || 1;
+    if (field === 'avgPrice') {
+        // Total cost ko wapas per person price mein convert karke store karta hai
+        selectedTransfers[index].avgPrice = Number(value) / paxCount;
+    } else {
+        selectedTransfers[index][field] = value;
+    }
+    selectedTransfers[index].isManual = true; // Mark as edited so it doesn't reset
+    
+    // UI refresh nahi karenge yahan taaki typing smooth rahe, bas totals update karenge
+    if (typeof calculateBudgetInvestment === "function") calculateBudgetInvestment();
+}
+
+function deleteTransferLeg(index) {
+    lastDeletedTransfer = selectedTransfers[index];
+    lastDeletedIndex = index;
+
+    selectedTransfers.splice(index, 1);
+    renderTables();
+
+    const bar = document.getElementById('undo-bar');
+    if(bar) {
+        bar.style.display = 'flex';
+        clearTimeout(undoTimer);
+        undoTimer = setTimeout(() => {
+            bar.style.display = 'none';
+            lastDeletedTransfer = null;
+        }, 5000); 
+    }
+}
+
+function undoDelete() {
+    if (lastDeletedTransfer) {
+        selectedTransfers.splice(lastDeletedIndex, 0, lastDeletedTransfer);
+        renderTables();
+        const bar = document.getElementById('undo-bar');
+        if(bar) bar.style.display = 'none';
+        lastDeletedTransfer = null;
+        showToast("Restored successfully!", "success");
+    }
+}
+
+function optimizeIntercity(tBudgetTotal, paxCount) {
+    if (!masterData.intercity) masterData.intercity = [];
+    let newIntercity = [];
+
+    for (let i = 0; i < currentPlan.length - 1; i++) {
+        const fromC = currentPlan[i].city.toLowerCase();
+        const toC = currentPlan[i+1].city.toLowerCase();
+        const legId = `ic-${fromC}-${toC}`;
+
+        let existing = selectedIntercity.find(item => item.legId === legId);
+        if (existing && existing.isManual) {
+            newIntercity.push(existing);
+            continue;
+        }
+
+        const match = masterData.intercity.find(ic => 
+            ic.from.toLowerCase().includes(fromC) && 
+            ic.to.toLowerCase().includes(toC)
+        );
+
+        newIntercity.push({
+            legId: legId,
+            date: currentPlan[i].cout, // travel date
+            mode: match ? match.mode : "TBD",
+            fromTo: match ? `${match.from} to ${match.to}` : `${currentPlan[i].city} to ${currentPlan[i+1].city}`,
+            notes: "Scheduled",
+            price: match ? Number(match.price) : 0,
+            isManual: false
+        });
+    }
+    selectedIntercity = newIntercity;
+}
+// 1. OPEN MODAL (Triggered by SWAP button)
+function openIntercitySwap(legId) {
+    if (!masterData.intercity || masterData.intercity.length === 0) {
+        showToast("No intercity data found", "error");
+        return;
+    }
+
+    document.getElementById('modalHeading').innerText = "Select Intercity Transport";
+    let html = `
+        <div class="p-4 bg-white sticky top-0 border-b z-10 flex flex-col gap-2">
+            <input type="text" id="icSearch" placeholder="Search route or mode..." 
+                   oninput="filterIntercityModal('${legId}')" class="w-full p-2 border rounded-xl text-xs">
+            
+            <select id="icSortOrder" onchange="filterIntercityModal('${legId}')" class="w-full p-2 border rounded-xl text-[10px] font-bold text-gray-600 bg-gray-50">
+                <option value="none">Sort by: Default</option>
+                <option value="asc">Price: Low to High</option>
+                <option value="desc">Price: High to Low</option>
+            </select>
+        </div>
+        <div id="icListContainer" class="p-4 space-y-3 max-h-[400px] overflow-y-auto"></div>
+    `;
+    
+    document.getElementById('modalContent').innerHTML = html;
+    filterIntercityModal(legId);
+    toggleModal(true);
+}
+
+// 2. FILTER & SORT LOGIC
+function filterIntercityModal(legId) {
+    const query = document.getElementById('icSearch')?.value.toLowerCase() || "";
+    const sortOrder = document.getElementById('icSortOrder')?.value || "none";
+    const container = document.getElementById('icListContainer');
+    
+    // Filter master data
+    let filtered = masterData.intercity.filter(item => 
+        item.mode.toLowerCase().includes(query) || 
+        item.from.toLowerCase().includes(query) || 
+        item.to.toLowerCase().includes(query)
+    );
+
+    // Sort by price
+    if (sortOrder === "asc") {
+        filtered.sort((a, b) => Number(a.price) - Number(b.price));
+    } else if (sortOrder === "desc") {
+        filtered.sort((a, b) => Number(b.price) - Number(a.price));
+    }
+
+    if (filtered.length === 0) {
+        container.innerHTML = `<p class="text-center text-gray-400 text-[10px] py-10">No matching routes found.</p>`;
+        return;
+    }
+
+    container.innerHTML = filtered.map((item) => `
+        <div onclick="applyIntercitySwap('${legId}', ${JSON.stringify(item).replace(/"/g, '&quot;')})" 
+             class="p-3 border rounded-xl hover:border-blue-500 cursor-pointer flex justify-between items-center shadow-sm bg-white transition-all">
+            <div>
+                <span class="text-[9px] font-black bg-blue-100 text-blue-700 px-2 py-0.5 rounded uppercase">${item.mode}</span>
+                <p class="text-xs font-bold mt-1">${item.from} → ${item.to}</p>
+            </div>
+            <div class="text-right">
+                <p class="font-bold text-blue-600 text-xs">₹${Number(item.price).toLocaleString()}</p>
+                <p class="text-[8px] text-gray-400 uppercase">Per Pax</p>
+            </div>
+        </div>
+    `).join('');
+}
+
+// 3. APPLY SELECTION TO TABLE
+function applyIntercitySwap(legId, item) {
+    // Find if this leg already exists in our selected list
+    const idx = selectedIntercity.findIndex(ic => ic.legId === legId);
+    
+    const newEntry = {
+        legId: legId || 'manual-' + Date.now(),
+        mode: item.mode,
+        fromTo: `${item.from} to ${item.to}`,
+        notes: "Confirmed",
+        price: Number(item.price),
+        isManual: true
+    };
+
+    if (idx !== -1) {
+        // Replace existing
+        selectedIntercity[idx] = newEntry;
+    } else {
+        // Add new
+        selectedIntercity.push(newEntry);
+    }
+
+    toggleModal(false);
+    renderTables(); // This will trigger calculateBudgetInvestment() automatically
+}
+
+// 4. EDITABLE TABLE CELLS
+function editIntercity(index, field, value) {
+    if (!selectedIntercity[index]) return;
+    
+    if (field === 'price') {
+        const paxCount = Number(document.getElementById('paxCountInput').value) || 1;
+        // Store the per-person price back into the array
+        selectedIntercity[index].price = Number(value) / paxCount;
+    } else {
+        selectedIntercity[index][field] = value;
+    }
+    selectedIntercity[index].isManual = true;
+    calculateBudgetInvestment(); 
+}
+// Function to actually put the row in the table
+// Function to update Section 04 data when you type in the table
+function editIntercity(index, field, value) {
+    if (field === 'price') {
+        const paxCount = Number(document.getElementById('paxCountInput').value) || 1;
+        selectedIntercity[index].price = Number(value) / paxCount;
+    } else {
+        selectedIntercity[index][field] = value;
+    }
+    selectedIntercity[index].isManual = true;
+    calculateBudgetInvestment(); // Update totals immediately
+}
+
+// Updated: Adds to the ARRAY, not the HTML directly
+function addIntercityToTable(masterIndex) {
+    const item = masterData.intercity[masterIndex];
+    
+    // Add to the global array so runOptimizer/renderTables sees it
+    selectedIntercity.push({
+        legId: 'manual-' + Date.now(),
+        mode: item.mode,
+        fromTo: `${item.from} to ${item.to}`,
+        notes: "Scheduled",
+        price: Number(item.price),
+        isManual: true
+    });
+
+    toggleModal(false);
+    renderTables(); // This will refresh the UI and math
+}
+
+// Updated: Accurate Budget Calculation for all 4 sections
+function calculateBudgetInvestment() {
+    let hNet = 0; let sNet = 0; 
+    const paxCount = Number(document.getElementById('paxCountInput').value) || 1;
+
+    // 1. Hotels and Sights
+    currentPlan.forEach(p => { 
+        hNet += (Number(p.hotel?.cost) || 0) * (Number(p.nights) || 0); 
+        sNet += (p.sights || []).reduce((sum, s) => sum + (Number(s.price) * paxCount), 0); 
+    });
+
+    // 2. Section 03: Transfers
+    const tNet = selectedTransfers.reduce((sum, t) => sum + (Number(t.avgPrice) * paxCount), 0);
+
+    // 3. Section 04: Intercity (Now pulling from the array)
+    const icNet = selectedIntercity.reduce((sum, ic) => sum + (Number(ic.price) * paxCount), 0);
+
+    const mPct = Number(document.getElementById('markupInput').value) || 0;
+    const gPct = Number(document.getElementById('gstInput').value) || 0;
+
+    const netTotal = hNet + sNet + tNet + icNet; 
+    const markupValue = netTotal * (mPct / 100);
+    const gstValue = (netTotal + markupValue) * (gPct / 100);
+
+    // Update UI Labels
+    if(document.getElementById('netH')) document.getElementById('netH').innerText = `₹${hNet.toLocaleString()}`;
+    if(document.getElementById('netS')) document.getElementById('netS').innerText = `₹${sNet.toLocaleString()}`;
+    if(document.getElementById('netT')) document.getElementById('netT').innerText = `₹${(tNet + icNet).toLocaleString()}`; 
+
+    document.getElementById('valM').innerText = `₹${Math.round(markupValue).toLocaleString()}`;
+    document.getElementById('valG').innerText = `₹${Math.round(gstValue).toLocaleString()}`;
+    
+    const grandTotal = Math.round(netTotal + markupValue + gstValue);
+    document.getElementById('resGrandTotal').innerText = `₹${grandTotal.toLocaleString('en-IN')}`;
+}
+    /* --- INTEGRATED SEARCH & RANGE FILTER LOGIC WITH COUNT --- */
+
+    function openHotelSwap(routeId) {
+        const item = currentPlan.find(p => p.id === routeId);
+        const city = item.city;
+        
+        const options = masterData.hotels.filter(h => h.city.toLowerCase() === city.toLowerCase());
+        const cityMaxPrice = options.length > 0 ? Math.max(...options.map(h => Number(h.cost))) : 100000;
+        const cityMinPrice = options.length > 0 ? Math.min(...options.map(h => Number(h.cost))) : 0;
+
+        document.getElementById('modalHeading').innerText = `Select Hotel: ${city}`;
+
+        // Added a span with ID 'hotelCountBadge' to show the total
+        let controlsHtml = `
+            <div class="p-4 bg-white sticky top-0 border-b space-y-3 z-10 shadow-sm">
+                <input type="text" id="modalSearch" placeholder="Search hotel name..." 
+                    oninput="applyHotelFilters(${routeId}, '${city}')"
+                    class="w-full p-2.5 border-2 border-slate-100 rounded-xl text-xs focus:border-blue-500 outline-none transition-all">
+                
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Budget Range (₹)</label>
+                        <span id="hotelCountBadge" class="bg-blue-600 text-white px-2 py-0.5 rounded-full text-[9px] font-bold shadow-sm">0 Found</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="flex flex-col">
+                            <span class="text-[8px] font-bold text-slate-400">MIN</span>
+                            <input type="number" id="minPriceInput" value="${cityMinPrice}" 
+                                oninput="applyHotelFilters(${routeId}, '${city}')"
+                                class="w-full p-2 border rounded font-bold text-xs outline-none focus:border-blue-500">
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[8px] font-bold text-slate-400">MAX</span>
+                            <input type="number" id="maxPriceInput" value="${cityMaxPrice}" 
+                                oninput="applyHotelFilters(${routeId}, '${city}')"
+                                class="w-full p-2 border rounded font-bold text-xs outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="hotelListContainer" class="p-4 space-y-3"></div>
+        `;
+
+        document.getElementById('modalContent').innerHTML = controlsHtml;
+        
+        applyHotelFilters(routeId, city);
+        toggleModal(true);
+    }
+
+    function applyHotelFilters(routeId, city) {
+        const searchTerm = document.getElementById('modalSearch').value.toLowerCase();
+        const minPrice = Number(document.getElementById('minPriceInput').value) || 0;
+        const maxPrice = Number(document.getElementById('maxPriceInput').value) || 999999;
+        
+        const allCityHotels = masterData.hotels.filter(h => h.city.toLowerCase() === city.toLowerCase());
+        
+        const filtered = allCityHotels.filter(h => {
+            const cost = Number(h.cost);
+            const matchesSearch = h.name.toLowerCase().includes(searchTerm);
+            const matchesBudget = cost >= minPrice && cost <= maxPrice;
+            return matchesSearch && matchesBudget;
+        });
+
+        // Update the count badge
+        document.getElementById('hotelCountBadge').innerText = `${filtered.length} Found`;
+
+        let html = "";
+        if (filtered.length > 0) {
+            filtered.forEach((h) => {
+                const originalIndex = allCityHotels.findIndex(orig => orig.name === h.name);
+                
+                html += `
+                    <div onclick="selectHotel(${routeId}, ${originalIndex}, '${h.city}')" 
+                        class="p-4 bg-white border rounded-lg cursor-pointer hover:border-blue-500 hover:shadow-md transition-all flex justify-between items-center group">
+                        <div class="flex flex-col">
+                            <span class="text-xs font-black uppercase group-hover:text-blue-600 transition-colors">${h.name}</span>
+                            <span class="text-[10px] text-slate-400 italic">${h.type || 'Standard'}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs font-black text-slate-700">₹${(Number(h.cost)).toLocaleString()}</span>
+                        </div>
+                    </div>`;
+            });
+        } else {
+            html = `<div class="py-10 text-center">
+                        <p class="text-xs text-slate-400 font-bold italic">No hotels found in this budget range.</p>
+                    </div>`;
+        }
+
+        document.getElementById('hotelListContainer').innerHTML = html;
+    }
+
+    // Updated selectHotel
+function selectHotel(routeId, hotelIndex, city) {
+    const route = currentPlan.find(p => p.id === routeId);
+    if (!route) return;
+
+    const cityHotels = masterData.hotels.filter(h => h.city.toLowerCase() === city.toLowerCase());
+    
+    // 1. Set the hotel and LOCK it
+    route.hotel = cityHotels[hotelIndex];
+    route.isHotelManual = true; 
+
+    // 2. Refresh the UI immediately
+    renderTables();
+
+    // 3. Show the simple success toast
+    showToast("Hotel selection updated", "success");
+
+    // 4. Close the selection modal
+    closeModal();
+
+    // 5. Trigger the custom prompt (replicates your removeActivity logic)
+    setTimeout(() => {
+        askToReoptimize("Hotel updated! Re-run others to adjust the total budget?", () => {
+            // When user clicks 'Yes', we re-run ONLY hotels (true, false)
+            runOptimizer(true, false); 
+        });
+    }, 300);
+}
+    
+    /* --- UPDATED SIGHTS MANAGEMENT SYSTEM --- */
+
+function openSightSwap(routeId) {
+    const route = currentPlan.find(p => p.id === routeId);
+    const paxCount = Number(document.getElementById('paxCountInput').value) || 1;
+    document.getElementById('modalHeading').innerText = `Manage Activities: ${route.city}`;
+    
+    // 1. Create the fixed UI for filters
+    renderSightModalWrapper(route, paxCount);
+    // 2. Initial content load
+    filterSightsInModal(route.id);
+    toggleModal(true);
+}
+
+function renderSightModalWrapper(route, paxCount) {
+    const allCitySights = masterData.sights.filter(s => s.city.toLowerCase().includes(route.city.toLowerCase()));
+    
+    // Auto-calculate range for the city
+    const cityMaxPrice = allCitySights.length > 0 ? Math.max(...allCitySights.map(s => Number(s.price) * paxCount)) : 50000;
+    const cityMinPrice = allCitySights.length > 0 ? Math.min(...allCitySights.map(s => Number(s.price) * paxCount)) : 0;
+
+    let html = `
+    <div class="p-4 bg-white sticky top-0 border-b space-y-3 z-10 shadow-sm">
+        <input type="text" id="sightSearch" placeholder="Search activity..." 
+               oninput="filterSightsInModal(${route.id})"
+               class="w-full p-2.5 border-2 border-slate-100 rounded-xl text-xs focus:border-blue-500 outline-none transition-all">
+        
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <div class="flex justify-between items-center mb-2">
+                <label class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Budget (Total for ${paxCount} Pax)</label>
+                <span id="sightCountBadge" class="bg-blue-600 text-white px-2 py-0.5 rounded-full text-[9px] font-bold shadow-sm">0 Found</span>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="flex flex-col">
+                    <span class="text-[8px] font-bold text-slate-400 uppercase">Min ₹</span>
+                    <input type="number" id="sightMinPrice" value="${cityMinPrice}" 
+                           oninput="filterSightsInModal(${route.id})"
+                           class="w-full p-2 border rounded font-bold text-xs outline-none focus:border-blue-500">
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-[8px] font-bold text-slate-400 uppercase">Max ₹</span>
+                    <input type="number" id="sightMaxPrice" value="${cityMaxPrice}" 
+                           oninput="filterSightsInModal(${route.id})"
+                           class="w-full p-2 border rounded font-bold text-xs outline-none focus:border-blue-500">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="daysContainer" class="p-4 space-y-6"></div>`;
+
+    document.getElementById('modalContent').innerHTML = html;
+}
+
+function filterSightsInModal(routeId) {
+    const route = currentPlan.find(p => p.id === routeId);
+    const paxCount = Number(document.getElementById('paxCountInput').value) || 1;
+    
+    // Capture current filter values
+    const searchTerm = document.getElementById('sightSearch')?.value.toLowerCase() || "";
+    const minPrice = Number(document.getElementById('sightMinPrice')?.value) || 0;
+    const maxPrice = Number(document.getElementById('sightMaxPrice')?.value) || 999999;
+
+    const allCitySights = masterData.sights.filter(s => s.city.toLowerCase().includes(route.city.toLowerCase()));
+    
+    // Filter the master list
+    const filtered = allCitySights.filter(s => {
+        const totalPrice = Number(s.price) * paxCount;
+        return s.info.toLowerCase().includes(searchTerm) && 
+               totalPrice >= minPrice && 
+               totalPrice <= maxPrice;
+    });
+
+    // Update the "Activity Count" badge
+    if(document.getElementById('sightCountBadge')) {
+        document.getElementById('sightCountBadge').innerText = `${filtered.length} Found`;
+    }
+
+    // Build the Day-wise UI
+    let daysHtml = "";
+    for(let d=0; d <= route.nights; d++) {
+        const dayActs = route.sights.filter(s => s.assignedDay === d);
+        daysHtml += `
+        <div class="bg-white border rounded-lg p-3 shadow-sm">
+            <h4 class="font-black text-blue-700 text-[10px] mb-3 uppercase tracking-tighter">DAY ${d+1}</h4>
+            <div class="space-y-2 mb-3">
+                ${dayActs.map(s => `
+                    <div class="flex justify-between items-center bg-blue-50 p-2 rounded text-[10px] border border-blue-100">
+                        <span class="font-medium truncate mr-2">${s.info}</span>
+                        <button onclick="removeActivity(${route.id}, ${s.instanceId})" class="text-red-500 font-bold hover:text-red-700 transition-colors">×</button>
+                    </div>`).join('')}
+            </div>
+            <select onchange="addActivityToDay(${route.id}, ${d}, this.value)" 
+                    class="w-full text-[10px] p-2 border rounded font-bold bg-slate-50 outline-none focus:border-blue-500 cursor-pointer">
+                <option value="">+ Add Activity...</option>
+                ${filtered.map(s => `<option value="${s.info}">${s.info} (₹${(Number(s.price) * paxCount).toLocaleString()})</option>`).join('')}
+            </select>
+        </div>`;
+    }
+    document.getElementById('daysContainer').innerHTML = daysHtml;
+}
+
+// Updated addActivityToDay
+function addActivityToDay(routeId, day, info) {
+    if(!info) return;
+    const route = currentPlan.find(p => p.id === routeId);
+    const sight = masterData.sights.find(s => s.info === info);
+    
+    if(route && sight) {
+        // 1. Add activity logic
+        route.sights.push({ 
+            ...sight, 
+            price: Number(sight.price), 
+            instanceId: Date.now() + Math.random(), 
+            assignedDay: day,
+            isManual: true 
+        });
+
+        renderTables();
+        showToast("Activity added successfully", "success");
+
+        // 2. Trigger Custom Multi-Choice Message
+        setTimeout(() => {
+            askToReoptimizeMulti("Choose an optimization mode to balance your budget:", (choice) => {
+                if (choice === "1") {
+                    runOptimizer(false, true); 
+                } else if (choice === "2") {
+                    runOptimizer(false, true); // Or your specific day logic
+                } else if (choice === "3") {
+                    runOptimizer(false, true, routeId, day);
+                }
+                
+                if (typeof filterSightsInModal === "function") filterSightsInModal(routeId);
+            });
+        }, 300);
+    }
+}
+
+
+
+// --- 1. THE MODAL TRIGGER ---
+function askToReoptimizeMulti(message, onChoice) {
+    const overlay = document.createElement('div');
+    overlay.className = "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000]";
+    overlay.id = "custom-modal-multi";
+    overlay.innerHTML = `
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4 animate-in fade-in zoom-in duration-200">
+            <h3 class="text-lg font-bold text-gray-900 mb-2">Activity Added!</h3>
+            <p class="text-gray-600 mb-6 text-sm">${message}</p>
+            <div class="flex flex-col space-y-2">
+                <button data-choice="1" class="choice-btn w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-left text-sm">
+                    1. Re-run ALL activities (Balance entire trip)
+                </button>
+                <button data-choice="2" class="choice-btn w-full px-4 py-2 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition text-left text-sm">
+                    2. Re-run only THIS day (Fill gap)
+                </button>
+                <button data-choice="3" class="choice-btn w-full px-4 py-2 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition text-left text-sm">
+                    3. Re-run EXCEPT this day (Keep this day as is)
+                </button>
+                <button id="modal-cancel-multi" class="w-full px-4 py-2 mt-2 bg-gray-100 text-gray-500 rounded hover:bg-gray-200 transition text-sm font-medium">
+                    Cancel (Keep as is)
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    // Handle the 3 choices
+    overlay.querySelectorAll('.choice-btn').forEach(btn => {
+        btn.onclick = () => {
+            onChoice(btn.getAttribute('data-choice'));
+            overlay.remove();
+        };
+    });
+
+    overlay.querySelector('#modal-cancel-multi').onclick = () => overlay.remove();
+}
+// Function to show custom confirmation modal
+function askToReoptimize(message, onConfirm) {
+    const overlay = document.createElement('div');
+    overlay.className = "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000]";
+    overlay.id = "custom-modal-overlay";
+    overlay.innerHTML = `
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4 animate-in fade-in zoom-in duration-200">
+            <p class="text-gray-800 mb-6 text-center font-medium">${message}</p>
+            <div class="flex space-x-3">
+                <button id="modal-cancel" class="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition">No, Keep</button>
+                <button id="modal-confirm" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">Yes, Re-run</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#modal-confirm').onclick = () => {
+        onConfirm();
+        overlay.remove();
+    };
+    overlay.querySelector('#modal-cancel').onclick = () => {
+        overlay.remove();
+    };
+}
+// --- UPDATED REMOVE ACTIVITY ---
+function removeActivity(routeId, instanceId) {
+    // 1. Find the city/route in the live plan
+    const route = currentPlan.find(p => p.id === routeId);
+    if (!route) return;
+
+    // 2. Actually remove it from the data array immediately
+    route.sights = route.sights.filter(s => s.instanceId !== instanceId);
+    
+    // 3. Update the UI right away
+    renderTables();
+    if (typeof filterSightsInModal === "function") filterSightsInModal(routeId);
+    
+    // 4. Show your custom toast
+    showToast("Activity removed", "success");
+
+    // 5. Ask to fill the gap
+    setTimeout(() => {
+        askToReoptimize("Activity removed. Re-run others to fill the budget?", () => {
+            // When user clicks 'Yes', we re-run ONLY sights to fill the gap
+            runOptimizer(false, true); 
+        });
+    }, 300);
+}
+
+function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '---'; }
+
+    async function downloadPDF() {
+    const element = document.getElementById('pdf-content');
+    const paxName = document.getElementById('paxNameInput').value || 'Traveler';
+    
+    showToast("Generating High-Res PDF...");
+
+    try {
+        const canvas = await html2canvas(element, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: "#ffffff",
+            // YEAH LOGIC INPUTS KO PDF MEIN VISIBLE BANAYEGA
+            onclone: (clonedDoc) => {
+                const inputs = clonedDoc.querySelectorAll('.pdf-input');
+                inputs.forEach(input => {
+                    const parent = input.parentElement;
+                    const val = input.value || input.getAttribute('data-val');
+                    // Input ko hide karke uski jagah plain text dalna sirf PDF ke liye
+                    const textNode = clonedDoc.createElement('span');
+                    textNode.innerText = val;
+                    textNode.style.fontSize = "12px";
+                    textNode.style.fontWeight = input.classList.contains('font-bold') ? 'bold' : 'normal';
+                    
+                    input.style.display = 'none';
+                    parent.appendChild(textNode);
+                });
+            }
+        });
+
+        const { jsPDF } = window.jspdf;
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        const pdfWidth = 210;
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+        const pdf = new jsPDF('p', 'mm', [pdfWidth, pdfHeight]);
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`TripStore_${paxName.replace(/\s+/g, '_')}.pdf`);
+        
+        showToast("PDF Downloaded!");
+    } catch (error) {
+        console.error("PDF Error:", error);
+    }
+}
+
+    async function downloadExcel() {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Travel Proposal');
+    const paxName = document.getElementById('paxNameInput').value || 'Traveler';
+
+    // Styling Constants (Matching your CSS)
+    const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF87CEEB' } }; // Sky Blue
+    const whiteFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
+    const borderStyle = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+    const boldFont = { bold: true, size: 10 };
+
+    // --- 1. TOP SUMMARY SECTION ---
+    sheet.addRow(['NAME OF PAX:', document.getElementById('resPaxName').innerText, 'NUMBER OF PAX:', document.getElementById('resPaxCount').innerText]);
+    sheet.addRow(['DESTINATION:', document.getElementById('resDest').innerText, 'TOTAL DURATION:', document.getElementById('resDuration').innerText]);
+    
+    // Grand Total Row
+    const totalRow = sheet.addRow(['GRAND TOTAL QUOTATION:', '', '', document.getElementById('resGrandTotal').innerText]);
+    sheet.mergeCells(`A3:C3`);
+    
+    // Style Summary Rows
+    [1, 2, 3].forEach(rowIdx => {
+        const row = sheet.getRow(rowIdx);
+        row.eachCell(cell => {
+            cell.border = borderStyle;
+            if (cell.address.includes('A') || cell.address.includes('C')) {
+                cell.fill = headerFill;
+                cell.font = boldFont;
+            }
+        });
+    });
+    sheet.getCell('D3').font = { bold: true, size: 14, color: { argb: 'FF1D4ED8' } }; // Blue text
+
+    // --- 2. HOTEL SECTION ---
+    sheet.addRow([]); // Spacer
+    const hotelHeader = sheet.addRow(['01. HOTEL STAYS']);
+    hotelHeader.font = { bold: true, size: 12, color: { argb: 'FF1E40AF' } };
+    
+    const hTableHead = sheet.addRow(['City', 'Check In', 'Check Out', 'Nts', 'Hotel Name', 'Room Type', 'Total Cost']);
+    hTableHead.eachCell(cell => { cell.fill = headerFill; cell.font = boldFont; cell.border = borderStyle; });
+
+    currentPlan.forEach(item => {
+        const hotelCost = (Number(item.hotel?.cost) || 0) * item.nights;
+        const row = sheet.addRow([
+            item.city.toUpperCase(),
+            formatDate(item.cin),
+            formatDate(item.cout),
+            item.nights,
+            `${item.hotel?.name || '---'} (or Similar)`,
+            item.hotel?.type || '---',
+            `₹${hotelCost.toLocaleString()}`
+        ]);
+        row.eachCell(cell => { cell.border = borderStyle; });
+    });
+
+    // --- 3. ITINERARY SECTION ---
+    sheet.addRow([]); // Spacer
+    const sightHeader = sheet.addRow(['02. DAY-WISE ITINERARY']);
+    sightHeader.font = { bold: true, size: 12, color: { argb: 'FF1E40AF' } };
+
+    const sTableHead = sheet.addRow(['Date', 'Planned Activities', 'City']);
+    sTableHead.eachCell(cell => { cell.fill = headerFill; cell.font = boldFont; cell.border = borderStyle; });
+
+    currentPlan.forEach(item => {
+        for(let d=0; d <= item.nights; d++) {
+            const activities = item.sights.filter(s => s.assignedDay === d);
+            const currentDayDate = new Date(item.cin);
+            currentDayDate.setDate(currentDayDate.getDate() + d);
+            
+            const actsText = activities.length > 0 
+                ? activities.map(s => `• ${s.info}`).join('\n') 
+                : 'Free Day / Transfer';
+
+            const row = sheet.addRow([
+                formatDate(currentDayDate),
+                actsText,
+                item.city.toUpperCase()
+            ]);
+            row.height = activities.length > 1 ? activities.length * 15 : 20;
+            row.eachCell(cell => { 
+                cell.border = borderStyle; 
+                cell.alignment = { wrapText: true, vertical: 'middle' }; 
+            });
+        }
+    });
+
+    // Column Widths
+    sheet.getColumn(1).width = 20;
+    sheet.getColumn(2).width = 50;
+    sheet.getColumn(3).width = 20;
+    sheet.getColumn(4).width = 10;
+    sheet.getColumn(5).width = 35;
+
+    // Generate and Download
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), `TripStore_${paxName}.xlsx`);
+    showToast("Excel Downloaded!");
+}
+    
+    function toggleModal(s) { document.getElementById('swapModal').classList.toggle('hidden', !s); }
+    function closeModal() { toggleModal(false); }
+    // --- AUTO LOGIN ON REFRESH ---
+function checkAutoLogin() {
+    const savedSession = localStorage.getItem("tripstore_session");
+    if (savedSession) {
+        const session = JSON.parse(savedSession);
+        isAdmin = session.isAdmin;
+        launchApp(session.modeText);
+    }
+}
+
+// Page load hote hi session check karo
+window.addEventListener('DOMContentLoaded', checkAutoLogin);
+</script>
+</body>
+</html>
