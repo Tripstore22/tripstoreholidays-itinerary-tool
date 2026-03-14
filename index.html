@@ -288,7 +288,7 @@
                                     <th class="p-2 border">From</th>
                                     <th class="p-2 border">To</th>
                                     <th class="p-2 border">Details</th>
-                                    <th class="p-2 border text-right">Cost</th>
+                                    <th class="p-2 border text-right price-col">Cost</th>
                                     <th class="p-2 border no-print">Action</th>
                                 </tr>
                             </thead>
@@ -353,10 +353,10 @@
     <button onclick="undoDelete()">UNDO</button>
 </div>
 
-<button onclick="alert(JSON.stringify(masterData.transfers.slice(0,3), null, 2))" 
+<!-- <button onclick="alert(JSON.stringify(masterData.transfers.slice(0,3), null, 2))" 
         style="position:fixed; top:10px; right:10px; z-index:9999; background:red; color:white; padding:5px;">
     Check Database Data
-</button>
+</button> -->
     
 
 <script>
@@ -762,30 +762,23 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
 // --- 2. TRANSFER ENGINE (N+2 Logic & Auto-Fill) ---
 // --- 2. TRANSFER ENGINE (City-Based & Auto-Budget Logic) ---
 // --- FULL OPTIMIZER ---
+// --- UPDATED OPTIMIZER (STRICT MATCH LOGIC) ---
 function optimizeTransfers(tBudgetTotal, paxCount) {
-    if (!masterData.transfers || masterData.transfers.length === 0) {
-        console.error("Master data khali hai!");
-        return;
-    }
+    if (!masterData.transfers || masterData.transfers.length === 0) return;
 
     const manualTransfers = selectedTransfers.filter(t => t.isManual);
     let newLegs = [];
-    
     const totalLegsNeeded = currentPlan.length + 1; 
     const limit = tBudgetTotal > 0 ? (tBudgetTotal / totalLegsNeeded) : 9999999;
 
-    /**
-     * @param {string} targetCity - City Name
-     * @param {string} fromMatch - Expected 'From' (e.g., 'Airport')
-     * @param {string} toMatch - Expected 'To' (e.g., 'Hotel')
-     */
-    const findCityMatch = (targetCity, fromMatch, toMatch) => {
+    // --- Strict Matching Logic ---
+    const findCityMatchStrict = (targetCity, fromMatch, toMatch, isStrict = false) => {
         if (!targetCity) return null;
         const sCity = targetCity.toLowerCase().trim();
         const sFrom = fromMatch.toLowerCase().trim();
         const sTo = toMatch.toLowerCase().trim();
 
-        // 1. STRIKT FILTER: City, From, aur To teeno match hone chahiye
+        // 1. EXACT MATCH SEARCH
         let matches = masterData.transfers.filter(t => {
             const dbCity = (t.city || "").toLowerCase().trim();
             const dbFrom = (t.from || "").toLowerCase().trim();
@@ -796,28 +789,24 @@ function optimizeTransfers(tBudgetTotal, paxCount) {
                    dbTo.includes(sTo);
         });
 
-        // 2. FALLBACK: Agar exact sequence nahi mila toh sirf City match dhoondo
-        if (matches.length === 0) {
+        // 2. FALLBACK (Only if NOT strict)
+        if (matches.length === 0 && !isStrict) {
             matches = masterData.transfers.filter(t => (t.city || "").toLowerCase().trim().includes(sCity));
         }
 
         if (matches.length === 0) return null;
 
-        // 3. SORT: Sabse sasta record pehle (Index 4/avgPrice logic)
         matches.sort((a, b) => (Number(a.avgPrice) || 0) - (Number(b.avgPrice) || 0));
-
-        // 4. BUDGET CHECK: Limit ke andar wala dhoondo, warna sabse sasta
         let found = matches.find(t => (Number(t.avgPrice) * paxCount) <= limit);
         return found || matches[0]; 
     };
 
-    // --- PROCESS EACH LEG ---
     const firstCity = currentPlan[0].city;
     const lastCity = currentPlan[currentPlan.length - 1].city;
 
-    // 1. Arrival Leg (Airport -> Hotel)
+    // 1. Arrival Leg (Airport -> Hotel) - Yahan Fallback chalega
     let arrivalMatch = manualTransfers.find(t => t.legId === `arrival-${firstCity}`) || 
-                       findCityMatch(firstCity, "Airport", "Hotel");
+                       findCityMatchStrict(firstCity, "Airport", "Hotel", false);
     
     newLegs.push({
         legId: `arrival-${firstCity}`,
@@ -825,33 +814,35 @@ function optimizeTransfers(tBudgetTotal, paxCount) {
         city: firstCity,
         from: arrivalMatch ? arrivalMatch.from : "Airport",
         to: arrivalMatch ? arrivalMatch.to : "Hotel",
-        details: arrivalMatch ? (arrivalMatch.duration || arrivalMatch.details) : `Standard Arrival in ${firstCity}`,
-        avgPrice: arrivalMatch ? Number(arrivalMatch.avgPrice) : 0, // Index 4 Price
+        details: arrivalMatch ? (arrivalMatch.duration || arrivalMatch.details) : `Arrival in ${firstCity}`,
+        avgPrice: arrivalMatch ? Number(arrivalMatch.avgPrice) : 0,
         isManual: arrivalMatch ? arrivalMatch.isManual : false
     });
 
-    // 2. Inter-City Legs
+    // 2. Inter-City Legs (STRICT: Sirf wahi uthaye jo DB mein hai)
     for (let i = 0; i < currentPlan.length - 1; i++) {
         const fromC = currentPlan[i].city;
         const toC = currentPlan[i+1].city;
         const legKey = `inter-${fromC}-${toC}`;
-        let interMatch = manualTransfers.find(t => t.legId === legKey) || findCityMatch(fromC, fromC, toC);
+        
+        // Isme 'true' pass kiya hai taaki fallback na chale
+        let interMatch = manualTransfers.find(t => t.legId === legKey) || findCityMatchStrict(fromC, fromC, toC, true);
         
         newLegs.push({
             legId: legKey,
             date: currentPlan[i].cout,
             city: fromC,
-            from: interMatch ? interMatch.from : fromC,
-            to: interMatch ? interMatch.to : toC,
-            details: interMatch ? (interMatch.duration || interMatch.details) : `Transfer: ${fromC} to ${toC}`,
-            avgPrice: interMatch ? Number(interMatch.avgPrice) : 0, // Index 4 Price
+            from: interMatch ? interMatch.from : "", // Blank if not found
+            to: interMatch ? interMatch.to : "",     // Blank if not found
+            details: interMatch ? (interMatch.duration || interMatch.details) : "", // Blank row
+            avgPrice: interMatch ? Number(interMatch.avgPrice) : 0,
             isManual: interMatch ? interMatch.isManual : false
         });
     }
 
-    // 3. Departure Leg (Hotel -> Airport)
+    // 3. Departure Leg (Hotel -> Airport) - Yahan Fallback chalega
     let departureMatch = manualTransfers.find(t => t.legId === `departure-${lastCity}`) || 
-                         findCityMatch(lastCity, "Hotel", "Airport");
+                         findCityMatchStrict(lastCity, "Hotel", "Airport", false);
 
     newLegs.push({
         legId: `departure-${lastCity}`,
@@ -859,15 +850,14 @@ function optimizeTransfers(tBudgetTotal, paxCount) {
         city: lastCity,
         from: departureMatch ? departureMatch.from : "Hotel",
         to: departureMatch ? departureMatch.to : "Airport",
-        details: departureMatch ? (departureMatch.duration || departureMatch.details) : `Standard Departure from ${lastCity}`,
-        avgPrice: departureMatch ? Number(departureMatch.avgPrice) : 0, // Index 4 Price
+        details: departureMatch ? (departureMatch.duration || departureMatch.details) : `Departure from ${lastCity}`,
+        avgPrice: departureMatch ? Number(departureMatch.avgPrice) : 0,
         isManual: departureMatch ? departureMatch.isManual : false
     });
 
     selectedTransfers = newLegs;
-    if (typeof renderTables === "function") renderTables(); // Refresh Table
+    renderTables();
 }
-
 // Helper function to keep code clean
 function formatLeg(dbMatch, legId, date, defFrom, defTo) {
     return {
@@ -881,26 +871,232 @@ function formatLeg(dbMatch, legId, date, defFrom, defTo) {
         isManual: dbMatch ? dbMatch.isManual : false
     };
 }
-// --- 2. RENDER TABLE (WITH EDITABLE INPUTS) ---
-function renderTables() {
-    let hHtml = ""; let sHtml = ""; 
-    const paxCount = Number(document.getElementById('paxCountInput').value) || 1;
-    if(document.getElementById('resPaxCount')) document.getElementById('resPaxCount').innerText = paxCount;
+// // --- 2. RENDER TABLE (WITH EDITABLE INPUTS) ---
+// function renderTables() {
+//     let hHtml = ""; 
+//     let sHtml = ""; 
+//     const paxCount = Number(document.getElementById('paxCountInput').value) || 1;
 
-    // Hotel & Sightseeing Render
-    currentPlan.forEach((item) => {
-        const hotelCostTotal = (Number(item.hotel?.cost) || 0) * item.nights;
-        hHtml += `<tr><td class="font-bold uppercase">${item.city}</td><td>${formatDate(item.cin)}</td><td>${formatDate(item.cout)}</td><td class="text-center font-bold">${item.nights}</td><td><b class="uppercase text-[10px]">${item.hotel?.name || '---'}</b></td><td><span class="text-blue-600 italic text-[9px]">${item.hotel?.type || '---'}</span></td><td class="text-center font-bold">₹${hotelCostTotal.toLocaleString()}</td><td class="no-print"><button onclick="openHotelSwap(${item.id})" class="text-blue-600 underline text-[10px]">SWAP</button></td></tr>`;
+//     // 1. UPDATE SUMMARY TABLE HEADERS (Pax Count)
+//     if(document.getElementById('resPaxCount')) {
+//         document.getElementById('resPaxCount').innerText = paxCount;
+//     }
+
+//     // 2. HOTEL & SIGHTSEEING RENDER
+//     currentPlan.forEach((item) => {
+//         const hotelCostTotal = (Number(item.hotel?.cost) || 0) * item.nights;
+//         hHtml += `
+//             <tr>
+//                 <td class="font-bold uppercase">${item.city}</td>
+//                 <td>${formatDate(item.cin)}</td>
+//                 <td>${formatDate(item.cout)}</td>
+//                 <td class="text-center font-bold">${item.nights}</td>
+//                 <td><b class="uppercase text-[10px]">${item.hotel?.name || '---'}</b></td>
+//                 <td><span class="text-blue-600 italic text-[9px]">${item.hotel?.type || '---'}</span></td>
+//                 <td class="text-center font-bold price-col">₹${hotelCostTotal.toLocaleString()}</td>
+//                 <td class="no-print"><button onclick="openHotelSwap(${item.id})" class="text-blue-600 underline text-[10px]">SWAP</button></td>
+//             </tr>`;
         
+//         for(let d=0; d <= item.nights; d++){
+//             const activities = item.sights.filter(s => s.assignedDay === d);
+//             const curDate = new Date(item.cin); 
+//             curDate.setDate(curDate.getDate() + d);
+//             const acts = activities.map(s => `
+//                 <div class="flex justify-between text-[10px]">
+//                     <span>• ${s.info}</span>
+//                     <span class="text-slate-400 price-col">₹${(s.price * paxCount).toLocaleString()}</span>
+//                 </div>`).join('') || '<span class="text-slate-300 italic text-[10px]">Free Day</span>';
+            
+//             sHtml += `
+//                 <tr>
+//                     <td class="text-center font-bold text-[10px]">${formatDate(curDate)}</td>
+//                     <td>${acts}</td>
+//                     <td class="font-bold uppercase text-center text-[10px]">${item.city}</td>
+//                     <td class="no-print"><button onclick="openSightSwap(${item.id})" class="text-blue-600 underline text-[10px]">EDIT</button></td>
+//                 </tr>`;
+//         }
+//     });
+
+//     // 3. TRANSFERS TABLE RENDER (Added 'pdf-input' class to fix blank PDF issue)
+//     const tBody = document.getElementById('transferTableBody');
+//     if (tBody) {
+//         tBody.innerHTML = selectedTransfers.map((t, idx) => {
+//             const totalCost = Math.round(Number(t.avgPrice || 0) * paxCount);
+//             return `
+//                 <tr class="${t.isManual ? 'bg-blue-50/50' : ''}">
+//                     <td class="p-2 border text-[10px] font-bold">${formatDate(t.date)}</td>
+//                     <td class="p-2 border text-[10px] font-black text-blue-700 uppercase">${t.city || '---'}</td>
+//                     <td class="p-2 border">
+//                         <input type="text" value="${t.from || ''}" onchange="editTransfer(${idx}, 'from', this.value)" 
+//                                class="pdf-input w-full bg-transparent outline-none uppercase font-bold text-[10px]">
+//                     </td>
+//                     <td class="p-2 border">
+//                         <input type="text" value="${t.to || ''}" onchange="editTransfer(${idx}, 'to', this.value)" 
+//                                class="pdf-input w-full bg-transparent outline-none uppercase font-bold text-[10px]">
+//                     </td>
+//                     <td class="p-2 border">
+//                         <textarea onchange="editTransfer(${idx}, 'details', this.value)" 
+//                                   class="pdf-input w-full bg-transparent outline-none italic text-[9px] leading-tight resize-none">${t.details || ''}</textarea>
+//                     </td>
+//                     <td class="p-2 border font-bold text-right text-blue-900 text-xs price-col">
+//                         <div class="flex items-center justify-end">
+//                             <span>₹</span>
+//                             <input type="number" value="${totalCost}" onchange="editTransfer(${idx}, 'avgPrice', this.value)" 
+//                                    class="pdf-input w-20 text-right bg-transparent outline-none font-bold">
+//                         </div>
+//                     </td>
+//                     <td class="p-2 border text-center no-print">
+//                         <button onclick="deleteTransferLeg(${idx})" class="text-red-400 mr-2">✕</button>
+//                         <button onclick="openTransferSwap('${t.legId}')" class="text-blue-600 font-bold text-[10px]">SWAP</button>
+//                     </td>
+//                 </tr>`;
+//         }).join('');
+//     }
+
+//     // 4. INTERCITY RENDER (Added 'pdf-input' class)
+//     const icBody = document.getElementById('ferryBusTableBody');
+//     if (icBody) {
+//         icBody.innerHTML = selectedIntercity.map((ic, idx) => `
+//             <tr class="${ic.isManual ? 'bg-blue-50/30' : ''}">
+//                 <td class="p-2 border text-[10px] font-bold">${formatDate(ic.date)}</td>
+//                 <td class="p-2 border">
+//                     <input type="text" value="${ic.mode}" onchange="editIntercity(${idx}, 'mode', this.value)" 
+//                            class="pdf-input w-full bg-transparent outline-none font-bold text-blue-700 uppercase text-[10px]">
+//                 </td>
+//                 <td class="p-2 border">
+//                     <input type="text" value="${ic.fromTo}" onchange="editIntercity(${idx}, 'fromTo', this.value)" 
+//                            class="pdf-input w-full bg-transparent outline-none font-medium text-[10px]">
+//                 </td>
+//                 <td class="p-2 border">
+//                     <input type="text" value="${ic.notes}" onchange="editIntercity(${idx}, 'notes', this.value)" 
+//                            class="pdf-input w-full bg-transparent outline-none italic text-slate-500 text-[10px]" placeholder="Notes...">
+//                 </td>
+//                 <td class="p-2 border font-bold text-right price-col">
+//                     <div class="flex items-center justify-end ">
+//                         <span>₹</span>
+//                         <input type="number" value="${Math.round(ic.price * paxCount)}" onchange="editIntercity(${idx}, 'price', this.value)" 
+//                                class="pdf-input w-20 text-right bg-transparent outline-none font-bold text-blue-800">
+//                     </div>
+//                 </td>
+//                 <td class="p-2 border text-center no-print">
+//                     <button onclick="selectedIntercity.splice(${idx}, 1); renderTables();" class="text-red-500 font-bold mr-2">✕</button>
+//                     <button onclick="openIntercitySwap('${ic.legId}')" class="text-blue-600 font-bold text-[10px]">SWAP</button>
+//                 </td>
+//             </tr>`).join('');
+//     }
+
+//     // 5. FINAL UI UPDATES (Hotel/Sightseeing Bodies)
+//     document.getElementById('hotelTableBody').innerHTML = hHtml;
+//     document.getElementById('sightTableBody').innerHTML = sHtml;
+
+//     // 6. DYNAMIC SUMMARY (Destination & Duration Update)
+//     const uniqueCities = [...new Set(currentPlan.map(p => p.city.toUpperCase()))];
+//     const destinationEl = document.getElementById('resDest');
+//     if (destinationEl) {
+//         destinationEl.innerText = uniqueCities.join(' - ') || '---';
+//     }
+
+//     const totalNights = currentPlan.reduce((sum, row) => sum + (Number(row.nights) || 0), 0);
+//     const durationEl = document.getElementById('resDuration');
+//     if (durationEl) {
+//         durationEl.innerText = `${totalNights} NIGHTS`;
+//     }
+
+//     // 7. TOTAL CALCULATION
+//     if(typeof calculateBudgetInvestment === "function") {
+//         calculateBudgetInvestment();
+//     }
+// }
+// --- 2. RENDER TABLE (FIXED PRICE & NO DECIMALS) ---
+function renderTables() {
+    let hHtml = ""; 
+    let sHtml = ""; 
+    const paxCount = Number(document.getElementById('paxCountInput').value) || 1;
+
+    // 1. UPDATE SUMMARY TABLE HEADERS
+    if(document.getElementById('resPaxCount')) {
+        document.getElementById('resPaxCount').innerText = paxCount;
+    }
+
+    // 2. HOTEL & SIGHTSEEING RENDER
+    currentPlan.forEach((item, planIdx) => {
+        // Decimal hatane ke liye Math.round use kiya
+        const hotelCostTotal = Math.round((Number(item.hotel?.cost) || 0) * item.nights);
+        
+        // --- HOTEL ROW ---
+        // --- HOTEL ROW (FORCE POSITION FIX) ---
+hHtml += `
+    <tr class="border-b">
+        <td class="font-bold uppercase p-2 border text-[10px] whitespace-nowrap">${item.city}</td>
+        <td class="p-2 border text-[10px] text-center">${formatDate(item.cin)}</td>
+        <td class="p-2 border text-[10px] text-center">${formatDate(item.cout)}</td>
+        <td class="text-center font-bold p-2 border text-[10px] w-10">${item.nights}</td>
+        
+        <td class="p-2 border min-w-[120px]">
+            <input type="text" value="${item.hotel?.name || ''}" 
+                onchange="currentPlan[${planIdx}].hotel.name = this.value"
+                class="pdf-input w-full bg-transparent outline-none uppercase font-bold text-[10px]">
+        </td>
+        
+        <td class="p-2 border relative" style="min-width: 100px; max-width: 150px; overflow: hidden;">
+            <input type="text" value="${item.hotel?.type || ''}" 
+                onchange="currentPlan[${planIdx}].hotel.type = this.value"
+                class="pdf-input w-full bg-transparent outline-none text-blue-600 italic text-[9px] truncate"
+                style="display: block; width: 100%;">
+        </td>
+        
+        <td class="price-col p-2 border bg-slate-50/30" style="width: 110px !important; min-width: 110px !important; max-width: 110px !important;">
+            <div class="flex items-center justify-end" style="display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; width: 100%;">
+                <span style="font-weight: bold; font-size: 11px; color: #333; flex-shrink: 0; margin-right: 2px;">₹</span>
+                <input type="number" value="${Math.round(hotelCostTotal)}" 
+                    onchange="currentPlan[${planIdx}].hotel.cost = (Number(this.value) / ${item.nights || 1}); calculateBudgetInvestment();" 
+                    class="pdf-input text-right bg-transparent outline-none font-bold text-[11px]"
+                    style="width: 70px !important; border: none; flex-shrink: 0;">
+            </div>
+        </td>
+        
+        <td class="no-print p-2 border text-center w-16">
+            <button onclick="openHotelSwap(${item.id})" class="text-blue-600 underline text-[10px] font-bold">SWAP</button>
+        </td>
+    </tr>`;
+        
+        // --- SIGHTSEEING ROWS ---
         for(let d=0; d <= item.nights; d++){
             const activities = item.sights.filter(s => s.assignedDay === d);
-            const curDate = new Date(item.cin); curDate.setDate(curDate.getDate() + d);
-            const acts = activities.map(s => `<div class="flex justify-between text-[10px]"><span>• ${s.info}</span><span class="text-slate-400">₹${(s.price * paxCount).toLocaleString()}</span></div>`).join('') || '<span class="text-slate-300 italic text-[10px]">Free Day</span>';
-            sHtml += `<tr><td class="text-center font-bold text-[10px]">${formatDate(curDate)}</td><td>${acts}</td><td class="font-bold uppercase text-center text-[10px]">${item.city}</td><td class="no-print"><button onclick="openSightSwap(${item.id})" class="text-blue-600 underline text-[10px]">EDIT</button></td></tr>`;
+            const curDate = new Date(item.cin); 
+            curDate.setDate(curDate.getDate() + d);
+            
+            const actsMarkup = activities.map((s) => {
+                const sIdx = item.sights.findIndex(found => found.id === s.id);
+                // Decimal hataya
+                const sTotal = Math.round(s.price * paxCount);
+                return `
+                <div class="flex justify-between items-center text-[10px] mb-1 gap-1 border-b border-slate-50 last:border-0 pb-1">
+                    <input type="text" value="${s.info}" 
+                        onchange="currentPlan[${planIdx}].sights[${sIdx}].info = this.value"
+                        class="pdf-input flex-1 bg-transparent outline-none truncate">
+                    <div class="price-col flex items-center text-slate-500 whitespace-nowrap ml-2 min-w-[80px] justify-end">
+                        <span class="mr-1">₹</span>
+                        <input type="number" value="${sTotal}" 
+                            onchange="currentPlan[${planIdx}].sights[${sIdx}].price = (Number(this.value) / ${paxCount}); calculateBudgetInvestment();" 
+                            class="pdf-input w-16 text-right bg-transparent outline-none font-medium">
+                    </div>
+                </div>`;
+            }).join('') || '<span class="text-slate-300 italic text-[10px]">Free Day / Transfer</span>';
+            
+            sHtml += `
+                <tr>
+                    <td class="text-center font-bold text-[10px] p-2 border">${formatDate(curDate)}</td>
+                    <td class="p-2 border">${actsMarkup}</td>
+                    <td class="font-bold uppercase text-center text-[10px] p-2 border">${item.city}</td>
+                    <td class="no-print p-2 border text-center w-16">
+                        <button onclick="openSightSwap(${item.id})" class="text-blue-600 underline text-[10px] font-bold">EDIT</button>
+                    </td>
+                </tr>`;
         }
     });
 
-    // Transfers Table Render
+    // 3. TRANSFERS TABLE RENDER
     const tBody = document.getElementById('transferTableBody');
     if (tBody) {
         tBody.innerHTML = selectedTransfers.map((t, idx) => {
@@ -909,29 +1105,72 @@ function renderTables() {
                 <tr class="${t.isManual ? 'bg-blue-50/50' : ''}">
                     <td class="p-2 border text-[10px] font-bold">${formatDate(t.date)}</td>
                     <td class="p-2 border text-[10px] font-black text-blue-700 uppercase">${t.city || '---'}</td>
-                    <td class="p-2 border"><input type="text" value="${t.from || ''}" onchange="editTransfer(${idx}, 'from', this.value)" class="w-full bg-transparent outline-none uppercase font-bold text-[10px]"></td>
-                    <td class="p-2 border"><input type="text" value="${t.to || ''}" onchange="editTransfer(${idx}, 'to', this.value)" class="w-full bg-transparent outline-none uppercase font-bold text-[10px]"></td>
-                    <td class="p-2 border"><textarea onchange="editTransfer(${idx}, 'details', this.value)" class="w-full bg-transparent outline-none italic text-[9px] leading-tight resize-none">${t.details || ''}</textarea></td>
-                    <td class="p-2 border font-bold text-right text-blue-900 text-xs">
-                        <div class="flex items-center justify-end"><span>₹</span><input type="number" value="${totalCost}" onchange="editTransfer(${idx}, 'avgPrice', this.value)" class="w-20 text-right bg-transparent outline-none font-bold"></div>
+                    <td class="p-2 border"><input type="text" value="${t.from || ''}" onchange="editTransfer(${idx}, 'from', this.value)" class="pdf-input w-full bg-transparent outline-none uppercase font-bold text-[10px]"></td>
+                    <td class="p-2 border"><input type="text" value="${t.to || ''}" onchange="editTransfer(${idx}, 'to', this.value)" class="pdf-input w-full bg-transparent outline-none uppercase font-bold text-[10px]"></td>
+                    <td class="p-2 border min-w-[200px]">
+                        <textarea onchange="editTransfer(${idx}, 'details', this.value)" 
+                                  class="pdf-input w-full bg-transparent outline-none italic text-[9px] leading-tight resize-none min-h-[50px] overflow-y-auto block" 
+                                  placeholder="Details...">${t.details || ''}</textarea>
                     </td>
-                    <td class="p-2 border text-center no-print"><button onclick="deleteTransferLeg(${idx})" class="text-red-400 mr-2">✕</button><button onclick="openTransferSwap('${t.legId}')" class="text-blue-600 font-bold text-[10px]">SWAP</button></td>
+                    <td class="price-col p-2 border w-32 font-bold text-blue-900">
+                        <div class="flex items-center justify-end whitespace-nowrap">
+                            <span class="mr-1 text-[11px]">₹</span>
+                            <input type="number" value="${totalCost}" 
+                                   onchange="editTransfer(${idx}, 'avgPrice', this.value)" 
+                                   class="pdf-input w-20 text-right bg-transparent outline-none font-bold">
+                        </div>
+                    </td>
+                    <td class="p-2 border text-center no-print w-20">
+                        <button onclick="deleteTransferLeg(${idx})" class="text-red-400 mr-2 font-bold text-lg">✕</button>
+                        <button onclick="openTransferSwap('${t.legId}')" class="text-blue-600 font-bold text-[10px]">SWAP</button>
+                    </td>
                 </tr>`;
         }).join('');
     }
 
-    // Intercity Render
+    // 4. INTERCITY RENDER
     const icBody = document.getElementById('ferryBusTableBody');
     if (icBody) {
-        icBody.innerHTML = selectedIntercity.map((ic, idx) => `
-            <tr><td class="p-2 border text-[10px] font-bold">${formatDate(ic.date)}</td><td class="p-2 border"><input type="text" value="${ic.mode}" onchange="editIntercity(${idx}, 'mode', this.value)" class="w-full bg-transparent outline-none font-bold text-blue-700 uppercase text-[10px]"></td><td class="p-2 border"><input type="text" value="${ic.fromTo}" onchange="editIntercity(${idx}, 'fromTo', this.value)" class="w-full bg-transparent outline-none font-medium text-[10px]"></td><td class="p-2 border"><input type="text" value="${ic.notes}" onchange="editIntercity(${idx}, 'notes', this.value)" class="w-full bg-transparent outline-none italic text-slate-500 text-[10px]"></td><td class="p-2 border font-bold text-right text-[11px]"><div class="flex items-center justify-end"><span>₹</span><input type="number" value="${Math.round(ic.price * paxCount)}" onchange="editIntercity(${idx}, 'price', this.value)" class="w-20 text-right bg-transparent outline-none font-bold text-blue-800"></div></td><td class="p-2 border text-center no-print"><button onclick="selectedIntercity.splice(${idx}, 1); renderTables();" class="text-red-500 font-bold mr-2">✕</button></td></tr>
-        `).join('');
+        icBody.innerHTML = selectedIntercity.map((ic, idx) => {
+            const icTotal = Math.round(ic.price * paxCount);
+            return `
+            <tr class="${ic.isManual ? 'bg-blue-50/30' : ''}">
+                <td class="p-2 border text-[10px] font-bold">${formatDate(ic.date)}</td>
+                <td class="p-2 border"><input type="text" value="${ic.mode}" onchange="editIntercity(${idx}, 'mode', this.value)" class="pdf-input w-full bg-transparent outline-none font-bold text-blue-700 uppercase text-[10px]"></td>
+                <td class="p-2 border"><input type="text" value="${ic.fromTo}" onchange="editIntercity(${idx}, 'fromTo', this.value)" class="pdf-input w-full bg-transparent outline-none font-medium text-[10px]"></td>
+                <td class="p-2 border"><input type="text" value="${ic.notes}" onchange="editIntercity(${idx}, 'notes', this.value)" class="pdf-input w-full bg-transparent outline-none italic text-slate-500 text-[10px]"></td>
+                <td class="price-col p-2 border w-32 font-bold text-blue-800">
+                    <div class="flex items-center justify-end whitespace-nowrap">
+                        <span class="mr-1 text-[11px]">₹</span>
+                        <input type="number" value="${icTotal}" 
+                               onchange="editIntercity(${idx}, 'price', this.value)" 
+                               class="pdf-input w-20 text-right bg-transparent outline-none font-bold">
+                    </div>
+                </td>
+                <td class="p-2 border text-center no-print w-20">
+                    <button onclick="selectedIntercity.splice(${idx}, 1); renderTables();" class="text-red-500 font-bold mr-2">✕</button>
+                    <button onclick="openIntercitySwap('${ic.legId}')" class="text-blue-600 font-bold text-[10px]">SWAP</button>
+                </td>
+            </tr>`;
+        }).join('');
     }
 
+    // 5. FINAL UI UPDATES
     document.getElementById('hotelTableBody').innerHTML = hHtml;
     document.getElementById('sightTableBody').innerHTML = sHtml;
+
+    // 6. DYNAMIC SUMMARY
+    const uniqueCities = [...new Set(currentPlan.map(p => p.city.toUpperCase()))];
+    if(document.getElementById('resDest')) document.getElementById('resDest').innerText = uniqueCities.join(' - ') || '---';
+
+    const totalNights = currentPlan.reduce((sum, row) => sum + (Number(row.nights) || 0), 0);
+    if(document.getElementById('resDuration')) document.getElementById('resDuration').innerText = `${totalNights} NIGHTS`;
+
+    // 7. TOTAL CALCULATION
     if(typeof calculateBudgetInvestment === "function") calculateBudgetInvestment();
 }
+
+
 // --- 1. OPEN SWAP MODAL ---
 function openTransferSwap(legId) {
     window.activeLegId = legId; 
@@ -1098,6 +1337,9 @@ function editTransfer(index, field, value) {
     if (typeof calculateBudgetInvestment === "function") calculateBudgetInvestment();
 }
 
+let undoTimer; // Ye line functions ke bahar honi chahiye
+let lastDeletedTransfer = null;
+let lastDeletedIndex = null;
 function deleteTransferLeg(index) {
     lastDeletedTransfer = selectedTransfers[index];
     lastDeletedIndex = index;
@@ -1319,8 +1561,8 @@ function calculateBudgetInvestment() {
 
     const netTotal = hNet + sNet + tNet + icNet; 
     const markupValue = netTotal * (mPct / 100);
-    const gstValue = (netTotal + markupValue) * (gPct / 100);
-
+    // const gstValue = (netTotal + markupValue) * (gPct / 100);
+    const gstValue = markupValue * (gPct / 100);
     // Update UI Labels
     if(document.getElementById('netH')) document.getElementById('netH').innerText = `₹${hNet.toLocaleString()}`;
     if(document.getElementById('netS')) document.getElementById('netS').innerText = `₹${sNet.toLocaleString()}`;
@@ -1684,7 +1926,7 @@ function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-GB', { da
     const element = document.getElementById('pdf-content');
     const paxName = document.getElementById('paxNameInput').value || 'Traveler';
     
-    showToast("Generating High-Res PDF...");
+    showToast("Generating PDF with Internal Analysis...");
 
     try {
         const canvas = await html2canvas(element, {
@@ -1692,20 +1934,40 @@ function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-GB', { da
             useCORS: true,
             allowTaint: true,
             backgroundColor: "#ffffff",
-            // YEAH LOGIC INPUTS KO PDF MEIN VISIBLE BANAYEGA
             onclone: (clonedDoc) => {
-                const inputs = clonedDoc.querySelectorAll('.pdf-input');
-                inputs.forEach(input => {
+                // 1. PROFITABILITY SECTION KO DHUND KAR SHOW KARNA
+                // Yahan 'profitability-section' ki jagah wo ID likhein jo aapke internal part ki hai
+                const internalPart = clonedDoc.querySelector('.profitability-analysis-class') || clonedDoc.getElementById('internalSectionID');
+                
+                if (internalPart) {
+                    internalPart.style.display = 'block'; // Hide hai toh show kar dega
+                    internalPart.classList.remove('no-print', 'hidden'); // Classes hatayega
+                    internalPart.style.visibility = 'visible';
+                }
+
+                // 2. SARE INPUTS KO TEXT MEIN BADALNA (Internal Analysis ke andar wale bhi)
+                const allInputs = clonedDoc.querySelectorAll('.pdf-input, input, textarea');
+                allInputs.forEach(input => {
                     const parent = input.parentElement;
-                    const val = input.value || input.getAttribute('data-val');
-                    // Input ko hide karke uski jagah plain text dalna sirf PDF ke liye
+                    const val = input.value || input.getAttribute('data-val') || '---';
+                    
                     const textNode = clonedDoc.createElement('span');
                     textNode.innerText = val;
-                    textNode.style.fontSize = "12px";
-                    textNode.style.fontWeight = input.classList.contains('font-bold') ? 'bold' : 'normal';
-                    
+                    textNode.style.fontSize = "11px";
+                    textNode.style.fontWeight = "bold";
+                    textNode.style.color = "#000"; 
+
                     input.style.display = 'none';
                     parent.appendChild(textNode);
+                });
+
+                // 3. फालतू BUTTONS HIDE KARNA (SWAP/EDIT wagera)
+                const hideElements = clonedDoc.querySelectorAll('.no-print');
+                hideElements.forEach(el => {
+                    // Agar ye element profitability section ke andar NAHI hai, tabhi hide karein
+                    if (internalPart && !internalPart.contains(el)) {
+                        el.style.display = 'none';
+                    }
                 });
             }
         });
@@ -1717,11 +1979,12 @@ function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-GB', { da
 
         const pdf = new jsPDF('p', 'mm', [pdfWidth, pdfHeight]);
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`TripStore_${paxName.replace(/\s+/g, '_')}.pdf`);
+        pdf.save(`Internal_TripStore_${paxName.replace(/\s+/g, '_')}.pdf`);
         
-        showToast("PDF Downloaded!");
+        showToast("PDF Downloaded with Analysis!");
     } catch (error) {
         console.error("PDF Error:", error);
+        showToast("Error generating PDF");
     }
 }
 
@@ -1729,10 +1992,10 @@ function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-GB', { da
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Travel Proposal');
     const paxName = document.getElementById('paxNameInput').value || 'Traveler';
+    const paxCount = Number(document.getElementById('paxCountInput').value) || 1;
 
-    // Styling Constants (Matching your CSS)
+    // Styling Constants
     const headerFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF87CEEB' } }; // Sky Blue
-    const whiteFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
     const borderStyle = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
     const boldFont = { bold: true, size: 10 };
 
@@ -1740,11 +2003,9 @@ function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-GB', { da
     sheet.addRow(['NAME OF PAX:', document.getElementById('resPaxName').innerText, 'NUMBER OF PAX:', document.getElementById('resPaxCount').innerText]);
     sheet.addRow(['DESTINATION:', document.getElementById('resDest').innerText, 'TOTAL DURATION:', document.getElementById('resDuration').innerText]);
     
-    // Grand Total Row
     const totalRow = sheet.addRow(['GRAND TOTAL QUOTATION:', '', '', document.getElementById('resGrandTotal').innerText]);
     sheet.mergeCells(`A3:C3`);
     
-    // Style Summary Rows
     [1, 2, 3].forEach(rowIdx => {
         const row = sheet.getRow(rowIdx);
         row.eachCell(cell => {
@@ -1755,9 +2016,9 @@ function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-GB', { da
             }
         });
     });
-    sheet.getCell('D3').font = { bold: true, size: 14, color: { argb: 'FF1D4ED8' } }; // Blue text
+    sheet.getCell('D3').font = { bold: true, size: 14, color: { argb: 'FF1D4ED8' } };
 
-    // --- 2. HOTEL SECTION ---
+    // --- 2. HOTEL SECTION (01) ---
     sheet.addRow([]); // Spacer
     const hotelHeader = sheet.addRow(['01. HOTEL STAYS']);
     hotelHeader.font = { bold: true, size: 12, color: { argb: 'FF1E40AF' } };
@@ -1779,7 +2040,7 @@ function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-GB', { da
         row.eachCell(cell => { cell.border = borderStyle; });
     });
 
-    // --- 3. ITINERARY SECTION ---
+    // --- 3. ITINERARY SECTION (02) ---
     sheet.addRow([]); // Spacer
     const sightHeader = sheet.addRow(['02. DAY-WISE ITINERARY']);
     sightHeader.font = { bold: true, size: 12, color: { argb: 'FF1E40AF' } };
@@ -1797,12 +2058,7 @@ function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-GB', { da
                 ? activities.map(s => `• ${s.info}`).join('\n') 
                 : 'Free Day / Transfer';
 
-            const row = sheet.addRow([
-                formatDate(currentDayDate),
-                actsText,
-                item.city.toUpperCase()
-            ]);
-            row.height = activities.length > 1 ? activities.length * 15 : 20;
+            const row = sheet.addRow([formatDate(currentDayDate), actsText, item.city.toUpperCase()]);
             row.eachCell(cell => { 
                 cell.border = borderStyle; 
                 cell.alignment = { wrapText: true, vertical: 'middle' }; 
@@ -1810,17 +2066,59 @@ function formatDate(d) { return d ? new Date(d).toLocaleDateString('en-GB', { da
         }
     });
 
-    // Column Widths
-    sheet.getColumn(1).width = 20;
-    sheet.getColumn(2).width = 50;
-    sheet.getColumn(3).width = 20;
-    sheet.getColumn(4).width = 10;
-    sheet.getColumn(5).width = 35;
+    // --- 4. TRANSFERS SECTION (03) ---
+    sheet.addRow([]); // Spacer
+    const transHeader = sheet.addRow(['03. GROUND TRANSFERS']);
+    transHeader.font = { bold: true, size: 12, color: { argb: 'FF1E40AF' } };
+
+    const tTableHead = sheet.addRow(['Date', 'City', 'From', 'To', 'Transfer Details', 'Price']);
+    tTableHead.eachCell(cell => { cell.fill = headerFill; cell.font = boldFont; cell.border = borderStyle; });
+
+    selectedTransfers.forEach(t => {
+        const price = Math.round(Number(t.avgPrice || 0) * paxCount);
+        const row = sheet.addRow([
+            formatDate(t.date),
+            (t.city || '---').toUpperCase(),
+            (t.from || '').toUpperCase(),
+            (t.to || '').toUpperCase(),
+            t.details || 'Standard Transfer',
+            `₹${price.toLocaleString()}`
+        ]);
+        row.eachCell(cell => { cell.border = borderStyle; cell.alignment = { wrapText: true } });
+    });
+
+    // --- 5. INTERCITY SECTION (04) ---
+    sheet.addRow([]); // Spacer
+    const icHeader = sheet.addRow(['04. TRAIN / FERRY / BUS']);
+    icHeader.font = { bold: true, size: 12, color: { argb: 'FF1E40AF' } };
+
+    const icTableHead = sheet.addRow(['Date', 'Mode', 'Sector (From - To)', 'Schedule/Notes', 'Price']);
+    icTableHead.eachCell(cell => { cell.fill = headerFill; cell.font = boldFont; cell.border = borderStyle; });
+
+    selectedIntercity.forEach(ic => {
+        const price = Math.round(Number(ic.price || 0) * paxCount);
+        const row = sheet.addRow([
+            formatDate(ic.date),
+            (ic.mode || '---').toUpperCase(),
+            (ic.fromTo || '---').toUpperCase(),
+            ic.notes || '---',
+            `₹${price.toLocaleString()}`
+        ]);
+        row.eachCell(cell => { cell.border = borderStyle; });
+    });
+
+    // Final Formatting: Column Widths
+    sheet.getColumn(1).width = 15; // Date
+    sheet.getColumn(2).width = 25; // Mode/City
+    sheet.getColumn(3).width = 30; // From/Sector
+    sheet.getColumn(4).width = 30; // To/Notes
+    sheet.getColumn(5).width = 45; // Details
+    sheet.getColumn(6).width = 15; // Price
 
     // Generate and Download
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), `TripStore_${paxName}.xlsx`);
-    showToast("Excel Downloaded!");
+    saveAs(new Blob([buffer]), `TripStore_${paxName.replace(/\s+/g, '_')}.xlsx`);
+    showToast("Excel Downloaded Successfully!");
 }
     
     function toggleModal(s) { document.getElementById('swapModal').classList.toggle('hidden', !s); }
