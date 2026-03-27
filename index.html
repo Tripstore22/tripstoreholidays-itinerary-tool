@@ -465,6 +465,7 @@ async function checkLogin() {
                     username: user,
                     password: pass
                 })
+            });
             const result = await response.json();
             
             if (result.success) {
@@ -474,7 +475,6 @@ async function checkLogin() {
             } else {
                 document.getElementById('loginError').innerText = "❌ " + (result.error || "Signup failed");
                 document.getElementById('loginError').classList.remove('hidden');
-            }
             }
         } catch (e) {
             showToast("Signup Failed", "error");
@@ -510,16 +510,16 @@ async function checkLogin() {
 
     // --- ADMIN PANEL LOGIC ---
     async function refreshAdminList() {
+        async function refreshAdminList() {
         try {
-           const result = await res.json();
+            const res = await fetch(`${API_URL}?action=getAllSaved`);
+            const result = await res.json();
             const names = result.names || [];
             const select = document.getElementById('adminUserSelect');
             select.innerHTML = '<option value="">Select a Saved User...</option>' + 
                                names.map(n => `<option value="${n}">${n}</option>`).join('');
-                               names.map(n => `<option value="${n}">${n}</option>`).join('');
         } catch(e) { console.error(e); }
     }
-
     function adminLoadUser() {
         const name = document.getElementById('adminUserSelect').value;
         if(name) searchItinerary(name);
@@ -575,13 +575,15 @@ async function checkLogin() {
     }
 
     async function searchItinerary(query) {
+    async function searchItinerary(query) {
     if (!query) return;
     const btn = document.getElementById('btnSearch');
     btn.innerText = "...";
     showToast("Searching Cloud...");
-    
-    const result = await response.json();
 
+    try {
+        const response = await fetch(`${API_URL}?action=search&name=${encodeURIComponent(query)}`);
+        const result = await response.json();
         if (!result.found) return showToast("No record found", "error");
 
         const data = result.itinerary?.payload || result.itinerary;
@@ -604,9 +606,7 @@ async function checkLogin() {
         currentPlan = data.currentPlan || [];
         selectedTransfers = data.selectedTransfers || []; 
         selectedIntercity = data.selectedIntercity || [];
-        selectedTransfers = data.selectedTransfers || []; 
-        selectedIntercity = data.selectedIntercity || []; // --- ADDED THIS LINE ---
-
+        
         // --- UI Refresh ---
         updatePaxHeader();
         renderRouteInputs();
