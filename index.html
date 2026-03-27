@@ -510,7 +510,6 @@ async function checkLogin() {
 
     // --- ADMIN PANEL LOGIC ---
     async function refreshAdminList() {
-        async function refreshAdminList() {
         try {
             const res = await fetch(`${API_URL}?action=getAllSaved`);
             const result = await res.json();
@@ -520,8 +519,6 @@ async function checkLogin() {
                                names.map(n => `<option value="${n}">${n}</option>`).join('');
         } catch(e) { console.error(e); }
     }
-    function adminLoadUser() {
-        const name = document.getElementById('adminUserSelect').value;
         if(name) searchItinerary(name);
     }
 
@@ -574,7 +571,6 @@ async function checkLogin() {
         }
     }
 
-    async function searchItinerary(query) {
     async function searchItinerary(query) {
     if (!query) return;
     const btn = document.getElementById('btnSearch');
