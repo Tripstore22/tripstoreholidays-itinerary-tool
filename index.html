@@ -519,8 +519,10 @@ async function checkLogin() {
                                names.map(n => `<option value="${n}">${n}</option>`).join('');
         } catch(e) { console.error(e); }
     }
+       function adminLoadUser() {
+        const name = document.getElementById('adminUserSelect').value;
         if(name) searchItinerary(name);
-
+    }
     // --- CORE INITIALIZATION ---
     async function init() {
         try {
