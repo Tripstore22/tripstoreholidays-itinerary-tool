@@ -1,0 +1,21 @@
+# Mac system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Excel / Office files (large, data-only — not needed in repo)
+*.xlsx
+*.xls
+*.docx
+*.doc
+
+# Old version HTML files (keep only the live file)
+index_V*.html
+index_Old.html
+index1.html
+
+# Automation file (runs in Google Apps Script, not here)
+Automation.gs
+
+# Summary doc
+conversation_summary.html
