@@ -1210,7 +1210,7 @@ function renderTables() {
                 return `
                 <div class="flex justify-between items-start text-[10px] mb-1 gap-1 border-b border-slate-50 last:border-0 pb-1">
                     <div class="flex-1 min-w-0">
-                        <textarea onchange="currentPlan[${planIdx}].sights[${sIdx}].info = this.value"
+                        <textarea onchange="currentPlan[${planIdx}].sights[${sIdx}].info=this.value; currentPlan[${planIdx}].sights[${sIdx}].category=''; currentPlan[${planIdx}].sights[${sIdx}].duration=''; currentPlan[${planIdx}].sights[${sIdx}].tags=''; renderTables();"
                             class="pdf-input w-full bg-transparent outline-none font-medium resize-none overflow-hidden text-[10px]"
                             rows="1">${s.info}</textarea>
                         <div class="flex items-center gap-1 mt-0">${cat}${dur}</div>
@@ -1221,10 +1221,14 @@ function renderTables() {
                             onchange="currentPlan[${planIdx}].sights[${sIdx}].price = Number(this.value)/${config.totalPax}; calculateBudgetInvestment();"
                             class="pdf-input w-16 text-right bg-transparent outline-none font-medium">
                     </div>
+                    <button onclick="deleteSightFromDay(${planIdx},'${s.instanceId}')"
+                        class="no-print text-red-400 hover:text-red-600 font-bold text-sm ml-1 flex-shrink-0" title="Remove tour">✕</button>
                 </div>`;
             }).join('');
-            const freeDay = !actsContent ? '<span class="text-slate-300 italic text-[10px]">Free Day / Transfer</span>' : '';
-            const actsMarkup = topLines + actsContent + freeDay + bottomLines;
+            const freeDay  = !actsContent ? '<span class="text-slate-300 italic text-[10px]">Free Day / Transfer</span>' : '';
+            const isDeptDay = (isLastDayOfTrip || isCheckoutToNext);
+            const addBtn   = !isDeptDay ? `<div class="no-print text-right mt-1"><button onclick="openAddTourDirect(${planIdx},${d},'${item.city}','${new Date(item.cin).toISOString().split('T')[0].replace(/"/g,"")}')" class="text-blue-500 hover:text-blue-700 font-bold text-xs border border-blue-300 rounded px-2 py-0.5">+ Add Tour</button></div>` : '';
+            const actsMarkup = topLines + actsContent + freeDay + bottomLines + addBtn;
 
             sHtml += `
             <tr>
@@ -1282,7 +1286,12 @@ function renderTables() {
                     <button onclick="openTransferSwap('${t.legId}')" class="text-blue-600 font-bold text-[10px]">SWAP</button>
                 </td>
             </tr>`;
-        }).join('');
+        }).join('') + `
+        <tr class="no-print">
+            <td colspan="7" class="p-2 border text-right">
+                <button onclick="openAddTransferDirect()" class="text-blue-500 hover:text-blue-700 font-bold text-xs border border-blue-300 rounded px-3 py-1">+ Add Transfer</button>
+            </td>
+        </tr>`;
     }
 
     // Intercity (per-person pricing)
@@ -1887,6 +1896,236 @@ function formatDate(d) {
 
 function toggleModal(s) { document.getElementById('swapModal').classList.toggle('hidden', !s); }
 function closeModal()    { toggleModal(false); }
+
+// =============================================================
+// DELETE TOUR DIRECTLY FROM DAY VIEW
+// =============================================================
+function deleteSightFromDay(planIdx, instanceId) {
+    currentPlan[planIdx].sights = currentPlan[planIdx].sights.filter(s => String(s.instanceId) !== String(instanceId));
+    renderTables();
+}
+
+// =============================================================
+// ADD TOUR DIRECTLY TO A DAY (search list OR type manually)
+// =============================================================
+function openAddTourDirect(planIdx, dayIdx, city, dateStr) {
+    const mc = document.getElementById('modalContent');
+    mc.className = 'p-4 overflow-y-auto space-y-4 bg-slate-50';
+    mc.style.cssText = '';
+    document.getElementById('modalHeading').innerText = `Add Tour — ${city} (Day ${dayIdx + 1})`;
+
+    const citySights = (masterData.sights || []).filter(s => s.city && s.city.toLowerCase() === city.toLowerCase());
+    const alreadyPicked = new Set((currentPlan[planIdx]?.sights || []).map(s => s.info));
+
+    function buildList() {
+        const cfg = getTravelConfigs();
+        const results = citySights.filter(s => !alreadyPicked.has(s.info)).slice(0, 20);
+        if (!results.length) return '<div class="text-slate-400 text-xs text-center py-4">No tours available</div>';
+        return results.map(s => {
+            const price = Math.round(Number(s.price) * cfg.totalPax);
+            const enc   = encodeURIComponent(JSON.stringify(s));
+            return `<div onclick="confirmAddTour(window._addTourCtx.planIdx, window._addTourCtx.dayIdx, JSON.parse(decodeURIComponent('${enc}'.replace(/\\+/g,' '))))"
+                class="flex justify-between items-center p-2 rounded-lg bg-white border hover:border-blue-400 cursor-pointer text-[10px] gap-2">
+                <div class="flex-1 min-w-0">
+                    <div class="font-medium truncate">${s.info}</div>
+                    <div class="text-slate-400">${s.category || ''} ${s.duration ? '· ' + s.duration : ''}</div>
+                </div>
+                <div class="font-bold text-blue-700 whitespace-nowrap">₹ ${price.toLocaleString('en-IN')}</div>
+            </div>`;
+        }).join('');
+    }
+
+    // store context for the search function
+    window._addTourCtx = { planIdx, dayIdx, city };
+
+    mc.innerHTML = `
+        <div class="space-y-3">
+            <input id="addTourSearch" oninput="filterAddTourList(this.value)"
+            placeholder="Search tours for ${city}..."
+            class="w-full p-2 border rounded text-xs outline-none">
+            <div id="addTourList" class="space-y-1 max-h-48 overflow-y-auto">${buildList('')}</div>
+            <div class="border-t pt-3">
+                <div class="text-[10px] font-bold text-slate-500 uppercase mb-2">Or type manually</div>
+                <input id="manualTourName" placeholder="Tour name" class="w-full p-2 border rounded text-xs mb-2 outline-none">
+                <div class="flex gap-2">
+                    <input id="manualTourCategory" placeholder="Category (optional)" class="flex-1 p-2 border rounded text-xs outline-none">
+                    <input id="manualTourDuration" placeholder="Duration (optional)" class="flex-1 p-2 border rounded text-xs outline-none">
+                </div>
+                <div class="flex gap-2 mt-2 items-center">
+                    <span class="text-xs font-bold">₹</span>
+                    <input id="manualTourPrice" type="number" placeholder="Total price" class="flex-1 p-2 border rounded text-xs outline-none">
+                    <button onclick="addManualTourDirect(${planIdx},${dayIdx})"
+                        class="bg-blue-600 text-white px-4 py-2 rounded text-xs font-bold">Add</button>
+                </div>
+            </div>
+        </div>`;
+    toggleModal(true);
+}
+
+function filterAddTourList(q) {
+    const { planIdx, city } = window._addTourCtx || {};
+    const list = document.getElementById('addTourList');
+    if (!list) return;
+    const citySights = (masterData.sights || []).filter(s => s.city && s.city.toLowerCase() === city.toLowerCase());
+    const alreadyPicked = new Set((currentPlan[planIdx]?.sights || []).map(s => s.info));
+    const cfg = getTravelConfigs();
+    const results = citySights
+        .filter(s => !alreadyPicked.has(s.info) && (!q || s.info.toLowerCase().includes(q.toLowerCase())))
+        .slice(0, 20);
+    if (!results.length) { list.innerHTML = '<div class="text-slate-400 text-xs text-center py-4">No matching tours found</div>'; return; }
+    list.innerHTML = results.map(s => {
+        const price = Math.round(Number(s.price) * cfg.totalPax);
+        const enc   = encodeURIComponent(JSON.stringify(s));
+        return `<div onclick="confirmAddTour(window._addTourCtx.planIdx, window._addTourCtx.dayIdx, JSON.parse(decodeURIComponent('${enc}'.replace(/\\+/g,' '))))"
+            class="flex justify-between items-center p-2 rounded-lg bg-white border hover:border-blue-400 cursor-pointer text-[10px] gap-2">
+            <div class="flex-1 min-w-0">
+                <div class="font-medium truncate">${s.info}</div>
+                <div class="text-slate-400">${s.category || ''} ${s.duration ? '· ' + s.duration : ''}</div>
+            </div>
+            <div class="font-bold text-blue-700 whitespace-nowrap">₹ ${price.toLocaleString('en-IN')}</div>
+        </div>`;
+    }).join('');
+}
+
+function confirmAddTour(planIdx, dayIdx, sight) {
+    if (typeof sight === 'string') sight = JSON.parse(decodeURIComponent(sight));
+    currentPlan[planIdx].sights.push({
+        ...sight,
+        price: Number(sight.price),
+        instanceId: Date.now() + Math.random(),
+        assignedDay: dayIdx,
+        isManual: true
+    });
+    toggleModal(false);
+    renderTables();
+    showToast("Tour added!", "success");
+}
+
+function addManualTourDirect(planIdx, dayIdx) {
+    const name  = document.getElementById('manualTourName')?.value.trim();
+    const price = Number(document.getElementById('manualTourPrice')?.value) || 0;
+    if (!name) { showToast("Please enter a tour name", "error"); return; }
+    const cfg = getTravelConfigs();
+    currentPlan[planIdx].sights.push({
+        info:       name,
+        category:   document.getElementById('manualTourCategory')?.value.trim() || '',
+        duration:   document.getElementById('manualTourDuration')?.value.trim() || '',
+        tags:       '',
+        price:      price / cfg.totalPax,
+        instanceId: Date.now() + Math.random(),
+        assignedDay: dayIdx,
+        isManual:   true
+    });
+    toggleModal(false);
+    renderTables();
+    showToast("Tour added!", "success");
+}
+
+// =============================================================
+// ADD TRANSFER MANUALLY (search list OR type manually)
+// =============================================================
+function openAddTransferDirect() {
+    document.getElementById('modalHeading').innerText = 'Add Transfer';
+    const mc = document.getElementById('modalContent');
+    mc.className = 'p-4 overflow-y-auto space-y-4 bg-slate-50';
+    mc.style.cssText = '';
+
+    const cities = [...new Set((masterData.transfers || []).map(t => t.city))].sort();
+
+    mc.innerHTML = `
+        <div class="space-y-3">
+            <div class="flex gap-2">
+                <div class="flex-1">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase">Date</label>
+                    <input id="addTrDate" type="date" class="w-full p-2 border rounded text-xs mt-1 outline-none">
+                </div>
+                <div class="flex-1">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase">City</label>
+                    <select id="addTrCity" onchange="refreshTransferList()" class="w-full p-2 border rounded text-xs mt-1 outline-none">
+                        <option value="">-- Select --</option>
+                        ${cities.map(c => `<option value="${c}">${c}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+            <input id="addTrSearch" oninput="refreshTransferList()" placeholder="Search transfers..." class="w-full p-2 border rounded text-xs outline-none">
+            <div id="addTrList" class="space-y-1 max-h-40 overflow-y-auto text-[10px] text-slate-400 text-center py-2">Select a city above</div>
+            <div class="border-t pt-3">
+                <div class="text-[10px] font-bold text-slate-500 uppercase mb-2">Or type manually</div>
+                <div class="flex gap-2 mb-2">
+                    <input id="addTrFrom" placeholder="From" class="flex-1 p-2 border rounded text-xs outline-none">
+                    <input id="addTrTo"   placeholder="To"   class="flex-1 p-2 border rounded text-xs outline-none">
+                </div>
+                <div class="flex gap-2 items-center">
+                    <span class="text-xs font-bold">₹</span>
+                    <input id="addTrPrice" type="number" placeholder="Price" class="flex-1 p-2 border rounded text-xs outline-none">
+                    <button onclick="confirmAddTransfer()" class="bg-blue-600 text-white px-4 py-2 rounded text-xs font-bold">Add</button>
+                </div>
+            </div>
+        </div>`;
+    toggleModal(true);
+}
+
+function refreshTransferList() {
+    const city = document.getElementById('addTrCity')?.value || '';
+    const q    = (document.getElementById('addTrSearch')?.value || '').toLowerCase();
+    const list = document.getElementById('addTrList');
+    if (!list) return;
+    if (!city) { list.innerHTML = '<div class="text-slate-400 text-xs text-center py-2">Select a city above</div>'; return; }
+    const matches = (masterData.transfers || [])
+        .filter(t => t.city && t.city.toLowerCase() === city.toLowerCase()
+            && (!q || (t.from+' '+t.to).toLowerCase().includes(q)))
+        .slice(0, 20);
+    if (!matches.length) { list.innerHTML = '<div class="text-slate-400 text-xs text-center py-2">No transfers found</div>'; return; }
+    list.innerHTML = matches.map(t => {
+        const price = Math.round(Number(t.economySedan || t.avgPrice) || 0);
+        return `<div onclick="selectTransferFromList(${JSON.stringify(t).replace(/"/g,'&quot;')})"
+            class="flex justify-between items-center p-2 rounded-lg bg-white border hover:border-blue-400 cursor-pointer text-[10px] gap-2">
+            <div class="flex-1 min-w-0"><div class="font-medium">${t.from} → ${t.to}</div>
+            <div class="text-slate-400">${t.transferType || ''} ${t.direction || ''}</div></div>
+            <div class="font-bold text-blue-700 whitespace-nowrap">₹ ${price.toLocaleString('en-IN')}</div>
+        </div>`;
+    }).join('');
+}
+
+function selectTransferFromList(t) {
+    if (typeof t === 'string') t = JSON.parse(t);
+    const date = document.getElementById('addTrDate')?.value || '';
+    selectedTransfers.push({
+        city:         t.city,
+        from:         t.from,
+        to:           t.to,
+        details:      t.transferType || '',
+        vehiclePrice: Math.round(Number(t.economySedan || t.avgPrice) || 0),
+        avgPrice:     Math.round(Number(t.economySedan || t.avgPrice) || 0),
+        date:         date,
+        legId:        'manual_' + Date.now(),
+        isManual:     true
+    });
+    toggleModal(false);
+    renderTables();
+    showToast("Transfer added!", "success");
+}
+
+function confirmAddTransfer() {
+    const from  = document.getElementById('addTrFrom')?.value.trim();
+    const to    = document.getElementById('addTrTo')?.value.trim();
+    const price = Number(document.getElementById('addTrPrice')?.value) || 0;
+    const city  = document.getElementById('addTrCity')?.value || '';
+    const date  = document.getElementById('addTrDate')?.value || '';
+    if (!from || !to) { showToast("Enter From and To", "error"); return; }
+    selectedTransfers.push({
+        city, from, to,
+        details:      '',
+        vehiclePrice: price,
+        avgPrice:     price,
+        date,
+        legId:        'manual_' + Date.now(),
+        isManual:     true
+    });
+    toggleModal(false);
+    renderTables();
+    showToast("Transfer added!", "success");
+}
 
 // =============================================================
 // AUTO-SAVE before any export action
