@@ -928,6 +928,8 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
 
                 for (const slot of slots) {
                     if (dayHours >= maxDayHours) break;
+                    // Stop adding if a full-day tour already placed this day
+                    if (finalSights.some(s => s.assignedDay === d && classifyTour(s) === 'fullday')) break;
 
                     const matchFn = slotMatches[slot] || (() => true);
 
@@ -949,19 +951,23 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
                     }
                 }
 
+                // If a full-day tour is already on this day, stop — no other tours should be added
+                const hasFullDay = finalSights.some(s => s.assignedDay === d && classifyTour(s) === 'fullday');
+
                 // Fill loop: keep adding tours until day is full (8 hrs)
-                // No type-duplication restriction here — Colosseum then Trevi Fountain on same day is fine
-                while (dayHours < maxDayHours - 1) {
-                    let filled = false;
-                    for (const s of pool) {
-                        if (!canAdd(s, dayHours, maxDayHours)) continue;
-                        if (classifyTour(s) === 'fullday') continue; // never stack a full-day as filler
-                        addTour(s, d);
-                        dayHours += getTourHours(s);
-                        filled = true;
-                        break;
+                if (!hasFullDay) {
+                    while (dayHours < maxDayHours - 1) {
+                        let filled = false;
+                        for (const s of pool) {
+                            if (!canAdd(s, dayHours, maxDayHours)) continue;
+                            if (classifyTour(s) === 'fullday') continue; // never stack a full-day as filler
+                            addTour(s, d);
+                            dayHours += getTourHours(s);
+                            filled = true;
+                            break;
+                        }
+                        if (!filled) break;
                     }
-                    if (!filled) break;
                 }
 
                 // Safety net: day still empty → retry ignoring budget cap
