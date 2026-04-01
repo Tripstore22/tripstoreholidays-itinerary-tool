@@ -618,13 +618,14 @@ async function saveItinerary() {
         action: "saveItinerary",
         paxName,
         payload: {
-            adults:   cfg.adults,
-            children: cfg.children,
-            paxCount: cfg.totalPax,
-            hotelBudget:  document.getElementById('hotelBudget').value,
-            sightBudget:  document.getElementById('sightBudget').value,
-            markup:       document.getElementById('markupInput').value,
-            gst:          document.getElementById('gstInput').value,
+            adults:      cfg.adults,
+            children:    cfg.children,
+            paxCount:    cfg.totalPax,
+            hotelBudget: document.getElementById('hotelBudget').value,
+            sightBudget: document.getElementById('sightBudget').value,
+            markup:      document.getElementById('markupInput').value,
+            gst:         document.getElementById('gstInput').value,
+            vehicleType: document.getElementById('vehicleTypeSelect')?.value || 'auto',
             selectedRoute,
             currentPlan,
             selectedTransfers,
@@ -649,18 +650,27 @@ async function searchItinerary(query) {
         const text = await res.text();
         if (text === "Not Found") return showToast("No record found", "error");
         const data = JSON.parse(text);
-        document.getElementById('paxNameInput').value   = query;
-        document.getElementById('adultCountInput').value  = data.adults   || data.paxCount || 2;
-        document.getElementById('childCountInput').value  = data.children || 0;
-        document.getElementById('hotelBudget').value    = data.hotelBudget;
-        document.getElementById('sightBudget').value    = data.sightBudget;
-        document.getElementById('markupInput').value    = data.markup;
-        document.getElementById('gstInput').value       = data.gst;
+        document.getElementById('paxNameInput').value        = query;
+        document.getElementById('adultCountInput').value     = data.adults   || data.paxCount || 2;
+        document.getElementById('childCountInput').value     = data.children || 0;
+        document.getElementById('hotelBudget').value         = data.hotelBudget;
+        document.getElementById('sightBudget').value         = data.sightBudget;
+        document.getElementById('markupInput').value         = data.markup;
+        document.getElementById('gstInput').value            = data.gst;
+        if (data.vehicleType && document.getElementById('vehicleTypeSelect')) {
+            document.getElementById('vehicleTypeSelect').value = data.vehicleType;
+        }
         selectedRoute     = data.selectedRoute    || [];
         currentPlan       = data.currentPlan      || [];
         selectedTransfers = data.selectedTransfers || [];
         selectedIntercity = data.selectedIntercity || [];
         updatePaxHeader();
+        // Update pax-dependent labels without triggering runOptimizer
+        const _cfg = getTravelConfigs();
+        const _el = document.getElementById('roomDisplay');
+        if (_el) _el.innerText = `Rooms Required: ${_cfg.roomsRequired} (auto)`;
+        document.getElementById('hotelBudgetLabel').innerText = `Hotel Budget (${_cfg.totalPax} Pax)`;
+        document.getElementById('sightBudgetLabel').innerText = `Land Package Budget (${_cfg.totalPax} Pax)`;
         renderRouteInputs();
         renderTables();
         showToast("Itinerary Loaded!");
@@ -1881,16 +1891,29 @@ function closeModal()    { toggleModal(false); }
 // =============================================================
 // AUTO-SAVE before any export action
 async function autoSaveThenDo(action) {
-    const paxName = document.getElementById('paxNameInput').value.trim();
-    if (paxName && currentPlan.length > 0) {
+    if (currentPlan.length > 0) {
         try {
-            const cfg = getTravelConfigs();
-            const payload = { selectedRoute, currentPlan, selectedTransfers, selectedIntercity, cfg };
+            const cfg     = getTravelConfigs();
+            const nameRaw = document.getElementById('paxNameInput').value.trim();
+            // Use entered name, or auto-generate from cities + date
+            const cities  = selectedRoute.map(r => r.city).join('-') || 'Draft';
+            const dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).replace(' ', '');
+            const paxName = nameRaw || `${cities}_${dateStr}`;
+            const payload = {
+                adults:      cfg.adults,
+                children:    cfg.children,
+                paxCount:    cfg.totalPax,
+                hotelBudget: document.getElementById('hotelBudget').value,
+                sightBudget: document.getElementById('sightBudget').value,
+                markup:      document.getElementById('markupInput').value,
+                gst:         document.getElementById('gstInput').value,
+                vehicleType: document.getElementById('vehicleTypeSelect')?.value || 'auto',
+                selectedRoute, currentPlan, selectedTransfers, selectedIntercity
+            };
             await fetch(API_URL, {
                 method: 'POST',
                 body: JSON.stringify({ action: 'saveItinerary', paxName, payload })
             });
-            showToast("Auto-saved to cloud", "success");
         } catch(e) { /* silent — don't block the export */ }
     }
     action();
