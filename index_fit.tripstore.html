@@ -770,6 +770,21 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
             const getTourTags = (s) =>
                 (s.tags || '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
 
+            // Generic experience-type tags — should NOT cause blocking between different tours.
+            // Only attraction-specific tags (eiffel-tower, louvre, versailles etc.) should block duplicates.
+            const GENERIC_TAGS = new Set([
+                'boat-cruise','skip-the-line','guided-tour','walking-tour','food-tour',
+                'wine-tour','cooking-class','hop-on-hop-off','night-tour','sightseeing',
+                'bus-tour','city-tour','must-do','food-drink','segway-tour','evening-show',
+                'day-trip','full-day','half-day','arc-de-triomphe','cultural','historical',
+                'museum','landmark','art-gallery','architecture','nature','adventure',
+                'family','romantic','luxury','budget','private','group','small-group'
+            ]);
+
+            // Return only attraction-specific tags (strips out generic experience types)
+            const getAttractionTags = (s) =>
+                getTourTags(s).filter(t => !GENERIC_TAGS.has(t));
+
             // Extract 2-word bigrams from tour name to detect same-attraction duplicates
             // e.g. "Eiffel Tower Entry Ticket" and "Eiffel Tower Guided Tour" both produce "eiffel_tower"
             const getAttractionBigrams = (tourName) => {
@@ -824,21 +839,21 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
             const totalSightBudget = Math.max(0, dailyGroupAllowance * quotableDays);
 
             // City-wide deduplication
-            let usedInCity        = new Set(finalSights.map(s => s.info));
-            let usedTags          = new Set(finalSights.flatMap(s => getTourTags(s)));
-            let usedAttrBigrams   = new Set(finalSights.flatMap(s => getAttractionBigrams(s.info)));
-            let totalSpent        = finalSights.reduce((sum, s) => sum + Number(s.price) * paxCount, 0);
+            let usedInCity      = new Set(finalSights.map(s => s.info));
+            let usedAttrTags    = new Set(finalSights.flatMap(s => getAttractionTags(s)));
+            let usedAttrBigrams = new Set(finalSights.flatMap(s => getAttractionBigrams(s.info)));
+            let totalSpent      = finalSights.reduce((sum, s) => sum + Number(s.price) * paxCount, 0);
 
-            // canAdd: dedup + attraction bigram check + tag conflict + hour fit + total budget cap
-            const canAdd = (s, dayHours, maxHours, ignoreTags = false, ignoreBudget = false) => {
+            // canAdd: exact name dedup + attraction tag check + bigram check + hour fit + budget cap
+            // Generic tags (boat-cruise, skip-the-line etc.) are ignored — only place-specific tags block.
+            const canAdd = (s, dayHours, maxHours, ignoreBudget = false) => {
                 if (usedInCity.has(s.info)) return false;
-                // Block same attraction appearing twice (e.g. 3 different Eiffel Tower tours)
+                // Block same landmark/attraction appearing twice using attraction-specific tags
+                const aTags = getAttractionTags(s);
+                if (aTags.length > 0 && aTags.some(t => usedAttrTags.has(t))) return false;
+                // Secondary: bigram name check catches cases with no tags
                 const bigrams = getAttractionBigrams(s.info);
                 if (bigrams.some(b => usedAttrBigrams.has(b))) return false;
-                if (!ignoreTags) {
-                    const sTags = getTourTags(s);
-                    if (sTags.length > 0 && sTags.some(t => usedTags.has(t))) return false;
-                }
                 if (dayHours + getTourHours(s) > maxHours) return false;
                 if (!ignoreBudget && totalSightBudget > 0 && totalSpent + Number(s.price) * paxCount > totalSightBudget) return false;
                 return true;
@@ -847,7 +862,7 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
             const addTour = (s, day) => {
                 finalSights.push({ ...s, price: Number(s.price), instanceId: Date.now() + Math.random(), assignedDay: day, isManual: false });
                 usedInCity.add(s.info);
-                getTourTags(s).forEach(t => usedTags.add(t));
+                getAttractionTags(s).forEach(t => usedAttrTags.add(t));
                 getAttractionBigrams(s.info).forEach(b => usedAttrBigrams.add(b));
                 totalSpent += Number(s.price) * paxCount;
             };
@@ -949,21 +964,11 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
                     if (!filled) break;
                 }
 
-                // Safety net: day still empty → retry ignoring tag constraints
+                // Safety net: day still empty → retry ignoring budget cap
                 const dayIsEmpty = !finalSights.some(s => s.assignedDay === d && !s.isManual);
                 if (dayIsEmpty) {
                     for (const s of pool) {
-                        if (!canAdd(s, dayHours, maxDayHours, true, false)) continue;
-                        addTour(s, d);
-                        dayHours += getTourHours(s);
-                        break;
-                    }
-                }
-
-                // Last resort: still empty → ignore budget cap too
-                if (!finalSights.some(s => s.assignedDay === d && !s.isManual)) {
-                    for (const s of pool) {
-                        if (!canAdd(s, dayHours, maxDayHours, true, true)) continue;
+                        if (!canAdd(s, dayHours, maxDayHours, true)) continue;
                         addTour(s, d);
                         dayHours += getTourHours(s);
                         break;
