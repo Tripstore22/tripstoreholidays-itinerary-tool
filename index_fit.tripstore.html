@@ -159,8 +159,21 @@
                         <input type="number" id="markupInput" oninput="calculateBudgetInvestment()" class="w-full p-1.5 border rounded text-xs" value="15">
                     </div>
                     <div>
-                        <label class="text-[8px] font-bold text-gray-500 uppercase">GST %</label>
-                        <input type="number" id="gstInput" oninput="calculateBudgetInvestment()" class="w-full p-1.5 border rounded text-xs" value="5">
+                        <label class="text-[8px] font-bold text-gray-500 uppercase">GST Mode</label>
+                        <div class="mt-1 space-y-1">
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                <input type="radio" name="gstMode" id="gst5pkg" value="5pkg" onchange="calculateBudgetInvestment()" class="accent-blue-600">
+                                <span class="text-[9px] font-bold text-slate-600">5% Full Package</span>
+                            </label>
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                <input type="radio" name="gstMode" id="gst18svc" value="18svc" onchange="calculateBudgetInvestment()" class="accent-blue-600">
+                                <span class="text-[9px] font-bold text-slate-600">18% Service Charge</span>
+                            </label>
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                <input type="radio" name="gstMode" id="gstNone" value="none" onchange="calculateBudgetInvestment()" class="accent-blue-600" checked>
+                                <span class="text-[9px] text-slate-400">No GST</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
                 <div class="grid grid-cols-3 gap-2">
@@ -636,7 +649,7 @@ async function saveItinerary() {
             hotelBudget: document.getElementById('hotelBudget').value,
             sightBudget: document.getElementById('sightBudget').value,
             markup:      document.getElementById('markupInput').value,
-            gst:         document.getElementById('gstInput').value,
+            gstMode:     document.querySelector('input[name="gstMode"]:checked')?.value || 'none',
             vehicleType: document.getElementById('vehicleTypeSelect')?.value || 'auto',
             selectedRoute,
             currentPlan,
@@ -668,7 +681,9 @@ async function searchItinerary(query) {
         document.getElementById('hotelBudget').value         = data.hotelBudget;
         document.getElementById('sightBudget').value         = data.sightBudget;
         document.getElementById('markupInput').value         = data.markup;
-        document.getElementById('gstInput').value            = data.gst;
+        const gstModeToRestore = data.gstMode || (data.gst == 18 ? '18svc' : data.gst > 0 ? '5pkg' : 'none');
+        const gstRadio = document.querySelector(`input[name="gstMode"][value="${gstModeToRestore}"]`);
+        if (gstRadio) gstRadio.checked = true;
         if (data.vehicleType && document.getElementById('vehicleTypeSelect')) {
             document.getElementById('vehicleTypeSelect').value = data.vehicleType;
         }
@@ -1368,12 +1383,14 @@ function calculateBudgetInvestment() {
     const tNet  = selectedTransfers.reduce((sum, t) => sum + (Number(t.vehiclePrice || t.avgPrice) || 0), 0);
     const icNet = selectedIntercity.reduce((sum, ic) => sum + Number(ic.price) * totalPax, 0);
 
-    const mPct = Number(document.getElementById('markupInput').value) || 0;
-    const gPct = Number(document.getElementById('gstInput').value)    || 0;
+    const mPct    = Number(document.getElementById('markupInput').value) || 0;
+    const gstMode = document.querySelector('input[name="gstMode"]:checked')?.value || 'none';
 
     const netTotal  = hNet + sNet + tNet + icNet;
     const markupVal = netTotal * (mPct / 100);
-    const gstVal    = markupVal * (gPct / 100);
+    let gstVal = 0;
+    if (gstMode === '5pkg')  gstVal = (netTotal + markupVal) * 0.05;   // 5% on full package
+    if (gstMode === '18svc') gstVal = markupVal * 0.18;                // 18% on service charge only
     const grandTotal = Math.round(netTotal + markupVal + gstVal);
 
     // Per Adult / Per Child split using separate pricing factors
@@ -2146,7 +2163,7 @@ async function autoSaveThenDo(action) {
                 hotelBudget: document.getElementById('hotelBudget').value,
                 sightBudget: document.getElementById('sightBudget').value,
                 markup:      document.getElementById('markupInput').value,
-                gst:         document.getElementById('gstInput').value,
+                gstMode:     document.querySelector('input[name="gstMode"]:checked')?.value || 'none',
                 vehicleType: document.getElementById('vehicleTypeSelect')?.value || 'auto',
                 selectedRoute, currentPlan, selectedTransfers, selectedIntercity
             };
