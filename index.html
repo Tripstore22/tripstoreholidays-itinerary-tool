@@ -389,6 +389,15 @@ let selectedIntercity  = [];
 // =============================================================
 // VEHICLE HELPERS
 // =============================================================
+function getVehicleCount(paxCount) {
+    // Sedan fits up to 3 | Van fits up to 7
+    // Auto logic: <4 pax → sedan(s), ≥4 pax → van(s)
+    const override = document.getElementById('vehicleTypeSelect')?.value || 'auto';
+    if (override !== 'auto') return 1; // manual override — user controls type, always 1 unit displayed
+    if (paxCount < 4) return Math.ceil(paxCount / 3); // e.g. 6 pax = 2 sedans (rare edge)
+    return Math.ceil(paxCount / 7); // 1–7 → 1 van, 8–14 → 2 vans, 15–21 → 3 vans
+}
+
 function getVehiclePrice(transfer, paxCount) {
     const override = document.getElementById('vehicleTypeSelect')?.value || 'auto';
     let key;
@@ -397,12 +406,17 @@ function getVehiclePrice(transfer, paxCount) {
     } else {
         key = override;
     }
-    return Number(transfer[key]) || Number(transfer.economySedan) || Number(transfer.avgPrice) || 0;
+    const unitPrice = Number(transfer[key]) || Number(transfer.economySedan) || Number(transfer.avgPrice) || 0;
+    return unitPrice * getVehicleCount(paxCount);
 }
 
 function getVehicleLabel(paxCount) {
     const override = document.getElementById('vehicleTypeSelect')?.value || 'auto';
-    if (override === 'auto') return paxCount < 4 ? 'Economy Sedan' : 'Standard Van';
+    const count = getVehicleCount(paxCount);
+    if (override === 'auto') {
+        const type = paxCount < 4 ? 'Economy Sedan' : 'Standard Van';
+        return count > 1 ? `${count} × ${type}` : type;
+    }
     const map = { economySedan: 'Economy Sedan', standardVan: 'Standard Van', premiumVan: 'Premium Van', executiveSedan: 'Executive Sedan' };
     return map[override] || 'Economy Sedan';
 }
