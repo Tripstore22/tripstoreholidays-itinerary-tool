@@ -1634,47 +1634,38 @@ function openHotelSwap(routeId) {
 
     document.getElementById('modalHeading').innerText = `Select Hotel: ${city}`;
     const mc = document.getElementById('modalContent');
-    mc.className = 'p-4 overflow-y-auto space-y-4 bg-slate-50';
-    mc.style.cssText = '';
+    mc.className = 'flex flex-col bg-slate-50 overflow-hidden';
+    mc.style.cssText = 'flex:1;min-height:0;';
     mc.innerHTML = `
-        <div class="p-4 bg-white sticky top-0 border-b space-y-3 z-10 shadow-sm">
+        <div class="bg-white border-b px-3 py-2 space-y-2 flex-shrink-0" style="max-height:35vh;overflow-y:auto;">
             <input type="text" id="modalSearch" placeholder="Search hotel name..."
                 oninput="applyHotelFilters(${routeId},'${city}')"
-                class="w-full p-2.5 border-2 border-slate-100 rounded-xl text-xs focus:border-blue-500 outline-none transition-all">
+                class="w-full p-1.5 border border-slate-200 rounded text-xs outline-none focus:border-blue-500">
             <div class="grid grid-cols-2 gap-2">
                 <div>
                     <label class="text-[8px] font-bold text-slate-400 uppercase">Star Rating</label>
-                    <select id="starFilter" onchange="applyHotelFilters(${routeId},'${city}')" class="w-full p-2 border rounded text-xs outline-none mt-0.5">
+                    <select id="starFilter" onchange="applyHotelFilters(${routeId},'${city}')" class="w-full p-1.5 border rounded text-xs outline-none mt-0.5">
                         <option value="">All Stars</option>
                         ${stars.map(s => `<option value="${s}">${s}</option>`).join('')}
                     </select>
                 </div>
                 <div>
                     <label class="text-[8px] font-bold text-slate-400 uppercase">Category</label>
-                    <select id="categoryFilter" onchange="applyHotelFilters(${routeId},'${city}')" class="w-full p-2 border rounded text-xs outline-none mt-0.5">
+                    <select id="categoryFilter" onchange="applyHotelFilters(${routeId},'${city}')" class="w-full p-1.5 border rounded text-xs outline-none mt-0.5">
                         <option value="">All Categories</option>
                         ${categories.map(c => `<option value="${c}">${c}</option>`).join('')}
                     </select>
                 </div>
             </div>
-            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <div class="flex justify-between items-center mb-2">
-                    <label class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Annual Avg Price (₹/night)</label>
-                    <span id="hotelCountBadge" class="bg-blue-600 text-white px-2 py-0.5 rounded-full text-[9px] font-bold">0 Found</span>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <span class="text-[8px] font-bold text-slate-400">MIN</span>
-                        <input type="number" id="minPriceInput" value="${minPrice}" oninput="applyHotelFilters(${routeId},'${city}')" class="w-full p-2 border rounded font-bold text-xs outline-none focus:border-blue-500">
-                    </div>
-                    <div>
-                        <span class="text-[8px] font-bold text-slate-400">MAX</span>
-                        <input type="number" id="maxPriceInput" value="${maxPrice}" oninput="applyHotelFilters(${routeId},'${city}')" class="w-full p-2 border rounded font-bold text-xs outline-none focus:border-blue-500">
-                    </div>
-                </div>
+            <div class="flex items-center gap-2">
+                <span class="text-[8px] font-bold text-slate-400 uppercase whitespace-nowrap">₹ Min</span>
+                <input type="number" id="minPriceInput" value="${minPrice}" oninput="applyHotelFilters(${routeId},'${city}')" class="flex-1 p-1.5 border rounded text-xs outline-none">
+                <span class="text-[8px] font-bold text-slate-400 uppercase whitespace-nowrap">Max</span>
+                <input type="number" id="maxPriceInput" value="${maxPrice}" oninput="applyHotelFilters(${routeId},'${city}')" class="flex-1 p-1.5 border rounded text-xs outline-none">
+                <span id="hotelCountBadge" class="bg-blue-600 text-white px-2 py-0.5 rounded-full text-[9px] font-bold whitespace-nowrap">0 Found</span>
             </div>
         </div>
-        <div id="hotelListContainer" class="p-4 space-y-3"></div>`;
+        <div id="hotelListContainer" class="overflow-y-auto flex-1 p-3 space-y-2"></div>`;
     applyHotelFilters(routeId, city);
     toggleModal(true);
 }
@@ -1692,31 +1683,29 @@ function applyHotelFilters(routeId, city) {
                cost >= minPrice && cost <= maxPrice &&
                (!starFilter     || h.starRating === starFilter) &&
                (!categoryFilter || h.category   === categoryFilter);
-    });
+    }).sort((a, b) => Number(a.cost) - Number(b.cost)); // lowest price first
     document.getElementById('hotelCountBadge').innerText = `${filtered.length} Found`;
     document.getElementById('hotelListContainer').innerHTML = filtered.length > 0
         ? filtered.map(h => {
             const origIdx = allCityHotels.findIndex(o => o.name === h.name);
             return `
             <div onclick="selectHotel(${routeId},${origIdx},'${h.city}')"
-                class="p-4 bg-white border rounded-lg cursor-pointer hover:border-blue-500 hover:shadow-md transition-all group">
-                <div class="flex justify-between items-start">
-                    <div class="flex-1">
-                        <div class="text-[9px] font-bold text-amber-500 mb-0.5">${h.starRating || ''}</div>
-                        <span class="text-xs font-black uppercase group-hover:text-blue-600 transition-colors">${h.name}</span>
-                        <div class="flex gap-2 mt-1">
-                            <span class="text-[8px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">${h.category || 'Hotel'}</span>
-                            <span class="text-[8px] text-slate-400 italic">${h.roomType || h.type || ''}</span>
-                        </div>
+                class="px-3 py-2 bg-white border rounded-lg cursor-pointer hover:border-blue-500 hover:shadow-sm transition-all group flex justify-between items-center gap-2">
+                <div class="flex-1 min-w-0">
+                    <div class="text-[9px] text-amber-500 leading-none mb-0.5">${h.starRating || ''}</div>
+                    <div class="text-[11px] font-bold uppercase truncate group-hover:text-blue-600">${h.name}</div>
+                    <div class="flex gap-1 mt-0.5 flex-wrap">
+                        <span class="text-[8px] bg-slate-100 text-slate-500 px-1 rounded">${h.category || ''}</span>
+                        <span class="text-[8px] text-slate-400 italic">${h.roomType || h.type || ''}</span>
                     </div>
-                    <div class="text-right ml-3">
-                        <span class="text-xs font-black text-slate-700">₹${Number(h.cost).toLocaleString()}</span>
-                        <div class="text-[8px] text-slate-400">per night</div>
-                    </div>
+                </div>
+                <div class="text-right flex-shrink-0">
+                    <div class="text-xs font-black text-slate-700">₹${Number(h.cost).toLocaleString()}</div>
+                    <div class="text-[8px] text-slate-400">per night</div>
                 </div>
             </div>`;
           }).join('')
-        : `<div class="py-10 text-center"><p class="text-xs text-slate-400 font-bold italic">No hotels match your filters.</p></div>`;
+        : `<div class="py-8 text-center text-xs text-slate-400 italic">No hotels match your filters.</div>`;
 }
 
 function selectHotel(routeId, hotelIndex, city) {
@@ -1802,7 +1791,7 @@ function filterSightsInModal(routeId) {
                s.info.toLowerCase().includes(searchTerm) &&
                totalPrice >= minPrice && totalPrice <= maxPrice &&
                (!catFilter || s.category === catFilter);
-    });
+    }).sort((a, b) => Number(a.price) - Number(b.price)); // lowest price first
     document.getElementById('sightCountBadge').innerText = `${filtered.length} Found`;
 
     let daysHtml = "";
