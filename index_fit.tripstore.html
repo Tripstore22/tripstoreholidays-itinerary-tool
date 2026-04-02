@@ -46,6 +46,7 @@
     }
 
     .pdf-section { page-break-inside: avoid !important; break-inside: avoid !important; display: block; margin-bottom: 20px; }
+    @media print { .hide-if-empty { display: none !important; } }
     tr { page-break-inside: avoid !important; break-inside: avoid !important; }
     thead { display: table-header-group; }
 
@@ -110,7 +111,7 @@
                         <div id="roomDisplay" class="text-[9px] font-bold text-blue-600 uppercase flex-1">Rooms Required: 1</div>
                         <label class="text-[8px] font-bold text-gray-400 uppercase whitespace-nowrap">Override</label>
                         <input type="number" id="roomCountInput" oninput="handlePaxChange(); runOptimizer(true,true);" min="0" placeholder="Auto"
-                            class="w-12 p-1 border rounded text-xs text-center font-bold" title="Leave blank for auto">
+                            class="w-16 p-1 border rounded text-xs text-center font-bold" title="Leave blank for auto">
                     </div>
                     <hr class="border-slate-100">
                     <label class="text-[9px] font-bold text-gray-400 uppercase">Route Details</label>
@@ -1252,10 +1253,18 @@ function renderTables() {
                         class="no-print text-red-400 hover:text-red-600 font-bold text-sm ml-1 flex-shrink-0" title="Remove tour">✕</button>
                 </div>`;
             }).join('');
-            const freeDay  = !actsContent ? '<span class="text-slate-300 italic text-[10px]">Free Day / Transfer</span>' : '';
-            const isDeptDay = (isLastDayOfTrip || isCheckoutToNext);
-            const addBtn   = !isDeptDay ? `<div class="no-print text-right mt-1"><button onclick="openAddTourDirect(${planIdx},${d},'${item.city}','${new Date(item.cin).toISOString().split('T')[0].replace(/"/g,"")}')" class="text-blue-500 hover:text-blue-700 font-bold text-xs border border-blue-300 rounded px-2 py-0.5">+ Add Tour</button></div>` : '';
-            const actsMarkup = topLines + actsContent + freeDay + bottomLines + addBtn;
+            // Editable day note (replaces "Free Day / Transfer" static text)
+            if (!item.dayNotes) item.dayNotes = {};
+            const noteVal = item.dayNotes[d] || '';
+            // Show editable note field; hide from print if empty
+            const noteField = `<div class="${!noteVal ? 'hide-if-empty' : ''}">
+                <textarea onchange="currentPlan[${planIdx}].dayNotes = currentPlan[${planIdx}].dayNotes||{}; currentPlan[${planIdx}].dayNotes[${d}]=this.value;"
+                    class="pdf-input w-full bg-transparent outline-none italic resize-none overflow-hidden text-[10px] text-slate-400"
+                    placeholder="Free Day / Transfer" rows="1">${noteVal}</textarea>
+            </div>`;
+            // + Add Tour on every day (including checkout/departure days)
+            const addBtn = `<div class="no-print text-right mt-1"><button onclick="openAddTourDirect(${planIdx},${d},'${item.city}','')" class="text-blue-500 hover:text-blue-700 font-bold text-xs border border-blue-300 rounded px-2 py-0.5">+ Add Tour</button></div>`;
+            const actsMarkup = topLines + actsContent + noteField + bottomLines + addBtn;
 
             sHtml += `
             <tr>
