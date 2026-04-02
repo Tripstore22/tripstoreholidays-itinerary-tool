@@ -82,72 +82,70 @@
     <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
 
         <!-- LEFT PANEL -->
-        <div class="lg:col-span-4 space-y-4 no-print">
+        <div class="lg:col-span-4 space-y-2 no-print">
 
             <!-- Brand + Traveler Details -->
-            <div class="glass p-5">
-                <div class="flex justify-between items-start mb-6">
-                    <img src="images/tripstorelogo.png" alt="Trip Store Holidays" class="h-10" onerror="this.outerHTML='<h1 class=\'text-2xl font-black text-blue-600 italic\'>TRIP STORE</h1>'">
-                    <div class="flex flex-col items-end gap-2">
-                        <span id="roleBadge" class="px-3 py-1 bg-slate-100 text-[9px] font-bold rounded-full uppercase text-slate-500">User Mode</span>
-                        <button onclick="handleLogout()" class="text-[9px] font-bold text-red-500 hover:text-red-700 border border-red-100 px-2 py-1 rounded bg-red-50 transition-all uppercase">Logout ⎋</button>
+            <div class="glass p-3">
+                <div class="flex justify-between items-center mb-2">
+                    <img src="images/tripstorelogo.png" alt="Trip Store Holidays" class="h-7" onerror="this.outerHTML='<h1 class=\'text-xl font-black text-blue-600 italic\'>TRIP STORE</h1>'">
+                    <div class="flex items-center gap-2">
+                        <span id="roleBadge" class="px-2 py-0.5 bg-slate-100 text-[8px] font-bold rounded-full uppercase text-slate-500">User Mode</span>
+                        <button onclick="handleLogout()" class="text-[8px] font-bold text-red-500 hover:text-red-700 border border-red-100 px-2 py-0.5 rounded bg-red-50 uppercase">Logout ⎋</button>
                     </div>
                 </div>
-                <div class="space-y-3">
-                    <label class="text-[10px] font-bold text-gray-400 uppercase">Traveler Details</label>
-                    <input type="text" id="paxNameInput" oninput="updatePaxHeader()" class="w-full p-2 border rounded text-xs" placeholder="Name of Pax">
+                <div class="space-y-1.5">
+                    <label class="text-[9px] font-bold text-gray-400 uppercase">Traveler Details</label>
+                    <input type="text" id="paxNameInput" oninput="updatePaxHeader()" class="w-full p-1.5 border rounded text-xs" placeholder="Name of Pax">
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="text-[9px] font-bold">Adults</label>
-                            <input type="number" id="adultCountInput" oninput="handlePaxChange()" min="1" class="w-full p-2 border rounded text-xs" value="2">
+                            <label class="text-[8px] font-bold">Adults</label>
+                            <input type="number" id="adultCountInput" oninput="handlePaxChange()" min="1" class="w-full p-1.5 border rounded text-xs" value="2">
                         </div>
                         <div>
-                            <label class="text-[9px] font-bold">Children</label>
-                            <input type="number" id="childCountInput" oninput="handlePaxChange()" min="0" class="w-full p-2 border rounded text-xs" value="0">
+                            <label class="text-[8px] font-bold">Children</label>
+                            <input type="number" id="childCountInput" oninput="handlePaxChange()" min="0" class="w-full p-1.5 border rounded text-xs" value="0">
                         </div>
                     </div>
-                    <div class="flex items-center gap-2 mt-1">
-                        <div id="roomDisplay" class="text-[10px] font-bold text-blue-600 uppercase flex-1">Rooms Required: 1</div>
-                        <div class="flex items-center gap-1">
-                            <label class="text-[9px] font-bold text-gray-400 uppercase whitespace-nowrap">Override Rooms</label>
-                            <input type="number" id="roomCountInput" oninput="handlePaxChange(); runOptimizer(true,true);" min="0" placeholder="Auto"
-                                class="w-16 p-1 border rounded text-xs text-center font-bold" title="Leave blank for auto">
-                        </div>
+                    <div class="flex items-center gap-2">
+                        <div id="roomDisplay" class="text-[9px] font-bold text-blue-600 uppercase flex-1">Rooms Required: 1</div>
+                        <label class="text-[8px] font-bold text-gray-400 uppercase whitespace-nowrap">Override</label>
+                        <input type="number" id="roomCountInput" oninput="handlePaxChange(); runOptimizer(true,true);" min="0" placeholder="Auto"
+                            class="w-12 p-1 border rounded text-xs text-center font-bold" title="Leave blank for auto">
                     </div>
-                    <hr class="border-slate-100 my-2">
-                    <label class="text-[10px] font-bold text-gray-400 uppercase">Route Details</label>
-                    <input type="text" list="cityList" id="cityInput" class="w-full p-2 border rounded" placeholder="Enter City">
+                    <hr class="border-slate-100">
+                    <label class="text-[9px] font-bold text-gray-400 uppercase">Route Details</label>
+                    <input type="text" list="cityList" id="cityInput" class="w-full p-1.5 border rounded text-xs" placeholder="Enter City">
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="text-[9px] font-bold">Check-in</label>
-                            <input type="date" id="checkinInput" class="w-full p-2 border rounded text-xs">
+                            <label class="text-[8px] font-bold">Check-in</label>
+                            <input type="date" id="checkinInput" class="w-full p-1.5 border rounded text-xs">
                         </div>
                         <div>
-                            <label class="text-[9px] font-bold">Check-out</label>
-                            <input type="date" id="checkoutInput" class="w-full p-2 border rounded text-xs">
+                            <label class="text-[8px] font-bold">Check-out</label>
+                            <input type="date" id="checkoutInput" class="w-full p-1.5 border rounded text-xs">
                         </div>
                     </div>
-                    <button onclick="addCityToRoute()" class="w-full bg-slate-800 text-white py-2 rounded font-bold mt-2 hover:bg-black transition-colors">+ Add Stop</button>
-                    <div id="routeList" class="space-y-1 mt-4"></div>
+                    <button onclick="addCityToRoute()" class="w-full bg-slate-800 text-white py-1.5 rounded font-bold text-xs hover:bg-black transition-colors">+ Add Stop</button>
+                    <div id="routeList" class="space-y-1 mt-1"></div>
                 </div>
             </div>
 
             <!-- Pricing Controls -->
-            <div class="glass p-5 space-y-4">
-                <h2 class="font-bold border-b pb-2 text-sm uppercase text-slate-600">Pricing Controls</h2>
+            <div class="glass p-3 space-y-2">
+                <h2 class="font-bold border-b pb-1 text-xs uppercase text-slate-600">Pricing Controls</h2>
                 <div class="grid grid-cols-2 gap-2">
                     <div>
-                        <label id="hotelBudgetLabel" class="text-[9px] font-bold text-gray-500 uppercase">Hotel Budget</label>
-                        <input type="number" id="hotelBudget" oninput="runOptimizer(true, true)" class="w-full p-2 border rounded font-bold" value="30000">
+                        <label id="hotelBudgetLabel" class="text-[8px] font-bold text-gray-500 uppercase">Hotel Budget</label>
+                        <input type="number" id="hotelBudget" oninput="runOptimizer(true, true)" class="w-full p-1.5 border rounded text-xs font-bold" value="30000">
                     </div>
                     <div>
-                        <label id="sightBudgetLabel" class="text-[9px] font-bold text-gray-500 uppercase">Land Package Budget</label>
-                        <input type="number" id="sightBudget" oninput="runOptimizer(true, true)" class="w-full p-2 border rounded font-bold" value="20000">
+                        <label id="sightBudgetLabel" class="text-[8px] font-bold text-gray-500 uppercase">Land Package Budget</label>
+                        <input type="number" id="sightBudget" oninput="runOptimizer(true, true)" class="w-full p-1.5 border rounded text-xs font-bold" value="20000">
                     </div>
                 </div>
                 <div>
-                    <label class="text-[9px] font-bold text-gray-500 uppercase">Vehicle Type</label>
-                    <select id="vehicleTypeSelect" onchange="runOptimizer(false, false)" class="w-full p-2 border rounded text-xs font-bold mt-1 outline-none">
+                    <label class="text-[8px] font-bold text-gray-500 uppercase">Vehicle Type</label>
+                    <select id="vehicleTypeSelect" onchange="runOptimizer(false, false)" class="w-full p-1.5 border rounded text-xs font-bold outline-none mt-0.5">
                         <option value="auto">Smart Auto (Pax &lt;4 = Sedan, ≥4 = Van)</option>
                         <option value="economySedan">Economy Sedan</option>
                         <option value="standardVan">Standard Van</option>
@@ -157,40 +155,40 @@
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                     <div>
-                        <label class="text-[9px] font-bold text-gray-500 uppercase">Markup %</label>
-                        <input type="number" id="markupInput" oninput="calculateBudgetInvestment()" class="w-full p-2 border rounded" value="15">
+                        <label class="text-[8px] font-bold text-gray-500 uppercase">Markup %</label>
+                        <input type="number" id="markupInput" oninput="calculateBudgetInvestment()" class="w-full p-1.5 border rounded text-xs" value="15">
                     </div>
                     <div>
-                        <label class="text-[9px] font-bold text-gray-500 uppercase">GST %</label>
-                        <input type="number" id="gstInput" oninput="calculateBudgetInvestment()" class="w-full p-2 border rounded" value="5">
+                        <label class="text-[8px] font-bold text-gray-500 uppercase">GST %</label>
+                        <input type="number" id="gstInput" oninput="calculateBudgetInvestment()" class="w-full p-1.5 border rounded text-xs" value="5">
                     </div>
                 </div>
                 <div class="grid grid-cols-3 gap-2">
-                    <button onclick="autoSaveThenDo(()=>window.print())" class="bg-slate-700 text-white py-2 rounded font-bold text-[9px] uppercase">Print</button>
-                    <button onclick="autoSaveThenDo(downloadPDF)" class="bg-orange-500 text-white py-2 rounded font-bold text-[9px] uppercase">PDF</button>
-                    <button onclick="autoSaveThenDo(downloadExcel)" class="bg-green-600 text-white py-2 rounded font-bold text-[9px] uppercase">Excel</button>
+                    <button onclick="autoSaveThenDo(()=>window.print())" class="bg-slate-700 text-white py-1.5 rounded font-bold text-[9px] uppercase">Print</button>
+                    <button onclick="autoSaveThenDo(downloadPDF)" class="bg-orange-500 text-white py-1.5 rounded font-bold text-[9px] uppercase">PDF</button>
+                    <button onclick="autoSaveThenDo(downloadExcel)" class="bg-green-600 text-white py-1.5 rounded font-bold text-[9px] uppercase">Excel</button>
                 </div>
             </div>
 
             <!-- Admin Panel -->
-            <div id="adminPanel" class="glass p-5 bg-blue-50 border-blue-200 hidden">
-                <h2 class="text-[10px] font-black text-blue-600 uppercase mb-3 tracking-widest">Admin Control</h2>
+            <div id="adminPanel" class="glass p-3 bg-blue-50 border-blue-200 hidden">
+                <h2 class="text-[9px] font-black text-blue-600 uppercase mb-2 tracking-widest">Admin Control</h2>
                 <div class="flex gap-2">
-                    <select id="adminUserSelect" class="flex-1 p-2 border rounded text-xs font-bold outline-none focus:ring-2 ring-blue-500">
+                    <select id="adminUserSelect" class="flex-1 p-1.5 border rounded text-xs font-bold outline-none">
                         <option value="">Loading Users...</option>
                     </select>
-                    <button onclick="adminLoadUser()" class="bg-blue-600 text-white px-4 py-2 rounded text-[10px] font-bold">LOAD</button>
+                    <button onclick="adminLoadUser()" class="bg-blue-600 text-white px-3 py-1.5 rounded text-[10px] font-bold">LOAD</button>
                 </div>
             </div>
 
             <!-- Cloud Storage -->
-            <div class="glass p-5 space-y-3">
-                <h2 class="font-bold border-b pb-2 text-sm uppercase text-blue-600">Cloud Storage</h2>
+            <div class="glass p-3 space-y-2">
+                <h2 class="font-bold border-b pb-1 text-xs uppercase text-blue-600">Cloud Storage</h2>
                 <div class="flex gap-2">
-                    <input type="text" id="searchInput" class="flex-1 p-2 border rounded text-xs" placeholder="Search Pax Name">
-                    <button onclick="searchItinerary(document.getElementById('searchInput').value)" id="btnSearch" class="bg-blue-600 text-white px-4 py-2 rounded text-[10px] font-bold">LOAD</button>
+                    <input type="text" id="searchInput" class="flex-1 p-1.5 border rounded text-xs" placeholder="Search Pax Name">
+                    <button onclick="searchItinerary(document.getElementById('searchInput').value)" id="btnSearch" class="bg-blue-600 text-white px-3 py-1.5 rounded text-[10px] font-bold">LOAD</button>
                 </div>
-                <button onclick="saveItinerary()" id="btnSave" class="w-full bg-green-600 text-white py-2 rounded font-bold text-xs uppercase hover:bg-green-700">Save Itinerary</button>
+                <button onclick="saveItinerary()" id="btnSave" class="w-full bg-green-600 text-white py-1.5 rounded font-bold text-xs uppercase hover:bg-green-700">Save Itinerary</button>
             </div>
         </div>
 
