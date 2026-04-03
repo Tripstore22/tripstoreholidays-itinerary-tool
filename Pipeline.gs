@@ -238,9 +238,11 @@ function processSheet(ss, type) {
         // Trains and transfers return multiple rows (bidirectional)
         const masterRows = Array.isArray(res.rows) ? res.rows : [res.row];
         masterRows.forEach(r => {
-          mst.appendRow(r);
+          // Normalise r to a flat array — Claude occasionally returns an object instead of array
+          const rowArr = Array.isArray(r) ? r : (r && typeof r === 'object' ? Object.values(r) : [String(r)]);
+          mst.appendRow(rowArr);
           // Add to in-memory set so within-batch duplicates are caught too
-          masterKeySet.add(buildMasterKey(r, type).toLowerCase());
+          masterKeySet.add(buildMasterKey(rowArr, type).toLowerCase());
         });
         markRow(inp, row.rowIndex, CFG.STATUS.PROCESSED, '', cfg.col);
         stats.processed++;

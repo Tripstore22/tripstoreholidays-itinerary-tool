@@ -31,6 +31,9 @@ function doGet(e) {
     if (action === 'search') {
       return searchItinerary(e.parameter.name || '');
     }
+    if (action === 'getQuoteLog') {
+      return getQuoteLog();
+    }
     return ContentService.createTextOutput('Invalid action');
   } catch (err) {
     return ContentService.createTextOutput('Server Error: ' + err.message);
@@ -350,13 +353,68 @@ function saveItinerary(paxName, payload) {
     if (String(data[i][0]).trim().toLowerCase() === paxName.trim().toLowerCase()) {
       sheet.getRange(i + 1, 2).setValue(payloadStr);
       sheet.getRange(i + 1, 3).setValue(now);
+      logQuote(paxName, payload);
       return ContentService.createTextOutput('Updated Successfully');
     }
   }
 
   // New record
   sheet.appendRow([paxName.trim(), payloadStr, now]);
+  logQuote(paxName, payload);
   return ContentService.createTextOutput('Saved Successfully');
+}
+
+
+// ------------------------------------------------------------
+// QUOTE LOG — returns all Quote_Log rows as JSON for the dashboard
+// ------------------------------------------------------------
+
+function getQuoteLog() {
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Quote_Log');
+  if (!sheet) return ContentService
+    .createTextOutput(JSON.stringify([]))
+    .setMimeType(ContentService.MimeType.JSON);
+
+  const rows    = sheet.getDataRange().getValues();
+  const headers = rows[0];
+  const result  = rows.slice(1)
+    .filter(r => r[0]) // skip blank rows
+    .map(r => ({
+      quoteId:      r[0]  || '',
+      paxName:      r[1]  || '',
+      loggedAt:     r[2]  ? new Date(r[2]).toISOString().slice(0,10) : '',
+      travelMonth:  r[3]  || '',
+      adults:       r[4]  || 0,
+      children:     r[5]  || 0,
+      totalPax:     r[6]  || 0,
+      cities:       r[7]  || '',
+      totalNights:  r[8]  || 0,
+      numCities:    r[9]  || 0,
+      hotelNet:     r[10] || 0,
+      sightNet:     r[11] || 0,
+      transferNet:  r[12] || 0,
+      trainsNet:    r[13] || 0,
+      subTotal:     r[14] || 0,
+      markupPct:    r[15] || 0,
+      markupAmt:    r[16] || 0,
+      gstAmt:       r[17] || 0,
+      grandTotal:   r[18] || 0,
+      budgetEntered:r[19] || 0,
+      utilPct:      r[20] || '',
+      budgetFlag:   r[21] || '',
+      hotelsManual: r[22] || 0,
+      sightsManual: r[23] || 0,
+      intercityManual: r[24] || 0,
+      category:     r[25] || '',
+      vehicle:      r[26] || '',
+      outcome:      r[27] || 'Pending',
+      notes:        r[28] || '',
+    }));
+
+  return ContentService
+    .createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 

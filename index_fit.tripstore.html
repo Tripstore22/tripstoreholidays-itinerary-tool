@@ -137,13 +137,19 @@
                 <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label id="hotelBudgetLabel" class="text-[8px] font-bold text-gray-500 uppercase">Hotel Budget</label>
-                        <input type="number" id="hotelBudget" oninput="runOptimizer(true, true)" class="w-full p-1.5 border rounded text-xs font-bold" value="30000">
+                        <input type="number" id="hotelBudget" class="w-full p-1.5 border rounded text-xs font-bold" value="30000">
                     </div>
                     <div>
                         <label id="sightBudgetLabel" class="text-[8px] font-bold text-gray-500 uppercase">Land Package Budget</label>
-                        <input type="number" id="sightBudget" oninput="runOptimizer(true, true)" class="w-full p-1.5 border rounded text-xs font-bold" value="20000">
+                        <input type="number" id="sightBudget" class="w-full p-1.5 border rounded text-xs font-bold" value="20000">
                     </div>
                 </div>
+                <button onclick="runOptimizer(true, true)"
+                    class="no-print w-full py-2 rounded text-xs font-bold text-white flex items-center justify-center gap-1.5"
+                    id="generateQuoteBtn"
+                    style="background:#1a3c5e;">
+                    ▶ Generate Quote
+                </button>
                 <div>
                     <label class="text-[8px] font-bold text-gray-500 uppercase">Vehicle Type</label>
                     <select id="vehicleTypeSelect" onchange="runOptimizer(false, false)" class="w-full p-1.5 border rounded text-xs font-bold outline-none mt-0.5">
@@ -757,7 +763,10 @@ function removeRoute(id) {
 function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRouteId = null, skipDayIdx = null) {
     if (!selectedRoute || selectedRoute.length === 0) {
         currentPlan = []; selectedTransfers = []; selectedIntercity = [];
-        renderTables(); return;
+        renderTables();
+        const _btn = document.getElementById('generateQuoteBtn');
+        if (_btn) _btn.innerHTML = '▶ Generate Quote';
+        return;
     }
     const config   = getTravelConfigs();
     const paxCount = config.totalPax;
