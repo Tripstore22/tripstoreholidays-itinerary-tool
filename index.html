@@ -1035,6 +1035,8 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
     optimizeTransfers(landBudgetTotal, paxCount);
     optimizeIntercity(landBudgetTotal, paxCount);
     renderTables();
+    const genBtn = document.getElementById('generateQuoteBtn');
+    if (genBtn) genBtn.innerHTML = '↺ Revise Quote';
     showToast("Plan generated successfully", "success");
 }
 
