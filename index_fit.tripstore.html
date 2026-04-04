@@ -68,9 +68,39 @@
             <button id="tab-login" onclick="toggleAuthMode('login')" class="flex-1 py-2 rounded-lg font-bold text-sm bg-white shadow-sm">Login</button>
             <button id="tab-signup" onclick="toggleAuthMode('signup')" class="flex-1 py-2 rounded-lg font-bold text-sm text-slate-500">Sign Up</button>
         </div>
-        <div id="auth-fields" class="space-y-4">
-            <input type="text" id="userInput" class="w-full p-4 border-2 border-slate-100 rounded-2xl text-center font-bold focus:border-blue-500 outline-none transition-all" placeholder="Username">
-            <input type="password" id="passInput" class="w-full p-4 border-2 border-slate-100 rounded-2xl text-center text-xl tracking-[0.3em] focus:border-blue-500 outline-none transition-all" placeholder="••••">
+        <!-- LOGIN fields -->
+        <div id="login-fields" class="space-y-4">
+            <input type="text" id="userInput" class="w-full p-4 border-2 border-slate-100 rounded-2xl text-center font-bold focus:border-blue-500 outline-none transition-all" placeholder="Login ID">
+            <input type="password" id="passInput" class="w-full p-4 border-2 border-slate-100 rounded-2xl text-center text-xl tracking-[0.3em] focus:border-blue-500 outline-none transition-all" placeholder="Password">
+        </div>
+        <!-- SIGNUP fields (hidden by default) -->
+        <div id="signup-fields" class="hidden space-y-3 text-left">
+            <div>
+                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Travel Agency Name</label>
+                <input type="text" id="signupAgency" class="w-full p-3 border-2 border-slate-100 rounded-xl font-semibold text-sm focus:border-blue-500 outline-none transition-all" placeholder="e.g. Sunrise Travels Pvt Ltd">
+            </div>
+            <div>
+                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Your Full Name</label>
+                <input type="text" id="signupPerson" class="w-full p-3 border-2 border-slate-100 rounded-xl font-semibold text-sm focus:border-blue-500 outline-none transition-all" placeholder="e.g. Rahul Sharma">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Login ID</label>
+                    <input type="text" id="signupLoginId" class="w-full p-3 border-2 border-slate-100 rounded-xl font-semibold text-sm focus:border-blue-500 outline-none transition-all" placeholder="Choose a username">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Mobile Number</label>
+                    <input type="tel" id="signupMobile" class="w-full p-3 border-2 border-slate-100 rounded-xl font-semibold text-sm focus:border-blue-500 outline-none transition-all" placeholder="10-digit number">
+                </div>
+            </div>
+            <div>
+                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Email ID</label>
+                <input type="email" id="signupEmail" class="w-full p-3 border-2 border-slate-100 rounded-xl font-semibold text-sm focus:border-blue-500 outline-none transition-all" placeholder="your@email.com">
+            </div>
+            <div>
+                <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Password</label>
+                <input type="password" id="signupPass" class="w-full p-3 border-2 border-slate-100 rounded-xl font-semibold text-sm focus:border-blue-500 outline-none transition-all" placeholder="Create a password">
+            </div>
         </div>
         <button id="authBtn" onclick="handleAuth()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold mt-6 hover:bg-blue-700 transition-all shadow-lg">Unlock System</button>
         <p id="loginError" class="text-red-500 text-xs mt-4 font-bold hidden"></p>
