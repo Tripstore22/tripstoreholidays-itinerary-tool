@@ -273,7 +273,7 @@ function checkLogin(user, pass) {
 // AUTH — Signup (new user → PENDING until admin approves)
 // ------------------------------------------------------------
 
-function handleSignup(username, password) {
+function handleSignup(username, password, agencyName, personName, mobile, email) {
   const ss    = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName('Users');
   if (!sheet) return ContentService.createTextOutput('Setup Error: Users sheet not found');
@@ -286,7 +286,7 @@ function handleSignup(username, password) {
     }
   }
 
-  sheet.appendRow([username.trim(), password.trim(), 'PENDING', new Date()]);
+  sheet.appendRow([username.trim(), password.trim(), 'PENDING', new Date(), agencyName.trim(), personName.trim(), mobile.trim(), email.trim()]);
   return ContentService.createTextOutput('Signup Successful');
 }
 
