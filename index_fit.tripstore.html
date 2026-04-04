@@ -558,6 +558,8 @@ function toggleAuthMode(mode) {
     const isLogin = mode === 'login';
     document.getElementById('tab-login').className  = isLogin  ? "flex-1 py-2 rounded-lg font-bold text-sm bg-white shadow-sm" : "flex-1 py-2 rounded-lg font-bold text-sm text-slate-500";
     document.getElementById('tab-signup').className = !isLogin ? "flex-1 py-2 rounded-lg font-bold text-sm bg-white shadow-sm" : "flex-1 py-2 rounded-lg font-bold text-sm text-slate-500";
+    document.getElementById('login-fields').classList.toggle('hidden', !isLogin);
+    document.getElementById('signup-fields').classList.toggle('hidden', isLogin);
     document.getElementById('authBtn').innerText = isLogin ? "Unlock System" : "Request Access";
     document.getElementById('loginError').classList.add('hidden');
     document.getElementById('signupSuccess').classList.add('hidden');
