@@ -597,13 +597,17 @@ async function checkLogin() {
 }
 
 async function handleSignup() {
-    const user = document.getElementById('userInput').value.trim();
-    const pass = document.getElementById('passInput').value.trim();
-    const btn  = document.getElementById('authBtn');
-    if (!user || !pass) return showToast("Fill all fields", "error");
+    const agency  = document.getElementById('signupAgency').value.trim();
+    const person  = document.getElementById('signupPerson').value.trim();
+    const loginId = document.getElementById('signupLoginId').value.trim();
+    const mobile  = document.getElementById('signupMobile').value.trim();
+    const email   = document.getElementById('signupEmail').value.trim();
+    const pass    = document.getElementById('signupPass').value.trim();
+    const btn     = document.getElementById('authBtn');
+    if (!agency || !person || !loginId || !mobile || !email || !pass) return showToast("Please fill all fields", "error");
     btn.innerText = "SENDING REQUEST...";
     try {
-        const res    = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "signup", username: user, password: pass }) });
+        const res    = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "signup", username: loginId, password: pass, agencyName: agency, personName: person, mobile, email }) });
         const result = await res.text();
         if (result.includes("Successful")) {
             document.getElementById('signupSuccess').classList.remove('hidden');
