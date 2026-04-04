@@ -46,7 +46,7 @@ function doPost(e) {
     const action = data.action || '';
 
     if (action === 'signup') {
-      return handleSignup(data.username || '', data.password || '');
+      return handleSignup(data.username || '', data.password || '', data.agencyName || '', data.personName || '', data.mobile || '', data.email || '');
     }
     if (action === 'saveItinerary') {
       return saveItinerary(data.paxName || '', data.payload || {});
