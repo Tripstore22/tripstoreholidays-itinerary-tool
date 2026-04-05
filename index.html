@@ -759,7 +759,6 @@ function handlePaxChange() {
     if (el) el.innerText = `Rooms Required: ${roomsRequired}${isManual ? ' (manual)' : ' (auto)'}`;
     document.getElementById('hotelBudgetLabel').innerText = `Hotel Budget (${totalPax} Pax)`;
     document.getElementById('sightBudgetLabel').innerText = `Land Package Budget (${totalPax} Pax)`;
-    runOptimizer();
 }
 
 function updatePaxHeader() {
