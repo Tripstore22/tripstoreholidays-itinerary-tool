@@ -789,7 +789,10 @@ function renderRouteInputs() {
 function removeRoute(id) {
     selectedRoute = selectedRoute.filter(r => r.id !== id);
     renderRouteInputs();
-    runOptimizer();
+    currentPlan = []; selectedTransfers = []; selectedIntercity = [];
+    renderTables();
+    const btn = document.getElementById('generateQuoteBtn');
+    if (btn) btn.innerHTML = '▶ Generate Quote';
 }
 
 // =============================================================
