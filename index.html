@@ -776,7 +776,6 @@ function addCityToRoute() {
     selectedRoute.push({ id: Date.now(), city, cin: checkin, cout: checkout, nights });
     selectedRoute.sort((a, b) => new Date(a.cin) - new Date(b.cin));
     renderRouteInputs();
-    runOptimizer();
 }
 
 function renderRouteInputs() {
