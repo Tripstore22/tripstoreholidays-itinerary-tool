@@ -2235,7 +2235,7 @@ function openAddTransferDirect() {
                 </div>
             </div>
             <input id="addTrSearch" oninput="refreshTransferList()" placeholder="Search transfers..." class="w-full p-2 border rounded text-xs outline-none">
-            <div id="addTrList" class="space-y-1 max-h-40 overflow-y-auto text-[10px] text-slate-400 text-center py-2">Select a city above</div>
+            <div id="addTrList" class="space-y-1 max-h-40 overflow-y-auto text-[10px] text-slate-400 text-center py-2">${autoCity ? '' : 'Select a city above'}</div>
             <div class="border-t pt-3">
                 <div class="text-[10px] font-bold text-slate-500 uppercase mb-2">Or type manually</div>
                 <div class="flex gap-2 mb-2">
