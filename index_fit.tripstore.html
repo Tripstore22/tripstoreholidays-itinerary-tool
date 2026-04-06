@@ -2131,7 +2131,13 @@ function filterAddTourList(q) {
     const { planIdx, city } = window._addTourCtx || {};
     const list = document.getElementById('addTourList');
     if (!list) return;
-    const citySights = (masterData.sights || []).filter(s => s.city && s.city.toLowerCase() === city.toLowerCase());
+    const seenNamesF = new Set();
+    const citySights = (masterData.sights || []).filter(s => {
+        if (!s.city || s.city.toLowerCase() !== city.toLowerCase()) return false;
+        if (seenNamesF.has(s.info)) return false;
+        seenNamesF.add(s.info);
+        return true;
+    });
     const alreadyPicked = new Set((currentPlan[planIdx]?.sights || []).map(s => s.info));
     const cfg = getTravelConfigs();
     const results = citySights
