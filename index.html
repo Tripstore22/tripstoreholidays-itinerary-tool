@@ -578,7 +578,7 @@ async function checkLogin() {
     btn.innerText = "VERIFYING...";
     err.classList.add('hidden');
     try {
-        const res    = await fetch(`${API_URL}?action=checkLogin&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`);
+        const res    = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "checkLogin", user, pass }) });
         const status = await res.text();
         if (status === "ADMIN" || status === "USER") {
             const session = { isLoggedIn: true, isAdmin: status === "ADMIN", modeText: status === "ADMIN" ? "ADMIN MODE" : "USER MODE" };
@@ -638,7 +638,15 @@ function handleLogout() {
 
 function checkAutoLogin() {
     const saved = localStorage.getItem("tripstore_session");
-    if (saved) { const s = JSON.parse(saved); isAdmin = s.isAdmin; launchApp(s.modeText); }
+    if (saved) {
+        try {
+            const s = JSON.parse(saved);
+            isAdmin = s.isAdmin;
+            launchApp(s.modeText);
+        } catch (e) {
+            localStorage.removeItem("tripstore_session");
+        }
+    }
 }
 window.addEventListener('DOMContentLoaded', checkAutoLogin);
 
@@ -650,7 +658,13 @@ async function refreshAdminList() {
         const res   = await fetch(`${API_URL}?action=getAllSaved`);
         const names = await res.json();
         const sel   = document.getElementById('adminUserSelect');
-        sel.innerHTML = '<option value="">Select a Saved User...</option>' + names.map(n => `<option value="${n}">${n}</option>`).join('');
+        sel.innerHTML = '<option value="">Select a Saved User...</option>';
+        names.forEach(n => {
+            const opt = document.createElement('option');
+            opt.value = n;
+            opt.textContent = n;
+            sel.appendChild(opt);
+        });
     } catch (e) { console.error(e); }
 }
 
