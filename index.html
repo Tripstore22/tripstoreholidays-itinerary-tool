@@ -840,7 +840,7 @@ function addCityToRoute() {
 function renderRouteInputs() {
     document.getElementById('routeList').innerHTML = selectedRoute.map(r => `
         <div class="flex justify-between items-center bg-white p-2 rounded text-[10px] border">
-            <span><b>${r.city}</b> (${r.nights}N)</span>
+            <span><b>${r.city}</b> (${r.nights}N)<br><span class="text-slate-400">${formatDate(r.cin)} → ${formatDate(r.cout)}</span></span>
             <button onclick="removeRoute(${r.id})" class="text-red-500 font-bold px-2">✕</button>
         </div>`).join('');
     suggestBudgets();
