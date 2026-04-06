@@ -355,19 +355,18 @@ These rows are confirmed non-duplicates. Your job is to VALIDATE then ENRICH.
 INPUT ROWS:
 ${JSON.stringify(input, null, 2)}
 
-VALIDATE — set valid=false if:
+VALIDATE — set valid=false ONLY if:
 - hotel_name is empty, test data, or gibberish
-- star_rating is missing or not recognisable as 1-5 stars
-- All monthly prices are 0 (at least 4 months must be provided)
-- City is not a real European location
+- City is not a real travel destination
 
 ENRICH (only if valid=true):
-- Standardise star_rating to emoji format: ⭐ ⭐⭐ ⭐⭐⭐ ⭐⭐⭐⭐ ⭐⭐⭐⭐⭐
-- category: if blank, infer from star+price: Budget(<40k) | Standard(40-70k) | Superior(70-100k) | Luxury(100-150k) | Ultra-Luxury(>150k)
+- star_rating: if blank or missing, research the hotel and fill it in. Use emoji format: ⭐ ⭐⭐ ⭐⭐⭐ ⭐⭐⭐⭐ ⭐⭐⭐⭐⭐
+- category: infer from star+price: Budget(<40k) | Standard(40-70k) | Superior(70-100k) | Luxury(100-150k) | Ultra-Luxury(>150k)
 - chain: use "Independent" if blank or unknown
-- Derive missing monthly prices from the populated months using EU seasonal multipliers:
+- Monthly prices: if all are 0, research the hotel and generate realistic 3-night INR prices based on your knowledge of the property and city. Use EU seasonal multipliers as a guide:
   Jan=0.80 Feb=0.82 Mar=0.90 Apr=1.00 May=1.05 Jun=1.20 Jul=1.30 Aug=1.28 Sep=1.05 Oct=0.95 Nov=0.85 Dec=1.15
   Adjust for ski resorts (higher Dec-Mar) and beach destinations (higher Jun-Aug)
+  If you truly cannot estimate prices for a hotel, set all months to 0 and note it in error_reason — do NOT set valid=false just for missing prices
 - annual_avg: average of all 12 monthly values rounded to nearest integer
 - Format all price values as strings with ₹ prefix and comma formatting e.g. "₹54,250"
 
