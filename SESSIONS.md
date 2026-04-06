@@ -1,31 +1,23 @@
 # Session Handoff
 
-## Latest Session — 2026-04-02
+## Latest Session — 2026-04-06
 
 ### Completed
-- Duplicate tour fix: bigram name matching + attraction-specific tag blocking (eiffel-tower etc.)
-- Generic tags (boat-cruise, skip-the-line) no longer block unrelated tours
-- Full-day tours now block all other tours on same day
-- Delete ✕ button directly on each sightseeing tour in the itinerary view
-- + Add Tour button on every day including checkout/departure days
-- + Add Transfer button at bottom of transfers section (search list or type manually)
-- Editing a tour name now clears old category/duration/tags automatically
-- Checkout day: editable note field replaces static "Free Day / Transfer"; hidden from print if blank
-- Pax count (adults/children) and vehicle type now restore correctly on itinerary load
-- Auto-save on PDF/Print/Excel works even without pax name (uses city+date as name)
-- Multi-vehicle logic: van max 7 pax → 2 vans for 8–14 pax, 3 vans for 15–21 pax
-- GST replaced with radio buttons: 5% Full Package / 18% Service Charge / No GST
-- Hotel swap modal: 35/65 layout, compact cards, sorted lowest price first
-- Sightseeing modal list sorted lowest price first
-- Left sidebar made compact (padding, inputs, logo, spacing)
-- Hotel table headers: In / Out / Hotel Name & Star / Room & Hotel Category
-- Override Rooms input widened (was cut off)
-- CLAUDE.md created — auto-reads SESSIONS.md on every session start
-- SESSIONS.md automated — updates on "bye", no manual writing needed
-- Daily backup script: backup_chats.sh (cron job still needs setup in Terminal)
+- cross_reference.py built: reads 4 input CSVs → dedupes vs master + INPUT tabs → appends PENDING rows
+- Full pipeline test: 233 Excel files → 804 archive rows → uploaded to Itinerary_Archive tab
+- Hotels fix in extract_itineraries.py: _NOT_A_CITY filter, numeric hotel name filter → 820 → 793 clean rows
+- Sightseeing fix: time-as-city recovery, distance skip, transfer leak skip, ALL CAPS fix → 393 → 247 clean rows
+- append_rows column-shift bug fixed in cross_reference.py (explicit range write A{n}:ZZ{n})
+- INPUT_Hotels cleaned and repushed: 443 new rows, 480 total in sheet
+- INPUT_Sightseeing cleaned and repushed: 224 new rows, 341 total in sheet
+- 275 total PENDING rows queued across all 4 INPUT tabs for midnight enrichment
+- Code.gs and Pipeline.gs pasted into Apps Script editor
+- ANTHROPIC_API_KEY and SUMMARY_EMAIL set in Script Properties
 
 ### Still Pending
-- Cron job for daily backup not yet activated (open Terminal.app and run the crontab command from earlier chat)
-- Google Sheet Sightseeing tab: verify Column A has correct city names (no cross-city contamination)
-- Code.gs needs re-deployment in Apps Script (Extensions → Deploy → Manage Deployments → New version)
-- Pipeline.gs setup: run setupSheets() then setupTrigger(), set ANTHROPIC_API_KEY in Script Properties
+- Run setupSheets() in Apps Script (was mid-step when session saved)
+- Run setupTrigger() in Apps Script to activate midnight automation
+- Test run: select runMidnightEnrichment() and run manually to verify enrichment works
+- Trains and Transfers data not yet reviewed for quality (only hotels + sightseeing cleaned so far)
+- Code.gs needs re-deployment: Extensions → Deploy → Manage Deployments → New version
+- Cron job for local backup still not activated (open Terminal, run the crontab command from earlier)
