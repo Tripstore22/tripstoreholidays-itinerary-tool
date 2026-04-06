@@ -715,7 +715,6 @@ function sendSummaryEmail(results, durationSeconds) {
 
 function setupSheets() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const ui = SpreadsheetApp.getUi();
 
   _buildInputSheet(ss, CFG.INPUT.HOTELS, [
     'City','Hotel Name','Star Rating','Hotel Category','Chain / Brand','Room Type',
