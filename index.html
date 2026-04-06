@@ -2201,20 +2201,36 @@ function openAddTransferDirect() {
     mc.className = 'p-4 overflow-y-auto space-y-4 bg-slate-50';
     mc.style.cssText = '';
 
-    const cities = [...new Set((masterData.transfers || []).map(t => t.city))].sort();
+    // Only show cities from the current itinerary route (not all transfer cities)
+    const routeCities = (selectedRoute || []).map(r => r.city);
+    const transferCitiesSet = new Set((masterData.transfers || []).map(t => t.city.toLowerCase()));
+    const cities = routeCities.filter(c => transferCitiesSet.has(c.toLowerCase()));
+
+    // Auto-detect current city based on today's date
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const todayStr = today.toISOString().slice(0,10);
+    let autoCity = '';
+    for (const r of (selectedRoute || [])) {
+        const cin  = new Date(r.cin);  cin.setHours(0,0,0,0);
+        const cout = new Date(r.cout); cout.setHours(0,0,0,0);
+        if (today >= cin && today <= cout) { autoCity = r.city; break; }
+    }
+    // If not found (trip is future/past), default to first route city
+    if (!autoCity && routeCities.length > 0) autoCity = routeCities[0];
 
     mc.innerHTML = `
         <div class="space-y-3">
             <div class="flex gap-2">
                 <div class="flex-1">
                     <label class="text-[10px] font-bold text-slate-500 uppercase">Date</label>
-                    <input id="addTrDate" type="date" class="w-full p-2 border rounded text-xs mt-1 outline-none">
+                    <input id="addTrDate" type="date" value="${todayStr}" class="w-full p-2 border rounded text-xs mt-1 outline-none">
                 </div>
                 <div class="flex-1">
                     <label class="text-[10px] font-bold text-slate-500 uppercase">City</label>
                     <select id="addTrCity" onchange="refreshTransferList()" class="w-full p-2 border rounded text-xs mt-1 outline-none">
                         <option value="">-- Select --</option>
-                        ${cities.map(c => `<option value="${c}">${c}</option>`).join('')}
+                        ${cities.map(c => `<option value="${c}" ${c === autoCity ? 'selected' : ''}>${c}</option>`).join('')}
                     </select>
                 </div>
             </div>
