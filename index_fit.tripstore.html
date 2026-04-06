@@ -1345,10 +1345,10 @@ function renderTables() {
                 const cat    = s.category ? `<span style="font-size:8px;background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;padding:0 3px;border-radius:3px;margin-right:3px;">${s.category}</span>` : '';
                 const dur    = s.duration ? `<span style="font-size:8px;color:#334155;">${s.duration}</span>` : '';
                 return `
-                <div class="flex justify-between items-start text-[10px] mb-1 gap-1 border-b border-slate-50 last:border-0 pb-1">
+                <div class="flex justify-between items-start text-[12px] mb-1 gap-1 border-b border-slate-50 last:border-0 pb-1">
                     <div class="flex-1 min-w-0">
                         <textarea onchange="currentPlan[${planIdx}].sights[${sIdx}].info=this.value; currentPlan[${planIdx}].sights[${sIdx}].category=''; currentPlan[${planIdx}].sights[${sIdx}].duration=''; currentPlan[${planIdx}].sights[${sIdx}].tags=''; renderTables();"
-                            class="pdf-input w-full bg-transparent outline-none font-medium resize-none overflow-hidden text-[10px]"
+                            class="pdf-input w-full bg-transparent outline-none font-medium resize-none overflow-hidden text-[12px]"
                             rows="1">${s.info}</textarea>
                         <div class="flex items-center gap-1 mt-0">${cat}${dur}</div>
                     </div>
