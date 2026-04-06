@@ -168,10 +168,12 @@
                     <div>
                         <label id="hotelBudgetLabel" class="text-[8px] font-bold text-gray-500 uppercase">Hotel Budget</label>
                         <input type="number" id="hotelBudget" class="w-full p-1.5 border rounded text-xs font-bold" placeholder="Enter budget">
+                        <div id="hotelBudgetHint" class="text-[9px] text-slate-400 mt-0.5 hidden">Suggested: <span id="hotelBudgetRange" class="font-semibold text-slate-500"></span> <button onclick="applyBudgetSuggestion('hotel')" class="ml-1 text-[8px] text-blue-500 underline no-print">Use mid</button></div>
                     </div>
                     <div>
                         <label id="sightBudgetLabel" class="text-[8px] font-bold text-gray-500 uppercase">Land Package Budget</label>
                         <input type="number" id="sightBudget" class="w-full p-1.5 border rounded text-xs font-bold" placeholder="Enter budget">
+                        <div id="sightBudgetHint" class="text-[9px] text-slate-400 mt-0.5 hidden">Suggested: <span id="sightBudgetRange" class="font-semibold text-slate-500"></span> <button onclick="applyBudgetSuggestion('land')" class="ml-1 text-[8px] text-blue-500 underline no-print">Use mid</button></div>
                     </div>
                 </div>
                 <button onclick="runOptimizer(true, true)"
@@ -773,6 +775,46 @@ function handlePaxChange() {
     if (el) el.innerText = `Rooms Required: ${roomsRequired}${isManual ? ' (manual)' : ' (auto)'}`;
     document.getElementById('hotelBudgetLabel').innerText = `Hotel Budget (${totalPax} Pax)`;
     document.getElementById('sightBudgetLabel').innerText = `Land Package Budget (${totalPax} Pax)`;
+    suggestBudgets();
+}
+
+// Budget ranges per room per night (hotel) and per pax per night (land)
+const BUDGET_RANGES = {
+    hotel: { low: 2500, high: 7500 },  // ₹/room/night
+    land:  { low: 1200, high: 2800 }   // ₹/pax/night (sightseeing + transfers)
+};
+let _lastBudgetSuggestion = { hotelMid: 0, landMid: 0 };
+
+function suggestBudgets() {
+    const totalNights = selectedRoute.reduce((s, r) => s + (r.nights || 0), 0);
+    if (totalNights === 0) {
+        document.getElementById('hotelBudgetHint').classList.add('hidden');
+        document.getElementById('sightBudgetHint').classList.add('hidden');
+        return;
+    }
+    const { roomsRequired, totalPax } = getTravelConfigs();
+
+    const hotelLow  = Math.round(BUDGET_RANGES.hotel.low  * roomsRequired * totalNights / 1000) * 1000;
+    const hotelHigh = Math.round(BUDGET_RANGES.hotel.high * roomsRequired * totalNights / 1000) * 1000;
+    const hotelMid  = Math.round((hotelLow + hotelHigh) / 2 / 1000) * 1000;
+
+    const landLow   = Math.round(BUDGET_RANGES.land.low  * totalPax * totalNights / 1000) * 1000;
+    const landHigh  = Math.round(BUDGET_RANGES.land.high * totalPax * totalNights / 1000) * 1000;
+    const landMid   = Math.round((landLow + landHigh) / 2 / 1000) * 1000;
+
+    _lastBudgetSuggestion = { hotelMid, landMid };
+
+    const fmt = v => '₹' + v.toLocaleString('en-IN');
+
+    document.getElementById('hotelBudgetRange').innerText = `${fmt(hotelLow)} – ${fmt(hotelHigh)}`;
+    document.getElementById('sightBudgetRange').innerText = `${fmt(landLow)} – ${fmt(landHigh)}`;
+    document.getElementById('hotelBudgetHint').classList.remove('hidden');
+    document.getElementById('sightBudgetHint').classList.remove('hidden');
+}
+
+function applyBudgetSuggestion(type) {
+    if (type === 'hotel') document.getElementById('hotelBudget').value = _lastBudgetSuggestion.hotelMid;
+    else                  document.getElementById('sightBudget').value = _lastBudgetSuggestion.landMid;
 }
 
 function updatePaxHeader() {
@@ -797,6 +839,7 @@ function renderRouteInputs() {
             <span><b>${r.city}</b> (${r.nights}N)</span>
             <button onclick="removeRoute(${r.id})" class="text-red-500 font-bold px-2">✕</button>
         </div>`).join('');
+    suggestBudgets();
 }
 
 function removeRoute(id) {
