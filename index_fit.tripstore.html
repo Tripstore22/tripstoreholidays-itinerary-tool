@@ -1372,7 +1372,7 @@ function renderTables() {
                     placeholder="Free Day / Transfer" rows="1">${noteVal}</textarea>
             </div>`;
             // + Add Tour on every day (including checkout/departure days)
-            const addBtn = `<div class="no-print text-right mt-1"><button onclick="openAddTourDirect(${planIdx},${d},'${item.city}','')" class="text-blue-500 hover:text-blue-700 font-bold text-xs border border-blue-300 rounded px-2 py-0.5">+ Add Tour</button></div>`;
+            const addBtn = `<div class="no-print text-right mt-1"><button onclick="openAddTourDirect(${planIdx},${d},'${item.city}','')" class="text-blue-500 hover:text-blue-700 font-bold text-[11px] border border-blue-300 rounded px-2 py-0.5">+ Add Tour</button></div>`;
             const actsMarkup = topLines + actsContent + noteField + bottomLines + addBtn;
 
             sHtml += `
