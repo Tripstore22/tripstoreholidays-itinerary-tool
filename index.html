@@ -876,12 +876,18 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
     const intercityCost = selectedIntercity.reduce((s, ic) => s + Math.round(Number(ic.price || 0) * paxCount), 0);
     const sBudgetTotal  = Math.max(0, landBudgetTotal - transferCost - intercityCost);
 
-    let spentHotelBudget = 0, systemHotelCitiesCount = 0, spentSightBudget = 0;
+    let spentHotelBudget = 0, spentSightBudget = 0;
     currentPlan.forEach(route => {
         if (route.hotel && route.isHotelManual) spentHotelBudget += calculateHotelPrice(Number(route.hotel.cost), route.nights);
-        else systemHotelCitiesCount++;
         if (route.sights) route.sights.forEach(s => { if (s.isManual) spentSightBudget += Number(s.price) * paxCount; });
     });
+
+    // Count cities that need system-assigned hotels (not manually set)
+    // Use selectedRoute (not currentPlan) so first-run works correctly when currentPlan is empty
+    const systemHotelCitiesCount = selectedRoute.filter(sr => {
+        const existing = currentPlan.find(p => p.id === sr.id);
+        return !existing || !existing.isHotelManual;
+    }).length;
 
     // activeDays = sum of nights only (departure day per city is excluded from activity assignment)
     const activeDays        = selectedRoute.reduce((sum, r) => sum + Number(r.nights), 0);
