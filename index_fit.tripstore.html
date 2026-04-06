@@ -2072,7 +2072,14 @@ function openAddTourDirect(planIdx, dayIdx, city, dateStr) {
     mc.style.cssText = '';
     document.getElementById('modalHeading').innerText = `Add Tour — ${city} (Day ${dayIdx + 1})`;
 
-    const citySights = (masterData.sights || []).filter(s => s.city && s.city.toLowerCase() === city.toLowerCase());
+    // Deduplicate by name, then exclude tours already placed in this city's itinerary
+    const seenNames = new Set();
+    const citySights = (masterData.sights || []).filter(s => {
+        if (!s.city || s.city.toLowerCase() !== city.toLowerCase()) return false;
+        if (seenNames.has(s.info)) return false;
+        seenNames.add(s.info);
+        return true;
+    });
     const alreadyPicked = new Set((currentPlan[planIdx]?.sights || []).map(s => s.info));
 
     function buildList() {
