@@ -754,7 +754,7 @@ function setupSheets() {
   _buildLogSheet(ss, CFG.LOG.DUPLICATES, 'e67e22', ['Logged_At','Data_Type','City / Route','Name','Duplicate_Reason','Row_Data']);
   _buildLogSheet(ss, CFG.LOG.AUDIT,      '2c3e50', ['Timestamp','Event']);
 
-  ui.alert('✅ Setup complete!\n\nAll INPUT and LOG tabs have been prepared.\n\nNext: run setupTrigger() to activate the midnight automation.');
+  Logger.log('✅ Setup complete! All INPUT and LOG tabs have been prepared. Next: run setupTrigger() to activate the midnight automation.');
 }
 
 function _buildInputSheet(ss, name, headers, statusColIndex, infoText) {
