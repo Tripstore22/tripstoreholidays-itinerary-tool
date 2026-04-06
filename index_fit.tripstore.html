@@ -871,10 +871,7 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
     const hBudgetTotal    = Number(document.getElementById('hotelBudget').value) || 0;
     const landBudgetTotal = Number(document.getElementById('sightBudget').value) || 0;
 
-    // Land Package Budget: deduct transfer + intercity costs first, remainder = sightseeing allowance
-    const transferCost  = selectedTransfers.reduce((s, t) => s + (Number(t.vehiclePrice || t.avgPrice) || 0), 0);
     const intercityCost = selectedIntercity.reduce((s, ic) => s + Math.round(Number(ic.price || 0) * paxCount), 0);
-    const sBudgetTotal  = Math.max(0, landBudgetTotal - transferCost - intercityCost);
 
     let spentHotelBudget = 0, spentSightBudget = 0;
     currentPlan.forEach(route => {
@@ -890,11 +887,11 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
     }).length;
 
     // activeDays = sum of nights only (departure day per city is excluded from activity assignment)
-    const activeDays        = selectedRoute.reduce((sum, r) => sum + Number(r.nights), 0);
-    const remainingHBudget  = Math.max(0, hBudgetTotal - spentHotelBudget);
+    const activeDays       = selectedRoute.reduce((sum, r) => sum + Number(r.nights), 0);
+    const remainingHBudget = Math.max(0, hBudgetTotal - spentHotelBudget);
     const hCapPerSystemCity = systemHotelCitiesCount > 0 ? remainingHBudget / systemHotelCitiesCount : 0;
-    const dailyGroupAllowance = activeDays > 0 ? Math.max(0, sBudgetTotal - spentSightBudget) / activeDays : 0;
 
+    // ── Phase 1: assign hotels only (no sights yet) ──────────────────────────
     currentPlan = selectedRoute.map((sourceRoute, routeIdx) => {
         const cityName     = sourceRoute.city.toLowerCase();
         const existingRoute = currentPlan.find(p => p.id === sourceRoute.id) || { ...sourceRoute, hotel: null, sights: [], isHotelManual: false };
@@ -908,7 +905,22 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
                 finalHotel = cityHotels.find(h => calculateHotelPrice(Number(h.cost), sourceRoute.nights) <= hCapPerSystemCity) || cityHotels[cityHotels.length - 1];
             }
         }
+        return { ...sourceRoute, hotel: finalHotel, sights: existingRoute.sights || [], isHotelManual, dayNotes: existingRoute.dayNotes || {} };
+    });
 
+    // ── Phase 2: run transfers now that hotels are known ─────────────────────
+    optimizeTransfers(landBudgetTotal, paxCount);
+    optimizeIntercity(landBudgetTotal, paxCount);
+
+    // ── Phase 3: recompute sightseeing budget using actual transfer costs ─────
+    const transferCost   = selectedTransfers.reduce((s, t) => s + (Number(t.vehiclePrice || t.avgPrice) || 0), 0);
+    const sBudgetTotal   = Math.max(0, landBudgetTotal - transferCost - intercityCost);
+    const dailyGroupAllowance = activeDays > 0 ? Math.max(0, sBudgetTotal - spentSightBudget) / activeDays : 0;
+
+    // ── Phase 4: assign sights into currentPlan ───────────────────────────────
+    currentPlan = currentPlan.map((existingRoute, routeIdx) => {
+        const sourceRoute = selectedRoute[routeIdx];
+        const cityName    = sourceRoute.city.toLowerCase();
         let finalSights = [...(existingRoute.sights || [])];
         if (reoptimizeSights || finalSights.length === 0) {
             finalSights = finalSights.filter(s => s.isManual);
