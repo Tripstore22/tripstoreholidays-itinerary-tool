@@ -1145,11 +1145,9 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
                 }
             }
         }
-        return { ...sourceRoute, hotel: finalHotel, isHotelManual, sights: finalSights.sort((a, b) => a.assignedDay - b.assignedDay) };
+        return { ...existingRoute, sights: finalSights.sort((a, b) => a.assignedDay - b.assignedDay) };
     });
 
-    optimizeTransfers(landBudgetTotal, paxCount);
-    optimizeIntercity(landBudgetTotal, paxCount);
     renderTables();
     const genBtn = document.getElementById('generateQuoteBtn');
     if (genBtn) genBtn.innerHTML = '↺ Revise Quote';
