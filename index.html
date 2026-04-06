@@ -1819,27 +1819,48 @@ function applyHotelFilters(routeId, city) {
                (!categoryFilter || h.category   === categoryFilter);
     }).sort((a, b) => Number(a.cost) - Number(b.cost)); // lowest price first
     document.getElementById('hotelCountBadge').innerText = `${filtered.length} Found`;
-    document.getElementById('hotelListContainer').innerHTML = filtered.length > 0
-        ? filtered.map(h => {
-            const origIdx = allCityHotels.findIndex(o => o.name === h.name);
-            return `
-            <div onclick="selectHotel(${routeId},${origIdx},'${h.city}')"
-                class="px-3 py-2 bg-white border rounded-lg cursor-pointer hover:border-blue-500 hover:shadow-sm transition-all group flex justify-between items-center gap-2">
-                <div class="flex-1 min-w-0">
-                    <div class="text-[9px] text-amber-500 leading-none mb-0.5">${h.starRating || ''}</div>
-                    <div class="text-[11px] font-bold uppercase truncate group-hover:text-blue-600">${h.name}</div>
-                    <div class="flex gap-1 mt-0.5 flex-wrap">
-                        <span class="text-[8px] bg-slate-100 text-slate-500 px-1 rounded">${h.category || ''}</span>
-                        <span class="text-[8px] text-slate-400 italic">${h.roomType || h.type || ''}</span>
-                    </div>
+
+    function hotelCard(h, highlight) {
+        const origIdx = allCityHotels.findIndex(o => o.name === h.name);
+        const border  = highlight ? 'border-green-400 bg-green-50' : 'border bg-white';
+        return `
+        <div onclick="selectHotel(${routeId},${origIdx},'${h.city}')"
+            class="px-3 py-2 ${border} rounded-lg cursor-pointer hover:border-blue-500 hover:shadow-sm transition-all group flex justify-between items-center gap-2">
+            <div class="flex-1 min-w-0">
+                ${highlight ? '<div class="text-[8px] font-bold text-green-600 uppercase mb-0.5">Best Match</div>' : ''}
+                <div class="text-[9px] text-amber-500 leading-none mb-0.5">${h.starRating || ''}</div>
+                <div class="text-[11px] font-bold uppercase truncate group-hover:text-blue-600">${h.name}</div>
+                <div class="flex gap-1 mt-0.5 flex-wrap">
+                    <span class="text-[8px] bg-slate-100 text-slate-500 px-1 rounded">${h.category || ''}</span>
+                    <span class="text-[8px] text-slate-400 italic">${h.roomType || h.type || ''}</span>
                 </div>
-                <div class="text-right flex-shrink-0">
-                    <div class="text-xs font-black text-slate-700">₹${Number(h.cost).toLocaleString()}</div>
-                    <div class="text-[8px] text-slate-400">per night</div>
-                </div>
-            </div>`;
-          }).join('')
-        : `<div class="py-8 text-center text-xs text-slate-400 italic">No hotels match your filters.</div>`;
+            </div>
+            <div class="text-right flex-shrink-0">
+                <div class="text-xs font-black text-slate-700">₹${Number(h.cost).toLocaleString()}</div>
+                <div class="text-[8px] text-slate-400">per night</div>
+            </div>
+        </div>`;
+    }
+
+    const currentCost = window._currentHotelCost || 0;
+    let html = '';
+    if (filtered.length === 0) {
+        html = `<div class="py-8 text-center text-xs text-slate-400 italic">No hotels match your filters.</div>`;
+    } else if (currentCost > 0) {
+        const low  = currentCost * 0.80;
+        const high = currentCost * 1.20;
+        const bestMatch = filtered.filter(h => Number(h.cost) >= low && Number(h.cost) <= high).slice(0, 3);
+        const rest      = filtered.filter(h => !bestMatch.includes(h));
+        if (bestMatch.length > 0) {
+            html += `<div class="text-[9px] font-bold text-green-700 uppercase px-1 mb-1">Within ±20% of current price</div>`;
+            html += bestMatch.map(h => hotelCard(h, true)).join('');
+            if (rest.length > 0) html += `<div class="text-[9px] font-bold text-slate-400 uppercase px-1 mt-3 mb-1">All Options</div>`;
+        }
+        html += rest.map(h => hotelCard(h, false)).join('');
+    } else {
+        html = filtered.map(h => hotelCard(h, false)).join('');
+    }
+    document.getElementById('hotelListContainer').innerHTML = html;
 }
 
 function selectHotel(routeId, hotelIndex, city) {
