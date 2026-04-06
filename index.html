@@ -168,12 +168,12 @@
                     <div>
                         <label id="hotelBudgetLabel" class="text-[8px] font-bold text-gray-500 uppercase">Hotel Budget</label>
                         <input type="number" id="hotelBudget" class="w-full p-1.5 border rounded text-xs font-bold" placeholder="Enter budget">
-                        <div id="hotelBudgetHint" class="text-[9px] text-slate-400 mt-0.5 hidden">Suggested: <span id="hotelBudgetRange" class="font-semibold text-slate-500"></span> <button onclick="applyBudgetSuggestion('hotel')" class="ml-1 text-[8px] text-blue-500 underline no-print">Use mid</button></div>
+                        <div id="hotelBudgetHint" style="display:none;font-size:9px;color:#94a3b8;margin-top:2px;">Suggested: <span id="hotelBudgetRange" style="font-weight:600;color:#64748b;"></span> <button onclick="applyBudgetSuggestion('hotel')" class="no-print" style="margin-left:4px;font-size:8px;color:#3b82f6;text-decoration:underline;background:none;border:none;cursor:pointer;">Use mid</button></div>
                     </div>
                     <div>
                         <label id="sightBudgetLabel" class="text-[8px] font-bold text-gray-500 uppercase">Land Package Budget</label>
                         <input type="number" id="sightBudget" class="w-full p-1.5 border rounded text-xs font-bold" placeholder="Enter budget">
-                        <div id="sightBudgetHint" class="text-[9px] text-slate-400 mt-0.5 hidden">Suggested: <span id="sightBudgetRange" class="font-semibold text-slate-500"></span> <button onclick="applyBudgetSuggestion('land')" class="ml-1 text-[8px] text-blue-500 underline no-print">Use mid</button></div>
+                        <div id="sightBudgetHint" style="display:none;font-size:9px;color:#94a3b8;margin-top:2px;">Suggested: <span id="sightBudgetRange" style="font-weight:600;color:#64748b;"></span> <button onclick="applyBudgetSuggestion('land')" class="no-print" style="margin-left:4px;font-size:8px;color:#3b82f6;text-decoration:underline;background:none;border:none;cursor:pointer;">Use mid</button></div>
                     </div>
                 </div>
                 <button onclick="runOptimizer(true, true)"
@@ -786,10 +786,14 @@ const BUDGET_RANGES = {
 let _lastBudgetSuggestion = { hotelMid: 0, landMid: 0 };
 
 function suggestBudgets() {
+    const hHint = document.getElementById('hotelBudgetHint');
+    const sHint = document.getElementById('sightBudgetHint');
+    if (!hHint || !sHint) return;
+
     const totalNights = selectedRoute.reduce((s, r) => s + (r.nights || 0), 0);
     if (totalNights === 0) {
-        document.getElementById('hotelBudgetHint').classList.add('hidden');
-        document.getElementById('sightBudgetHint').classList.add('hidden');
+        hHint.style.display = 'none';
+        sHint.style.display = 'none';
         return;
     }
     const { roomsRequired, totalPax } = getTravelConfigs();
@@ -808,8 +812,8 @@ function suggestBudgets() {
 
     document.getElementById('hotelBudgetRange').innerText = `${fmt(hotelLow)} – ${fmt(hotelHigh)}`;
     document.getElementById('sightBudgetRange').innerText = `${fmt(landLow)} – ${fmt(landHigh)}`;
-    document.getElementById('hotelBudgetHint').classList.remove('hidden');
-    document.getElementById('sightBudgetHint').classList.remove('hidden');
+    hHint.style.display = 'block';
+    sHint.style.display = 'block';
 }
 
 function applyBudgetSuggestion(type) {
