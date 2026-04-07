@@ -782,8 +782,7 @@ function handlePaxChange() {
 
 // Budget ranges per room per night (hotel) and per pax per night (land)
 const BUDGET_RANGES = {
-    hotel: { low: 5000, high: 15000 }, // ₹/room/night (budget 3★ → premium 5★)
-    land:  { low: 1500, high: 4000 }   // ₹/pax/night (sightseeing + transfers)
+    land: { low: 10000, high: 20000 }  // ₹/pax/night (sightseeing + transfers)
 };
 let _lastBudgetSuggestion = { hotelMid: 0, landMid: 0 };
 
@@ -800,18 +799,39 @@ function suggestBudgets() {
     }
     const { roomsRequired, totalPax } = getTravelConfigs();
 
-    const hotelLow  = Math.round(BUDGET_RANGES.hotel.low  * roomsRequired * totalNights / 1000) * 1000;
-    const hotelHigh = Math.round(BUDGET_RANGES.hotel.high * roomsRequired * totalNights / 1000) * 1000;
-    const hotelMid  = Math.round((hotelLow + hotelHigh) / 2 / 1000) * 1000;
+    // ── HOTEL: derive low/high from actual master data per city ──
+    let hotelLow = 0, hotelHigh = 0;
+    const hotels = (masterData && masterData.hotels) || [];
+    if (hotels.length) {
+        selectedRoute.forEach(r => {
+            const cityHotels = hotels
+                .filter(h => h.city && h.city.toLowerCase() === r.city.toLowerCase() && Number(h.cost) > 0)
+                .map(h => Number(h.cost))
+                .sort((a, b) => a - b);
+            if (!cityHotels.length) return;
+            const low  = cityHotels[0];                                      // cheapest
+            const high = cityHotels[cityHotels.length - 1];                  // most expensive
+            hotelLow  += low  * roomsRequired * r.nights;
+            hotelHigh += high * roomsRequired * r.nights;
+        });
+    }
+    // Fallback if masterData not loaded yet or city not found
+    if (!hotelLow && !hotelHigh) {
+        hotelLow  = 5000  * roomsRequired * totalNights;
+        hotelHigh = 15000 * roomsRequired * totalNights;
+    }
+    hotelLow  = Math.round(hotelLow  / 1000) * 1000;
+    hotelHigh = Math.round(hotelHigh / 1000) * 1000;
+    const hotelMid = Math.round((hotelLow + hotelHigh) / 2 / 1000) * 1000;
 
-    const landLow   = Math.round(BUDGET_RANGES.land.low  * totalPax * totalNights / 1000) * 1000;
-    const landHigh  = Math.round(BUDGET_RANGES.land.high * totalPax * totalNights / 1000) * 1000;
-    const landMid   = Math.round((landLow + landHigh) / 2 / 1000) * 1000;
+    // ── LAND: fixed range per pax per night ──
+    const landLow  = Math.round(BUDGET_RANGES.land.low  * totalPax * totalNights / 1000) * 1000;
+    const landHigh = Math.round(BUDGET_RANGES.land.high * totalPax * totalNights / 1000) * 1000;
+    const landMid  = Math.round((landLow + landHigh) / 2 / 1000) * 1000;
 
     _lastBudgetSuggestion = { hotelMid, landMid };
 
     const fmt = v => '₹' + v.toLocaleString('en-IN');
-
     document.getElementById('hotelBudgetRange').innerText = `${fmt(hotelLow)} – ${fmt(hotelHigh)}`;
     document.getElementById('sightBudgetRange').innerText = `${fmt(landLow)} – ${fmt(landHigh)}`;
     hHint.style.display = 'block';
