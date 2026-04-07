@@ -705,9 +705,9 @@ async function saveItinerary() {
             adults:      cfg.adults,
             children:    cfg.children,
             paxCount:    cfg.totalPax,
-            hotelBudget: document.getElementById('hotelBudget').value,
-            sightBudget: document.getElementById('sightBudget').value,
-            markup:      document.getElementById('markupInput').value,
+            hotelBudget: document.getElementById('hotelBudget')?.value || 0,
+            sightBudget: document.getElementById('sightBudget')?.value || 0,
+            markup:      document.getElementById('markupInput')?.value || 0,
             gstMode:     document.querySelector('input[name="gstMode"]:checked')?.value || 'none',
             vehicleType: document.getElementById('vehicleTypeSelect')?.value || 'auto',
             selectedRoute,
@@ -733,14 +733,16 @@ async function searchItinerary(query) {
         const res  = await fetch(`${API_URL}?action=search&name=${encodeURIComponent(query)}`);
         const text = await res.text();
         if (text === "Not Found") return showToast("No record found", "error");
-        const data = JSON.parse(text);
+        let data;
+        try { data = JSON.parse(text); } catch(e) { return showToast("Corrupted data from server", "error"); }
         document.getElementById('paxNameInput').value        = query;
         document.getElementById('adultCountInput').value     = data.adults   || data.paxCount || 2;
         document.getElementById('childCountInput').value     = data.children || 0;
-        document.getElementById('hotelBudget').value         = data.hotelBudget;
-        document.getElementById('sightBudget').value         = data.sightBudget;
-        document.getElementById('markupInput').value         = data.markup;
-        const gstModeToRestore = data.gstMode || (data.gst == 18 ? '18svc' : data.gst > 0 ? '5pkg' : 'none');
+        if (document.getElementById('hotelBudget'))  document.getElementById('hotelBudget').value  = data.hotelBudget || '';
+        if (document.getElementById('sightBudget'))  document.getElementById('sightBudget').value  = data.sightBudget || '';
+        if (document.getElementById('markupInput'))  document.getElementById('markupInput').value  = data.markup || '';
+        const gstVal = Number(data.gst) || 0;
+        const gstModeToRestore = data.gstMode || (gstVal === 18 ? '18svc' : gstVal > 0 ? '5pkg' : 'none');
         const gstRadio = document.querySelector(`input[name="gstMode"][value="${gstModeToRestore}"]`);
         if (gstRadio) gstRadio.checked = true;
         if (data.vehicleType && document.getElementById('vehicleTypeSelect')) {
@@ -2104,8 +2106,8 @@ function openAddTourDirect(planIdx, dayIdx, city, dateStr) {
         if (!results.length) return '<div class="text-slate-400 text-xs text-center py-4">No tours available</div>';
         return results.map(s => {
             const price = Math.round(Number(s.price) * cfg.totalPax);
-            const enc   = encodeURIComponent(JSON.stringify(s));
-            return `<div onclick="confirmAddTour(window._addTourCtx.planIdx, window._addTourCtx.dayIdx, JSON.parse(decodeURIComponent('${enc}'.replace(/\\+/g,' '))))"
+            const enc   = btoa(unescape(encodeURIComponent(JSON.stringify(s))));
+            return `<div onclick="confirmAddTour(window._addTourCtx.planIdx, window._addTourCtx.dayIdx, JSON.parse(decodeURIComponent(escape(atob('${enc}')))))"
                 class="flex justify-between items-center p-2 rounded-lg bg-white border hover:border-blue-400 cursor-pointer text-[10px] gap-2">
                 <div class="flex-1 min-w-0">
                     <div class="font-medium truncate">${s.info}</div>
@@ -2292,7 +2294,7 @@ function refreshTransferList() {
 }
 
 function selectTransferFromList(t) {
-    if (typeof t === 'string') t = JSON.parse(t);
+    if (typeof t === 'string') { try { t = JSON.parse(t); } catch(e) { return showToast("Invalid transfer data", "error"); } }
     const date = document.getElementById('addTrDate')?.value || '';
     selectedTransfers.push({
         city:         t.city,

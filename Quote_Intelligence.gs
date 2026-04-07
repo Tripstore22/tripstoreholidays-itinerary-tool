@@ -57,7 +57,7 @@ function buildQuoteLogRow(paxName, d) {
   // ── PAX ──
   const adults   = d.adults   || 0;
   const children = d.children || 0;
-  const paxCount = adults + children || d.paxCount || 0;
+  const paxCount = (adults + children) > 0 ? (adults + children) : (d.paxCount || 0);
 
   // ── DESTINATIONS ──
   const cities     = plan.map(p => _titleCase(p.city || '')).filter(Boolean);
@@ -116,7 +116,10 @@ function buildQuoteLogRow(paxName, d) {
   const markupPct    = Number(d.markup) || 0;
   const subTotal     = hotelNet + sightNet + transferNet + intercityNet;
   const markupAmt    = Math.round(subTotal * markupPct / 100);
-  const gstPct       = d.gst || 5;
+  let gstPct = 0;
+  if (d.gstMode === '18svc') gstPct = 18;
+  else if (d.gstMode === '5pkg') gstPct = 5;
+  else if (typeof d.gst === 'number') gstPct = d.gst; // legacy fallback
   const gstAmt       = Math.round(markupAmt * gstPct / 100);
   const grandTotal   = subTotal + markupAmt + gstAmt;
 

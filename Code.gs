@@ -45,6 +45,9 @@ function doPost(e) {
     const data = JSON.parse(e.postData.contents);
     const action = data.action || '';
 
+    if (action === 'checkLogin') {
+      return checkLogin(data.user || '', data.pass || '');
+    }
     if (action === 'signup') {
       return handleSignup(data.username || '', data.password || '', data.agencyName || '', data.personName || '', data.mobile || '', data.email || '');
     }
@@ -200,7 +203,7 @@ function getTransfers(ss) {
       standardVan:    standardVan,
       premiumVan:     premiumVan,
       executiveSedan: executiveSedan,
-      notes:          String(r[13] || '').trim(), // Column N: Schedule
+      schedule:       String(r[13] || '').trim(), // Column N: Schedule
       avgPrice:       economySedan                // backward compatibility
     });
   }
