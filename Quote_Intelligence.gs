@@ -37,7 +37,9 @@ function logQuote(paxName, data) {
   }
 
   try {
+    if (!data || !paxName) return;
     const row = buildQuoteLogRow(paxName, data);
+    if (!row || !row.length) return;
     logSheet.appendRow(row);
     colorLogRow(logSheet, logSheet.getLastRow(), row);
   } catch (e) {
@@ -50,6 +52,7 @@ function logQuote(paxName, data) {
 // ── ROW BUILDER ───────────────────────────────────────────────────
 
 function buildQuoteLogRow(paxName, d) {
+  if (!d || typeof d !== 'object') return [];
   const plan       = d.currentPlan       || [];
   const transfers  = d.selectedTransfers || [];
   const intercity  = d.selectedIntercity || [];
