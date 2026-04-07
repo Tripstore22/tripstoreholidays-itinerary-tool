@@ -475,8 +475,16 @@ VALIDATE — valid=false if:
 ENRICH (if valid=true):
 - Standardise city name capitalisation e.g. "amsterdam" → "Amsterdam"
 - Standardise mode capitalisation
-- avg_e: calculate average of provided € columns. If all € columns blank, back-calculate: round(inr_price / 110, 1)
-- Generate BOTH directions as two separate rows (same price for the return)
+- MONTHLY € PRICES (may_e, aug_e, oct_e, dec_e): Use your knowledge of real rail/ferry fares for this route.
+  These are one-way 2nd class / standard fares in EUR for an adult.
+  Seasonal pattern: May ≈ shoulder, Aug ≈ peak (highest), Oct ≈ shoulder-low, Dec ≈ varies by route.
+  If the route already has some months filled, use those as anchors and derive the rest using:
+  May=1.0x, Aug=1.25x, Oct=0.90x, Dec=1.05x relative multipliers.
+  If inr_price is provided and all months blank, back-calculate avg_e = round(inr_price/110, 1)
+  then derive months: may=round(avg*1.00,1), aug=round(avg*1.25,1), oct=round(avg*0.90,1), dec=round(avg*1.05,1).
+- avg_e: average of may_e, aug_e, oct_e, dec_e rounded to 1 decimal.
+- inr_price: if blank, calculate round(avg_e * 110). If already set, keep it.
+- Generate BOTH directions as two separate rows (same prices for the return leg).
 
 OUTPUT — JSON array only, no markdown:
 [{
@@ -490,6 +498,81 @@ OUTPUT — JSON array only, no markdown:
 }]`;
 
   return callClaudeAPI(prompt, pending.length);
+}
+
+
+// ================================================================
+// REPAIR — Fill missing monthly € prices in existing Trains master rows
+// Run manually: select repairTrainMonthlyPrices → Run
+// ================================================================
+function repairTrainMonthlyPrices() {
+  const ss     = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet  = ss.getSheetByName(CFG.MASTER.TRAINS);
+  if (!sheet) { Logger.log('Trains sheet not found'); return; }
+
+  const data   = sheet.getDataRange().getValues();
+  const header = data[0];
+
+  // Column indices (1-based from header row)
+  // A:Mode B:From C:To D:Stops E:Stopover F:INR G:May H:Aug I:Oct J:Dec K:Avg
+  const COL = { MODE:1, FROM:2, TO:3, STOPS:4, STOP:5, INR:6, MAY:7, AUG:8, OCT:9, DEC:10, AVG:11 };
+
+  // Find rows where INR is filled but all monthly € columns are blank
+  const toRepair = [];
+  for (let i = 1; i < data.length; i++) {
+    const row    = data[i];
+    const inr    = Number(row[COL.INR-1]);
+    const mayE   = row[COL.MAY-1];
+    const augE   = row[COL.AUG-1];
+    const octE   = row[COL.OCT-1];
+    const decE   = row[COL.DEC-1];
+    const hasMonthly = [mayE, augE, octE, decE].some(v => v !== '' && v !== 0 && v !== null);
+    if (inr > 0 && !hasMonthly) {
+      toRepair.push({ rowNum: i + 1, data: row });
+    }
+  }
+
+  if (toRepair.length === 0) { Logger.log('No rows need repair — all monthly prices already filled.'); return; }
+  Logger.log(`Found ${toRepair.length} rows with missing monthly € prices. Sending to Claude...`);
+
+  // Build pending format matching enrichTrains input
+  const pending = toRepair.map(r => ({ data: r.data, rowNum: r.rowNum }));
+
+  // Reuse enrichTrains which now includes proper monthly price logic
+  const results = enrichTrains(pending);
+  if (!results || !Array.isArray(results)) { Logger.log('Claude returned no results'); return; }
+
+  let updated = 0;
+  results.forEach(res => {
+    if (!res.valid || !res.rows || !res.rows.length) return;
+    const targetRow = toRepair[res.idx];
+    if (!targetRow) return;
+
+    // Use the first row (forward direction) to update monthly prices
+    const enriched = res.rows[0];
+    const mayE  = enriched[6]  || '';
+    const augE  = enriched[7]  || '';
+    const octE  = enriched[8]  || '';
+    const decE  = enriched[9]  || '';
+    const avgE  = enriched[10] || '';
+
+    sheet.getRange(targetRow.rowNum, COL.MAY, 1, 5).setValues([[mayE, augE, octE, decE, avgE]]);
+
+    // Also find and update the reverse direction row
+    const fromCity = String(targetRow.data[COL.FROM-1]).toLowerCase();
+    const toCity   = String(targetRow.data[COL.TO-1]).toLowerCase();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][COL.FROM-1]).toLowerCase() === toCity &&
+          String(data[i][COL.TO-1]).toLowerCase() === fromCity) {
+        sheet.getRange(i + 1, COL.MAY, 1, 5).setValues([[mayE, augE, octE, decE, avgE]]);
+        break;
+      }
+    }
+    updated++;
+  });
+
+  Logger.log(`✅ Repair complete. ${updated} route pairs updated with monthly € prices.`);
+  SpreadsheetApp.getActiveSpreadsheet().toast(`Updated ${updated} train routes with monthly prices.`, '✅ Done', 5);
 }
 
 
