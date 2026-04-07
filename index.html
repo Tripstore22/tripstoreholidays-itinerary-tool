@@ -380,6 +380,15 @@
                         </div>
                     </div>
 
+                    <!-- Export buttons (screen only) — repeated below Terms -->
+                    <div class="mt-6 no-print">
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="autoSaveThenDo(()=>window.print())" class="bg-slate-700 text-white py-2 rounded font-bold text-xs uppercase">Print</button>
+                            <button onclick="autoSaveThenDo(downloadPDF)" class="bg-orange-500 text-white py-2 rounded font-bold text-xs uppercase">PDF</button>
+                            <button onclick="autoSaveThenDo(downloadExcel)" class="bg-green-600 text-white py-2 rounded font-bold text-xs uppercase">Excel</button>
+                        </div>
+                    </div>
+
                     <!-- Internal Profitability (screen only) -->
                     <div class="mt-12 pt-6 border-t border-dashed no-print">
                         <h3 class="text-[9px] font-bold text-slate-400 uppercase mb-3 tracking-widest">Profitability Analysis (Internal)</h3>
@@ -1365,16 +1374,16 @@ function renderTables() {
 
             let topLines = '', bottomLines = '';
             if (isFirstDayOfTrip) {
-                topLines += `<div class="text-[9px] text-blue-700 italic border-b border-blue-100 pb-1 mb-1 font-medium">Arrive at the airport, take a transfer to your hotel</div>`;
+                topLines += `<div class="text-[12px] text-slate-700 border-b border-slate-100 pb-1 mb-1 font-medium">Arrive at the airport, take a transfer to your hotel</div>`;
             }
             if (isCheckinOtherCity) {
-                topLines += `<div class="text-[9px] text-blue-700 italic border-b border-blue-100 pb-1 mb-1 font-medium">Arrive in the city and make your way to the hotel on your own</div>`;
+                topLines += `<div class="text-[12px] text-slate-700 border-b border-slate-100 pb-1 mb-1 font-medium">Arrive in the city and make your way to the hotel on your own</div>`;
             }
             if (isCheckoutToNext) {
-                bottomLines += `<div class="text-[9px] text-blue-700 italic border-b border-blue-100 pb-1 mb-1 font-medium">After Breakfast check out and leave for your next city</div>`;
+                bottomLines += `<div class="text-[12px] text-slate-700 border-b border-slate-100 pb-1 mb-1 font-medium">After Breakfast check out and leave for your next city</div>`;
             }
             if (isLastDayOfTrip) {
-                bottomLines += `<div class="text-[9px] text-blue-700 italic border-b border-blue-100 pb-1 mb-1 font-medium">After breakfast check out and transfer to the airport, tour ends</div>`;
+                bottomLines += `<div class="text-[12px] text-slate-700 border-b border-slate-100 pb-1 mb-1 font-medium">After breakfast check out and transfer to the airport, tour ends</div>`;
             }
 
             const actsContent = activities.map(s => {
@@ -1386,15 +1395,17 @@ function renderTables() {
                 <div class="flex justify-between items-start text-[12px] mb-1 gap-1 border-b border-slate-50 last:border-0 pb-1">
                     <div class="flex-1 min-w-0">
                         <textarea onchange="currentPlan[${planIdx}].sights[${sIdx}].info=this.value; currentPlan[${planIdx}].sights[${sIdx}].category=''; currentPlan[${planIdx}].sights[${sIdx}].duration=''; currentPlan[${planIdx}].sights[${sIdx}].tags=''; renderTables();"
-                            class="pdf-input w-full bg-transparent outline-none font-medium resize-none overflow-hidden text-[12px]"
+                            oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+                            class="pdf-input w-full bg-transparent outline-none font-medium resize-none text-[12px]"
+                            style="overflow:hidden;"
                             rows="1">${s.info}</textarea>
                         <div class="flex items-center gap-1 mt-0">${cat}${dur}</div>
                     </div>
-                    <div class="price-col flex items-center text-slate-500 whitespace-nowrap ml-2 min-w-[80px] justify-end">
-                        <span class="mr-1">₹</span>
+                    <div class="price-col flex items-center text-slate-500 whitespace-nowrap ml-1 justify-end" style="min-width:70px;">
+                        <span style="font-size:10px;margin-right:1px;">₹</span>
                         <input type="number" value="${sTotal}"
                             onchange="currentPlan[${planIdx}].sights[${sIdx}].price = Number(this.value)/${config.totalPax}; calculateBudgetInvestment();"
-                            class="pdf-input w-16 text-right bg-transparent outline-none font-medium">
+                            class="pdf-input text-right bg-transparent outline-none font-medium" style="width:52px;">
                     </div>
                     <button onclick="deleteSightFromDay(${planIdx},'${s.instanceId}')"
                         class="no-print text-red-400 hover:text-red-600 font-bold text-sm ml-1 flex-shrink-0" title="Remove tour">✕</button>
@@ -1520,6 +1531,13 @@ function renderTables() {
     document.getElementById('resDuration').innerText = `${totalNights} NIGHTS / ${totalNights + 1} DAYS`;
 
     calculateBudgetInvestment();
+    // Auto-resize all tour-name textareas so full text is visible
+    setTimeout(() => {
+        document.querySelectorAll('textarea.pdf-input').forEach(ta => {
+            ta.style.height = 'auto';
+            ta.style.height = ta.scrollHeight + 'px';
+        });
+    }, 0);
 }
 
 // =============================================================
