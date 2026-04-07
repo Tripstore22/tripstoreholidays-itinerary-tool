@@ -782,8 +782,8 @@ function handlePaxChange() {
 
 // Budget ranges per room per night (hotel) and per pax per night (land)
 const BUDGET_RANGES = {
-    hotel: { low: 2500, high: 7500 },  // ₹/room/night
-    land:  { low: 1200, high: 2800 }   // ₹/pax/night (sightseeing + transfers)
+    hotel: { low: 5000, high: 15000 }, // ₹/room/night (budget 3★ → premium 5★)
+    land:  { low: 1500, high: 4000 }   // ₹/pax/night (sightseeing + transfers)
 };
 let _lastBudgetSuggestion = { hotelMid: 0, landMid: 0 };
 
@@ -842,7 +842,7 @@ function addCityToRoute() {
 function renderRouteInputs() {
     document.getElementById('routeList').innerHTML = selectedRoute.map(r => `
         <div class="flex justify-between items-center bg-white p-2 rounded text-[10px] border">
-            <span><b>${r.city}</b> (${r.nights}N)<br><span class="text-slate-400">${formatDate(r.cin)} → ${formatDate(r.cout)}</span></span>
+            <span><b>${r.city}</b> (${r.nights}N) &nbsp;<span class="text-slate-400">${formatDate(r.cin)} → ${formatDate(r.cout)}</span></span>
             <button onclick="removeRoute(${r.id})" class="text-red-500 font-bold px-2">✕</button>
         </div>`).join('');
     suggestBudgets();
@@ -2366,6 +2366,18 @@ async function autoSaveThenDo(action) {
 
 // EXPORT — PDF
 // =============================================================
+function getExportFilename(ext) {
+    const cfg       = getTravelConfigs();
+    const totalPax  = cfg.totalPax || 2;
+    const rawName   = document.getElementById('paxNameInput').value.trim();
+    const firstCity = selectedRoute.length ? selectedRoute[0].city : '';
+    const name      = rawName || firstCity || 'Traveler';
+    const travelDate = selectedRoute.length
+        ? new Date(selectedRoute[0].cin).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }).replace(/ /g,'-')
+        : new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }).replace(/ /g,'-');
+    return `${name.replace(/\s+/g,'_')}x${totalPax}_${travelDate}.${ext}`;
+}
+
 async function downloadPDF() {
     const element = document.getElementById('pdf-content');
     const paxName = document.getElementById('paxNameInput').value || 'Traveler';
@@ -2428,7 +2440,7 @@ async function downloadPDF() {
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
         const pdf = new jsPDF('p', 'mm', [pdfWidth, pdfHeight]);
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(`TripStore_${paxName.replace(/\s+/g, '_')}.pdf`);
+        pdf.save(getExportFilename('pdf'));
         showToast("PDF Downloaded!");
     } catch (e) { showToast("Error generating PDF", "error"); }
     finally { if (toastEl) toastEl.style.visibility = ''; }
@@ -2525,7 +2537,7 @@ async function downloadExcel() {
     sheet.getColumn(7).width = 15;
 
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), `TripStore_${paxName.replace(/\s+/g, '_')}.xlsx`);
+    saveAs(new Blob([buffer]), getExportFilename('xlsx'));
     showToast("Excel Downloaded Successfully!");
 }
 </script>
