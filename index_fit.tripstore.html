@@ -1857,6 +1857,7 @@ function openHotelSwap(routeId) {
                 <span id="hotelCountBadge" class="bg-blue-600 text-white px-2 py-0.5 rounded-full text-[9px] font-bold whitespace-nowrap">0 Found</span>
             </div>
         </div>
+        <div id="currentHotelBar" class="bg-slate-100 border-b px-3 py-2 flex-shrink-0 flex justify-between items-center" style="display:none!important;"></div>
         <div id="hotelListContainer" class="overflow-y-auto flex-1 p-3 space-y-2"></div>`;
     applyHotelFilters(routeId, city);
     toggleModal(true);
@@ -1880,38 +1881,53 @@ function applyHotelFilters(routeId, city) {
     }).sort((a, b) => Number(a.cost) - Number(b.cost)); // lowest price first
     document.getElementById('hotelCountBadge').innerText = `${filtered.length} Found`;
 
+    const currentCost   = window._currentHotelCost   || 0;
+    const nights        = window._currentHotelNights  || 1;
+
+    function diffLabel(h) {
+        if (currentCost === 0) return `<div class="text-xs font-black text-slate-700">₹${(Number(h.cost)*nights).toLocaleString('en-IN')}</div><div class="text-[8px] text-slate-400">${nights}N total</div>`;
+        const diff   = Math.round((Number(h.cost) - currentCost) * nights);
+        const sign   = diff >= 0 ? '+' : '−';
+        const colour = diff > 0 ? '#dc2626' : diff < 0 ? '#16a34a' : '#64748b';
+        return `<div style="font-size:12px;font-weight:900;color:${colour};">${sign}₹${Math.abs(diff).toLocaleString('en-IN')}</div>
+                <div style="font-size:8px;color:#94a3b8;">difference for ${nights} nights</div>`;
+    }
+
     function hotelCard(h, highlight) {
         const origIdx = allCityHotels.findIndex(o => o.name === h.name);
         const border  = highlight ? 'border-green-400 bg-green-50' : 'border bg-white';
         return `
         <div onclick="selectHotel(${routeId},${origIdx},'${h.city}')"
-            class="px-3 py-2 ${border} rounded-lg cursor-pointer hover:border-blue-500 hover:shadow-sm transition-all group flex justify-between items-center gap-2">
+            class="px-3 py-1.5 ${border} rounded-lg cursor-pointer hover:border-blue-500 hover:shadow-sm transition-all group flex justify-between items-center gap-2">
             <div class="flex-1 min-w-0">
-                ${highlight ? '<div class="text-[8px] font-bold text-green-600 uppercase mb-0.5">Best Match</div>' : ''}
-                <div class="text-[9px] text-amber-500 leading-none mb-0.5">${h.starRating || ''}</div>
-                <div class="text-[11px] font-bold uppercase truncate group-hover:text-blue-600">${h.name}</div>
+                <div class="flex items-center gap-1">
+                    <div class="text-[11px] font-bold uppercase truncate group-hover:text-blue-600">${h.name}</div>
+                    <div class="text-[9px] text-amber-500 whitespace-nowrap flex-shrink-0">${h.starRating || ''}</div>
+                </div>
                 <div class="flex gap-1 mt-0.5 flex-wrap">
                     <span class="text-[8px] bg-slate-100 text-slate-500 px-1 rounded">${h.category || ''}</span>
                     <span class="text-[8px] text-slate-400 italic">${h.roomType || h.type || ''}</span>
                 </div>
             </div>
-            <div class="text-right flex-shrink-0">${(() => {
-                const currentCost = window._currentHotelCost || 0;
-                const nights      = window._currentHotelNights || 1;
-                const diff        = Math.round((Number(h.cost) - currentCost) * nights);
-                if (currentCost === 0) {
-                    return `<div class="text-xs font-black text-slate-700">₹${(Number(h.cost)*nights).toLocaleString()}</div>
-                            <div class="text-[8px] text-slate-400">${nights}N total</div>`;
-                }
-                const sign   = diff >= 0 ? '+' : '';
-                const colour = diff > 0 ? 'text-red-600' : diff < 0 ? 'text-green-600' : 'text-slate-500';
-                return `<div class="text-xs font-black ${colour}">${sign}₹${Math.abs(diff).toLocaleString()}</div>
-                        <div class="text-[8px] text-slate-400">vs current (${nights}N)</div>`;
-            })()}</div>
+            <div class="text-right flex-shrink-0">${diffLabel(h)}</div>
         </div>`;
     }
 
-    const currentCost = window._currentHotelCost || 0;
+    // ── Sticky current hotel bar ──
+    const curBar = document.getElementById('currentHotelBar');
+    if (curBar && window._currentHotelName) {
+        const curHotel = allCityHotels.find(h => h.name.toLowerCase() === window._currentHotelName);
+        if (curHotel) {
+            curBar.style.display = 'flex';
+            curBar.innerHTML = `
+                <div>
+                    <div style="font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:1px;">Currently Selected</div>
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;">${curHotel.name} <span style="font-size:9px;color:#f59e0b;">${curHotel.starRating||''}</span></div>
+                </div>
+                <div style="text-align:right;font-size:11px;font-weight:900;color:#334155;">₹${(currentCost*nights).toLocaleString('en-IN')}<div style="font-size:8px;font-weight:400;color:#94a3b8;">${nights}N total</div></div>`;
+        }
+    }
+
     let html = '';
     if (filtered.length === 0) {
         html = `<div class="py-8 text-center text-xs text-slate-400 italic">No hotels match your filters.</div>`;
