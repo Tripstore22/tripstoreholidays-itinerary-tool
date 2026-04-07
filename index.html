@@ -817,8 +817,8 @@ function suggestBudgets() {
     }
     // Fallback if masterData not loaded yet or city not found
     if (!hotelLow && !hotelHigh) {
-        hotelLow  = 5000  * roomsRequired * totalNights;
-        hotelHigh = 15000 * roomsRequired * totalNights;
+        hotelLow  = 15000 * roomsRequired * totalNights;
+        hotelHigh = 50000 * roomsRequired * totalNights;
     }
     hotelLow  = Math.round(hotelLow  / 1000) * 1000;
     hotelHigh = Math.round(hotelHigh / 1000) * 1000;
