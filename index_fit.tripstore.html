@@ -1821,6 +1821,8 @@ function openHotelSwap(routeId) {
     const categories = [...new Set(options.map(h => h.category).filter(Boolean))].sort();
     const stars      = [...new Set(options.map(h => h.starRating).filter(Boolean))].sort();
     window._currentHotelCost = Number(item.hotel?.cost) || 0;
+    window._currentHotelName = (item.hotel?.name || '').toLowerCase();
+    window._currentHotelNights = item.nights || 1;
 
     document.getElementById('modalHeading').innerText = `Select Hotel: ${city}`;
     const mc = document.getElementById('modalContent');
@@ -1867,9 +1869,11 @@ function applyHotelFilters(routeId, city) {
     const starFilter     = document.getElementById('starFilter')?.value || '';
     const categoryFilter = document.getElementById('categoryFilter')?.value || '';
     const allCityHotels  = masterData.hotels.filter(h => h.city.toLowerCase() === city.toLowerCase());
+    const currentName = window._currentHotelName || '';
     const filtered = allCityHotels.filter(h => {
         const cost = Number(h.cost);
-        return h.name.toLowerCase().includes(searchTerm) &&
+        return h.name.toLowerCase() !== currentName &&   // exclude currently selected hotel
+               h.name.toLowerCase().includes(searchTerm) &&
                cost >= minPrice && cost <= maxPrice &&
                (!starFilter     || h.starRating === starFilter) &&
                (!categoryFilter || h.category   === categoryFilter);
@@ -1891,10 +1895,19 @@ function applyHotelFilters(routeId, city) {
                     <span class="text-[8px] text-slate-400 italic">${h.roomType || h.type || ''}</span>
                 </div>
             </div>
-            <div class="text-right flex-shrink-0">
-                <div class="text-xs font-black text-slate-700">₹${Number(h.cost).toLocaleString()}</div>
-                <div class="text-[8px] text-slate-400">per night</div>
-            </div>
+            <div class="text-right flex-shrink-0">${(() => {
+                const currentCost = window._currentHotelCost || 0;
+                const nights      = window._currentHotelNights || 1;
+                const diff        = Math.round((Number(h.cost) - currentCost) * nights);
+                if (currentCost === 0) {
+                    return `<div class="text-xs font-black text-slate-700">₹${(Number(h.cost)*nights).toLocaleString()}</div>
+                            <div class="text-[8px] text-slate-400">${nights}N total</div>`;
+                }
+                const sign   = diff >= 0 ? '+' : '';
+                const colour = diff > 0 ? 'text-red-600' : diff < 0 ? 'text-green-600' : 'text-slate-500';
+                return `<div class="text-xs font-black ${colour}">${sign}₹${Math.abs(diff).toLocaleString()}</div>
+                        <div class="text-[8px] text-slate-400">vs current (${nights}N)</div>`;
+            })()}</div>
         </div>`;
     }
 
