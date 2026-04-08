@@ -263,30 +263,54 @@ const DEMO_CITY_STATS = {
 };
 
 const DEMO_ACTIVE_USERS = {
-  count: 2,
-  users: [
-    { username:'admin', agencyName:'TripStore Holidays', personName:'Sumit Mishra', role:'ADMIN', lastLogin: new Date(Date.now() - 35*60*1000).toISOString() },
-    { username:'agent1', agencyName:'Holiday Makers', personName:'Priya Sharma', role:'USER', lastLogin: new Date(Date.now() - 3*60*60*1000).toISOString() },
+  count: 0,
+  users: []
+};
+
+// Demo master inventory (mirrors what getMasterInventory returns from Hotels + Sightseeing sheets)
+const DEMO_MASTER_INVENTORY = {
+  hotels: [
+    { city:'Paris',       count:18 }, { city:'Rome',        count:15 }, { city:'Barcelona',  count:14 },
+    { city:'Amsterdam',   count:13 }, { city:'Prague',      count:12 }, { city:'Vienna',     count:11 },
+    { city:'Florence',    count:10 }, { city:'Milan',       count:9  }, { city:'Budapest',   count:8  },
+    { city:'Athens',      count:8  }, { city:'Santorini',   count:7  }, { city:'Madrid',     count:7  },
+    { city:'Zurich',      count:6  }, { city:'Munich',      count:6  }, { city:'Dubrovnik',  count:5  },
+    { city:'Mykonos',     count:5  }, { city:'Nice',        count:4  }, { city:'Salzburg',   count:4  },
+    { city:'Innsbruck',   count:3  }, { city:'Krakow',      count:3  }, { city:'Warsaw',     count:2  },
+    { city:'Amalfi',      count:2  }, { city:'Monaco',      count:1  }, { city:'Brussels',   count:1  },
+  ],
+  sights: [
+    { city:'Rome',        count:32 }, { city:'Paris',       count:28 }, { city:'Barcelona',  count:25 },
+    { city:'Amsterdam',   count:22 }, { city:'Florence',    count:20 }, { city:'Prague',     count:18 },
+    { city:'Vienna',      count:17 }, { city:'Athens',      count:16 }, { city:'Budapest',   count:15 },
+    { city:'Madrid',      count:14 }, { city:'Milan',       count:12 }, { city:'Santorini',  count:10 },
+    { city:'Munich',      count:9  }, { city:'Dubrovnik',   count:8  }, { city:'Mykonos',    count:7  },
+    { city:'Nice',        count:6  }, { city:'Zurich',      count:5  }, { city:'Krakow',     count:4  },
+    { city:'Warsaw',      count:4  }, { city:'Salzburg',    count:3  }, { city:'Innsbruck',  count:3  },
+    { city:'Amalfi',      count:2  }, { city:'Brussels',    count:2  }, { city:'Monaco',     count:1  },
   ]
 };
 
 let allData = [];
 let filteredData = [];
 let cityStats = { hotels: [], sights: [] };
+let masterInventory = { hotels: [], sights: [] };
 let activeUsers = { count: 0, users: [] };
 
 async function loadAll() {
   try {
-    // Fetch all 3 data sources in parallel
-    const [quotesRes, cityRes, usersRes] = await Promise.allSettled([
+    // Fetch all 4 data sources in parallel
+    const [quotesRes, cityRes, usersRes, inventoryRes] = await Promise.allSettled([
       fetch(API_URL + '?action=getQuoteLog').then(r => r.json()),
       fetch(API_URL + '?action=getCityStats').then(r => r.json()),
       fetch(API_URL + '?action=getActiveUsers').then(r => r.json()),
+      fetch(API_URL + '?action=getMasterInventory').then(r => r.json()),
     ]);
 
-    allData     = (quotesRes.status==='fulfilled' && Array.isArray(quotesRes.value) && quotesRes.value.length>0) ? quotesRes.value : DEMO_QUOTES;
-    cityStats   = (cityRes.status==='fulfilled'   && cityRes.value?.hotels)   ? cityRes.value   : DEMO_CITY_STATS;
-    activeUsers = (usersRes.status==='fulfilled'  && usersRes.value?.count!=null) ? usersRes.value : DEMO_ACTIVE_USERS;
+    allData          = (quotesRes.status==='fulfilled'    && Array.isArray(quotesRes.value) && quotesRes.value.length>0) ? quotesRes.value    : DEMO_QUOTES;
+    cityStats        = (cityRes.status==='fulfilled'      && cityRes.value?.hotels)         ? cityRes.value      : DEMO_CITY_STATS;
+    activeUsers      = (usersRes.status==='fulfilled'     && usersRes.value?.count!=null)   ? usersRes.value     : DEMO_ACTIVE_USERS;
+    masterInventory  = (inventoryRes.status==='fulfilled' && inventoryRes.value?.hotels)    ? inventoryRes.value : DEMO_MASTER_INVENTORY;
 
     filteredData = [...allData];
     document.getElementById('lastRefresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
@@ -601,6 +625,115 @@ function render(filtersOnly = false) {
       </div>
       <div class="info-box info-blue">
         <strong>Insight:</strong> Low-quoted cities with high avg spend = niche but valuable. Low quoted + low spend = consider expanding inventory.
+      </div>
+    </div>
+  </div>
+
+  <!-- ───── SECTION: MASTER INVENTORY COVERAGE ───── -->
+  <div class="section-title"><span class="dot" style="background:var(--red)"></span>Master Inventory Coverage — Where We Need to Work</div>
+  <div class="city-tables" style="margin-bottom:8px;">
+    <div class="card">
+      <h3>🏨 Hotels in Master List <span class="badge">by no. of options per city</span></h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Rank</th><th>City</th><th class="td-right">Hotels Listed</th>
+            <th style="width:180px;">Coverage</th>
+          </tr></thead>
+          <tbody>
+            ${(function(){
+              const inv = masterInventory.hotels;
+              if (!inv.length) return '<tr><td colspan="4" class="empty">No data — deploy updated Code.gs first</td></tr>';
+              const maxH = inv[0].count || 1;
+              return inv.slice(0,10).map((c,i) => `
+                <tr>
+                  <td class="td-center"><span class="rank-badge ${i===0?'rank-1':'rank-top'}">${i+1}</span></td>
+                  <td><strong>${c.city}</strong></td>
+                  <td class="td-right" style="font-weight:700;">${c.count}</td>
+                  <td><div style="height:10px;background:var(--bg);border-radius:3px;overflow:hidden;">
+                    <div style="height:100%;width:${(c.count/maxH*100).toFixed(0)}%;background:var(--navy);border-radius:3px;"></div>
+                  </div></td>
+                </tr>
+              `).join('');
+            })()}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <h3>🎭 Sightseeing in Master List <span class="badge">by no. of options per city</span></h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Rank</th><th>City</th><th class="td-right">Activities Listed</th>
+            <th style="width:180px;">Coverage</th>
+          </tr></thead>
+          <tbody>
+            ${(function(){
+              const inv = masterInventory.sights;
+              if (!inv.length) return '<tr><td colspan="4" class="empty">No data — deploy updated Code.gs first</td></tr>';
+              const maxS = inv[0].count || 1;
+              return inv.slice(0,10).map((c,i) => `
+                <tr>
+                  <td class="td-center"><span class="rank-badge ${i===0?'rank-1':'rank-top'}">${i+1}</span></td>
+                  <td><strong>${c.city}</strong></td>
+                  <td class="td-right" style="font-weight:700;">${c.count}</td>
+                  <td><div style="height:10px;background:var(--bg);border-radius:3px;overflow:hidden;">
+                    <div style="height:100%;width:${(c.count/maxS*100).toFixed(0)}%;background:var(--teal);border-radius:3px;"></div>
+                  </div></td>
+                </tr>
+              `).join('');
+            })()}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="city-tables" style="margin-bottom:20px;">
+    <div class="card">
+      <h3>📉 Bottom 10 Cities — Hotels <span class="badge" style="background:var(--red-bg);color:var(--red);">need more options</span></h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>City</th><th class="td-right">Hotels Listed</th><th>Action Needed</th>
+          </tr></thead>
+          <tbody>
+            ${(function(){
+              const inv = masterInventory.hotels;
+              if (!inv.length) return '<tr><td colspan="3" class="empty">No data yet</td></tr>';
+              return inv.slice(-10).reverse().map(c => `
+                <tr>
+                  <td>${c.city}</td>
+                  <td class="td-right" style="font-weight:700;color:${c.count<=2?'var(--red)':c.count<=5?'var(--amber)':'var(--text)'}">${c.count}</td>
+                  <td style="font-size:10px;color:var(--grey);">${c.count<=2?'🔴 Critical — add more':'🟡 Low — review'}</td>
+                </tr>
+              `).join('');
+            })()}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <h3>📉 Bottom 10 Cities — Sightseeing <span class="badge" style="background:var(--red-bg);color:var(--red);">need more options</span></h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>City</th><th class="td-right">Activities Listed</th><th>Action Needed</th>
+          </tr></thead>
+          <tbody>
+            ${(function(){
+              const inv = masterInventory.sights;
+              if (!inv.length) return '<tr><td colspan="3" class="empty">No data yet</td></tr>';
+              return inv.slice(-10).reverse().map(c => `
+                <tr>
+                  <td>${c.city}</td>
+                  <td class="td-right" style="font-weight:700;color:${c.count<=3?'var(--red)':c.count<=8?'var(--amber)':'var(--text)'}">${c.count}</td>
+                  <td style="font-size:10px;color:var(--grey);">${c.count<=3?'🔴 Critical — add more':'🟡 Low — review'}</td>
+                </tr>
+              `).join('');
+            })()}
+          </tbody>
+        </table>
       </div>
     </div>
   </div>

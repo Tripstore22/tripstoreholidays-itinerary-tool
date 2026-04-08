@@ -40,6 +40,9 @@ function doGet(e) {
     if (action === 'getCityStats') {
       return getCityStats();
     }
+    if (action === 'getMasterInventory') {
+      return getMasterInventory();
+    }
     return ContentService.createTextOutput('Invalid action');
   } catch (err) {
     return ContentService.createTextOutput('Server Error: ' + err.message);
@@ -565,6 +568,57 @@ function getCityStats() {
 
   return ContentService
     .createTextOutput(JSON.stringify({ hotels: hotelStats, sights: sightStats }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+
+// ------------------------------------------------------------
+// MASTER INVENTORY — counts hotel and sightseeing entries per city
+// from the master Hotels and Sightseeing sheets.
+// Used by the dashboard to identify coverage gaps.
+// ------------------------------------------------------------
+
+function getMasterInventory() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // Hotels: Col A = City
+  const hotelMap = {};
+  const hotelSheet = ss.getSheetByName('Hotels');
+  if (hotelSheet) {
+    const rows = hotelSheet.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      const city = String(rows[i][0] || '').trim();
+      if (!city) continue;
+      const annualAvg = parsePrice(rows[i][18]);
+      if (annualAvg <= 0) continue; // skip inactive
+      hotelMap[city] = (hotelMap[city] || 0) + 1;
+    }
+  }
+
+  // Sightseeing: Col A = City
+  const sightMap = {};
+  const sightSheet = ss.getSheetByName('Sightseeing');
+  if (sightSheet) {
+    const rows = sightSheet.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      const city = String(rows[i][0] || '').trim();
+      if (!city) continue;
+      const price = parsePrice(rows[i][5]) || parsePrice(rows[i][6]) || parsePrice(rows[i][8]);
+      if (price <= 0) continue; // skip inactive
+      sightMap[city] = (sightMap[city] || 0) + 1;
+    }
+  }
+
+  const hotels = Object.entries(hotelMap)
+    .map(function(e) { return { city: e[0], count: e[1] }; })
+    .sort(function(a, b) { return b.count - a.count; });
+
+  const sights = Object.entries(sightMap)
+    .map(function(e) { return { city: e[0], count: e[1] }; })
+    .sort(function(a, b) { return b.count - a.count; });
+
+  return ContentService
+    .createTextOutput(JSON.stringify({ hotels: hotels, sights: sights }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
