@@ -432,7 +432,7 @@
 // =============================================================
 // CONFIGURATION
 // =============================================================
-const API_URL = "https://script.google.com/macros/s/AKfycby8KK3FPdT4vEzHhNpNUhx7wA8GeBvt5lE15OTffqaESGi5wY_Fr0sSVa3VcL3djPI9_Q/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzAbIgzRoN_MNs377jm3u-1r1E8D8gkSvxD84stvDwlvDC2Oe1rYf5qVqlHDE4X5jmsCQ/exec";
 
 // =============================================================
 // GLOBAL STATE
@@ -592,7 +592,7 @@ async function checkLogin() {
         const res    = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "checkLogin", user, pass }) });
         const status = await res.text();
         if (status === "ADMIN" || status === "USER") {
-            const session = { isLoggedIn: true, isAdmin: status === "ADMIN", modeText: status === "ADMIN" ? "ADMIN MODE" : "USER MODE" };
+            const session = { isLoggedIn: true, isAdmin: status === "ADMIN", modeText: status === "ADMIN" ? "ADMIN MODE" : "USER MODE", agentName: user };
             localStorage.setItem("tripstore_session", JSON.stringify(session));
             isAdmin = session.isAdmin;
             launchApp(session.modeText);
@@ -707,10 +707,12 @@ async function saveItinerary() {
     const btn = document.getElementById('btnSave');
     btn.innerText = "SAVING..."; btn.disabled = true;
     const cfg = getTravelConfigs();
+    const _sess = JSON.parse(localStorage.getItem('tripstore_session') || '{}');
     const data = {
         action: "saveItinerary",
         paxName,
         payload: {
+            agentName:   _sess.agentName || '',
             adults:      cfg.adults,
             children:    cfg.children,
             paxCount:    cfg.totalPax,
@@ -910,17 +912,19 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
         if (route.sights) route.sights.forEach(s => { if (s.isManual) spentSightBudget += Number(s.price) * paxCount; });
     });
 
-    // Count cities that need system-assigned hotels (not manually set)
+    // Count cities/nights that need system-assigned hotels (not manually set)
     // Use selectedRoute (not currentPlan) so first-run works correctly when currentPlan is empty
-    const systemHotelCitiesCount = selectedRoute.filter(sr => {
+    const systemHotelRoutes = selectedRoute.filter(sr => {
         const existing = currentPlan.find(p => p.id === sr.id);
         return !existing || !existing.isHotelManual;
-    }).length;
+    });
+    const systemHotelNightsTotal = systemHotelRoutes.reduce((s, sr) => s + Number(sr.nights || 0), 0);
 
     // activeDays = sum of nights only (departure day per city is excluded from activity assignment)
     const activeDays       = selectedRoute.reduce((sum, r) => sum + Number(r.nights), 0);
     const remainingHBudget = Math.max(0, hBudgetTotal - spentHotelBudget);
-    const hCapPerSystemCity = systemHotelCitiesCount > 0 ? remainingHBudget / systemHotelCitiesCount : 0;
+    // Distribute budget proportionally by nights (not equally per city)
+    const hBudgetPerNight  = systemHotelNightsTotal > 0 ? remainingHBudget / systemHotelNightsTotal : 0;
 
     // ── Phase 1: assign hotels only (no sights yet) ──────────────────────────
     currentPlan = selectedRoute.map((sourceRoute, routeIdx) => {
@@ -933,7 +937,10 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
             const cityHotels = masterData.hotels.filter(h => h.city.toLowerCase() === cityName);
             if (cityHotels.length > 0) {
                 cityHotels.sort((a, b) => b.cost - a.cost);
-                finalHotel = cityHotels.find(h => calculateHotelPrice(Number(h.cost), sourceRoute.nights) <= hCapPerSystemCity) || cityHotels[cityHotels.length - 1];
+                // Budget cap for this city = per-night rate × its nights
+                const cityNights = Number(sourceRoute.nights) || 1;
+                const hCapForCity = hBudgetPerNight * cityNights;
+                finalHotel = cityHotels.find(h => calculateHotelPrice(Number(h.cost), cityNights) <= hCapForCity) || cityHotels[cityHotels.length - 1];
             }
         }
         return { ...sourceRoute, hotel: finalHotel, sights: existingRoute.sights || [], isHotelManual, dayNotes: existingRoute.dayNotes || {} };
