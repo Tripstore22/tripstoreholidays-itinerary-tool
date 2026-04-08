@@ -111,13 +111,14 @@
 <!-- MAIN APP -->
 <div id="main-wrapper">
 
-<!-- ADMIN NAV (only shown for admins) -->
+<!-- MAIN NAV (shown for all logged-in users) -->
 <div id="adminNav" class="hidden no-print" style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);padding:0 24px;display:flex;align-items:center;gap:0;border-bottom:2px solid #2563eb;box-shadow:0 2px 12px rgba(0,0,0,.35);">
-  <div style="color:#fff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;opacity:.5;padding:14px 16px 14px 0;border-right:1px solid rgba(255,255,255,.1);margin-right:4px;">ADMIN</div>
-  <button id="navBtn-itinerary" onclick="switchAdminTab('itinerary')" class="admin-nav-btn active" style="color:#fff;font-size:11px;font-weight:700;padding:14px 18px;border:none;background:none;cursor:pointer;border-bottom:3px solid #2563eb;letter-spacing:.5px;transition:all .2s;">📋 Itinerary Builder</button>
-  <button id="navBtn-quote" onclick="switchAdminTab('quote')" class="admin-nav-btn" style="color:rgba(255,255,255,.6);font-size:11px;font-weight:700;padding:14px 18px;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;letter-spacing:.5px;transition:all .2s;">📊 Quote Dashboard</button>
-  <button id="navBtn-data" onclick="switchAdminTab('data')" class="admin-nav-btn" style="color:rgba(255,255,255,.6);font-size:11px;font-weight:700;padding:14px 18px;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;letter-spacing:.5px;transition:all .2s;">🗂️ Data Dashboard</button>
-  <div style="margin-left:auto;color:rgba(255,255,255,.4);font-size:10px;">TripStore Admin</div>
+  <div style="color:#fff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;opacity:.5;padding:14px 16px 14px 0;border-right:1px solid rgba(255,255,255,.1);margin-right:4px;" id="navRoleLabel">USER</div>
+  <button id="navBtn-itinerary" onclick="switchAdminTab('itinerary')" class="admin-nav-btn" style="color:#fff;font-size:11px;font-weight:700;padding:14px 18px;border:none;background:none;cursor:pointer;border-bottom:3px solid #2563eb;background:rgba(255,255,255,.06);letter-spacing:.5px;transition:all .2s;">📋 Itinerary Builder</button>
+  <button id="navBtn-saved" onclick="switchAdminTab('saved')" class="admin-nav-btn" style="color:rgba(255,255,255,.6);font-size:11px;font-weight:700;padding:14px 18px;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;letter-spacing:.5px;transition:all .2s;">📂 My Itineraries</button>
+  <button id="navBtn-quote" onclick="switchAdminTab('quote')" class="admin-nav-btn admin-only-tab" style="display:none;color:rgba(255,255,255,.6);font-size:11px;font-weight:700;padding:14px 18px;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;letter-spacing:.5px;transition:all .2s;">📊 Quote Dashboard</button>
+  <button id="navBtn-data" onclick="switchAdminTab('data')" class="admin-nav-btn admin-only-tab" style="display:none;color:rgba(255,255,255,.6);font-size:11px;font-weight:700;padding:14px 18px;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;letter-spacing:.5px;transition:all .2s;">🗂️ Data Dashboard</button>
+  <div style="margin-left:auto;color:rgba(255,255,255,.4);font-size:10px;" id="navUserLabel"></div>
 </div>
 
 <!-- TAB: ITINERARY BUILDER -->
@@ -423,6 +424,11 @@
     <datalist id="cityList"></datalist>
 </div><!-- /tab-itinerary -->
 
+<!-- TAB: MY ITINERARIES -->
+<div id="tab-saved" class="hidden" style="padding:28px 32px;background:#f1f5f9;min-height:100vh;">
+  <div id="savedListContent"><div style="text-align:center;padding:80px;color:#94a3b8;"><div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:dashSpin .8s linear infinite;margin:0 auto 16px;"></div>Loading saved itineraries...</div></div>
+</div>
+
 <!-- TAB: QUOTE DASHBOARD -->
 <div id="tab-quote" class="hidden" style="padding:28px 32px;background:#f1f5f9;min-height:100vh;">
   <div id="quoteDashContent"><div style="text-align:center;padding:80px;color:#94a3b8;"><div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:dashSpin .8s linear infinite;margin:0 auto 16px;"></div>Loading quote data...</div></div>
@@ -684,7 +690,8 @@ async function checkLogin() {
         const res    = await fetch(`${API_URL}?action=checkLogin&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`);
         const status = await res.text();
         if (status === "ADMIN" || status === "USER") {
-            const session = { isLoggedIn: true, isAdmin: status === "ADMIN", modeText: status === "ADMIN" ? "ADMIN MODE" : "USER MODE" };
+            const uname = document.getElementById('loginUser')?.value?.trim() || '';
+            const session = { isLoggedIn: true, isAdmin: status === "ADMIN", modeText: status === "ADMIN" ? "ADMIN MODE" : "USER MODE", username: uname };
             localStorage.setItem("tripstore_session", JSON.stringify(session));
             isAdmin = session.isAdmin;
             launchApp(session.modeText);
@@ -728,9 +735,18 @@ function launchApp(modeText) {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('main-wrapper').style.display  = 'block';
     document.getElementById('roleBadge').innerText = modeText;
+    // Show nav for ALL users
+    const nav = document.getElementById('adminNav');
+    nav.style.display = 'flex';
+    document.getElementById('navRoleLabel').textContent = isAdmin ? 'ADMIN' : 'USER';
+    const savedUser = localStorage.getItem('tripstore_session');
+    if (savedUser) {
+        try { document.getElementById('navUserLabel').textContent = JSON.parse(savedUser).username || ''; } catch(e) {}
+    }
     if (isAdmin) {
         document.getElementById('adminPanel').classList.remove('hidden');
-        document.getElementById('adminNav').style.display = 'flex';
+        // Show admin-only tabs
+        document.querySelectorAll('.admin-only-tab').forEach(el => el.style.display = 'inline-block');
         refreshAdminList();
     }
     init();
@@ -781,17 +797,45 @@ async function init() {
 }
 
 // =============================================================
-// CLOUD STORAGE
+// CLOUD STORAGE  —  versioning-aware save & load
+// _loadedFromName tracks if current itinerary was opened from a saved record.
+// On save, if the paxName hasn't changed from the loaded name, we save a NEW
+// version (append _V1, _V2 …) instead of overwriting the original.
 // =============================================================
+let _loadedFromName = null;   // set by searchItinerary / loadAndOpen
+
 async function saveItinerary() {
-    const paxName = document.getElementById('paxNameInput').value.trim();
-    if (!paxName) return showToast("Enter Pax Name to save", "error");
+    const rawName = document.getElementById('paxNameInput').value.trim();
+    if (!rawName) return showToast("Enter Pax Name to save", "error");
+
     const btn = document.getElementById('btnSave');
     btn.innerText = "SAVING..."; btn.disabled = true;
-    const cfg = getTravelConfigs();
+
+    let saveName = rawName;
+
+    // ── VERSIONING: if this itinerary was opened from a saved record and
+    //    the pax name hasn't been changed, save as a new version instead of overwriting.
+    if (_loadedFromName && rawName.toLowerCase() === _loadedFromName.toLowerCase()) {
+        try {
+            const allRes   = await fetch(`${API_URL}?action=getAllSaved`);
+            const allNames = await allRes.json();
+            // Strip any existing _Vn suffix from the base name
+            const base = rawName.replace(/_V\d+$/i, '');
+            // Find highest existing version number for this base
+            const vNums = allNames
+                .filter(n => n.toLowerCase() === base.toLowerCase() ||
+                             new RegExp('^' + base.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '_V(\\d+)$','i').test(n))
+                .map(n => { const m = n.match(/_V(\d+)$/i); return m ? parseInt(m[1]) : 0; });
+            const nextV = (vNums.length ? Math.max(...vNums) : 0) + 1;
+            saveName = `${base}_V${nextV}`;
+            document.getElementById('paxNameInput').value = saveName;
+        } catch(e) { /* fall through, save with raw name */ }
+    }
+
+    const cfg  = getTravelConfigs();
     const data = {
         action: "saveItinerary",
-        paxName,
+        paxName: saveName,
         payload: {
             adults:      cfg.adults,
             children:    cfg.children,
@@ -809,7 +853,10 @@ async function saveItinerary() {
     };
     try {
         await fetch(API_URL, { method: "POST", body: JSON.stringify(data) });
-        showToast("Saved Successfully");
+        _loadedFromName = null;   // clear — next save of THIS name will also version
+        showToast(_loadedFromName === null && saveName !== rawName
+            ? `Saved as new version: ${saveName}`
+            : "Saved Successfully");
         if (isAdmin) refreshAdminList();
     } catch (e) { showToast("Save Failed", "error"); }
     finally { btn.innerText = "Save Itinerary"; btn.disabled = false; }
@@ -842,17 +889,145 @@ async function searchItinerary(query) {
         selectedTransfers = data.selectedTransfers || [];
         selectedIntercity = data.selectedIntercity || [];
         updatePaxHeader();
-        // Update pax-dependent labels without triggering runOptimizer
         const _cfg = getTravelConfigs();
-        const _el = document.getElementById('roomDisplay');
+        const _el  = document.getElementById('roomDisplay');
         if (_el) _el.innerText = `Rooms Required: ${_cfg.roomsRequired} (auto)`;
         document.getElementById('hotelBudgetLabel').innerText = `Hotel Budget (${_cfg.totalPax} Pax)`;
         document.getElementById('sightBudgetLabel').innerText = `Land Package Budget (${_cfg.totalPax} Pax)`;
         renderRouteInputs();
         renderTables();
-        showToast("Itinerary Loaded!");
+        _loadedFromName = query;   // ← mark as "opened from saved"
+        showToast(`Loaded: ${query}`);
     } catch (e) { showToast("Error loading itinerary", "error"); }
     finally { btn.innerText = "LOAD"; }
+}
+
+// Opens a saved itinerary into the builder tab and switches to it
+async function loadAndOpen(name) {
+    switchAdminTab('itinerary');
+    await searchItinerary(name);
+}
+
+// ── MY ITINERARIES TAB ──────────────────────────────────────
+async function loadSavedList() {
+    const el = document.getElementById('savedListContent');
+    el.innerHTML = '<div style="text-align:center;padding:60px;color:#94a3b8;"><div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:dashSpin .8s linear infinite;margin:0 auto 12px;"></div>Loading...</div>';
+
+    let list = [];
+    try {
+        const res = await fetch(`${API_URL}?action=getSavedList`);
+        list = await res.json();
+        if (!Array.isArray(list)) list = [];
+    } catch(e) {
+        el.innerHTML = '<div style="padding:40px;color:#dc2626;text-align:center;">⚠️ Could not load itineraries. Check API deployment.</div>';
+        return;
+    }
+    if (!list.length) {
+        el.innerHTML = '<div style="padding:60px;text-align:center;color:#94a3b8;font-size:13px;">No saved itineraries yet.<br><small>Build and save an itinerary from the Itinerary Builder tab.</small></div>';
+        return;
+    }
+
+    // Group base names to show version badges
+    const versionMap = {};
+    list.forEach(r => {
+        const base = r.paxName.replace(/_V\d+$/i, '');
+        versionMap[base] = (versionMap[base] || 0) + 1;
+    });
+
+    el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div>
+        <div style="font-size:20px;font-weight:900;color:#0f172a;">My Itineraries</div>
+        <div style="font-size:12px;color:#64748b;margin-top:2px;">${list.length} saved itinerar${list.length===1?'y':'ies'}</div>
+      </div>
+      <input id="savedSearch" oninput="filterSavedList()" placeholder="Search by name or city…"
+        style="padding:8px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;width:240px;outline:none;">
+    </div>
+    <div style="background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.06);border:1px solid #e2e8f0;overflow:hidden;">
+      <table style="width:100%;border-collapse:collapse;" id="savedTable">
+        <thead>
+          <tr style="background:#0f172a;">
+            <th style="padding:11px 14px;text-align:left;font-size:10px;font-weight:700;color:#fff;letter-spacing:.5px;white-space:nowrap;">PAX NAME</th>
+            <th style="padding:11px 14px;text-align:center;font-size:10px;font-weight:700;color:#fff;letter-spacing:.5px;">PAX</th>
+            <th style="padding:11px 14px;text-align:center;font-size:10px;font-weight:700;color:#fff;letter-spacing:.5px;">NIGHTS</th>
+            <th style="padding:11px 14px;text-align:left;font-size:10px;font-weight:700;color:#fff;letter-spacing:.5px;">CITIES</th>
+            <th style="padding:11px 14px;text-align:right;font-size:10px;font-weight:700;color:#fff;letter-spacing:.5px;">HOTEL BUDGET</th>
+            <th style="padding:11px 14px;text-align:right;font-size:10px;font-weight:700;color:#fff;letter-spacing:.5px;">LAND BUDGET</th>
+            <th style="padding:11px 14px;text-align:center;font-size:10px;font-weight:700;color:#fff;letter-spacing:.5px;">SAVED</th>
+            <th style="padding:11px 14px;text-align:center;font-size:10px;font-weight:700;color:#fff;letter-spacing:.5px;">ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody id="savedTableBody">
+          ${list.map((r, idx) => {
+            const base    = r.paxName.replace(/_V\d+$/i, '');
+            const isVer   = /_V\d+$/i.test(r.paxName);
+            const verMatch= r.paxName.match(/_V(\d+)$/i);
+            const verBadge= verMatch ? `<span style="background:#eff6ff;color:#2563eb;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;margin-left:6px;">V${verMatch[1]}</span>` : '';
+            const latestBadge = (!isVer && versionMap[base] > 1) ? `<span style="background:#d4edda;color:#16a34a;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;margin-left:6px;">LATEST</span>` : '';
+            const savedDate = r.savedAt ? new Date(r.savedAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+            const hBudget   = r.hotelBudget ? '₹'+Number(r.hotelBudget).toLocaleString('en-IN') : '—';
+            const sBudget   = r.sightBudget ? '₹'+Number(r.sightBudget).toLocaleString('en-IN') : '—';
+            return `<tr data-name="${r.paxName.toLowerCase()}" data-cities="${r.cities.toLowerCase()}"
+              style="border-bottom:1px solid #f1f5f9;${idx%2===0?'background:#fff;':'background:#fafafa;'}transition:background .15s;"
+              onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='${idx%2===0?'#fff':'#fafafa'}'">
+              <td style="padding:11px 14px;font-size:12px;font-weight:700;color:#0f172a;white-space:nowrap;">
+                ${r.paxName.replace(/_V\d+$/i,'')}${verBadge}${latestBadge}
+              </td>
+              <td style="padding:11px 14px;text-align:center;font-size:12px;">${r.totalPax}<br><span style="font-size:9px;color:#94a3b8;">${r.adults}A${r.children>0?' '+r.children+'C':''}</span></td>
+              <td style="padding:11px 14px;text-align:center;font-size:13px;font-weight:800;color:#0f172a;">${r.totalNights}</td>
+              <td style="padding:11px 14px;font-size:11px;color:#475569;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.cities}">${r.cities||'—'}</td>
+              <td style="padding:11px 14px;text-align:right;font-size:12px;font-weight:600;">${hBudget}</td>
+              <td style="padding:11px 14px;text-align:right;font-size:12px;font-weight:600;">${sBudget}</td>
+              <td style="padding:11px 14px;text-align:center;font-size:10px;color:#64748b;white-space:nowrap;">${savedDate}</td>
+              <td style="padding:11px 14px;text-align:center;white-space:nowrap;">
+                <button onclick="loadAndOpen('${r.paxName.replace(/'/g,"\\'")}')"
+                  style="background:#0f172a;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;margin:0 2px;">✏️ Open</button>
+                <button onclick="loadAndPrint('${r.paxName.replace(/'/g,"\\'")}')"
+                  style="background:#1d4ed8;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;margin:0 2px;">🖨️ Print</button>
+                <button onclick="loadAndPDF('${r.paxName.replace(/'/g,"\\'")}')"
+                  style="background:#dc2626;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;margin:0 2px;">📄 PDF</button>
+                <button onclick="loadAndExcel('${r.paxName.replace(/'/g,"\\'")}')"
+                  style="background:#16a34a;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;margin:0 2px;">📊 Excel</button>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:12px;padding:11px 14px;background:#fffbeb;border-left:3px solid #d97706;border-radius:8px;font-size:11px;color:#92400e;font-weight:600;">
+      ✏️ <strong>Version control active:</strong> Opening a saved itinerary and saving changes will create a new version (V1, V2…) — the original is never overwritten.
+    </div>`;
+}
+
+function filterSavedList() {
+    const q = (document.getElementById('savedSearch')?.value || '').toLowerCase();
+    document.querySelectorAll('#savedTableBody tr').forEach(row => {
+        const name   = row.dataset.name   || '';
+        const cities = row.dataset.cities || '';
+        row.style.display = (!q || name.includes(q) || cities.includes(q)) ? '' : 'none';
+    });
+}
+
+async function loadAndPrint(name) {
+    await loadAndOpen(name);
+    setTimeout(() => window.print(), 800);
+}
+
+async function loadAndPDF(name) {
+    await loadAndOpen(name);
+    setTimeout(() => {
+        const btn = document.getElementById('btnPDF') || document.querySelector('[onclick*="generatePDF"]');
+        if (btn) btn.click();
+        else window.print();
+    }, 800);
+}
+
+async function loadAndExcel(name) {
+    await loadAndOpen(name);
+    setTimeout(() => {
+        const btn = document.querySelector('[onclick*="generateExcel"]') || document.querySelector('[onclick*="Excel"]');
+        if (btn) btn.click();
+    }, 800);
 }
 
 // =============================================================
@@ -2511,7 +2686,7 @@ async function downloadExcel() {
 
 function switchAdminTab(tab) {
     // Update nav button styles
-    ['itinerary','quote','data'].forEach(t => {
+    ['itinerary','saved','quote','data'].forEach(t => {
         const btn = document.getElementById('navBtn-' + t);
         if (!btn) return;
         if (t === tab) {
@@ -2526,9 +2701,11 @@ function switchAdminTab(tab) {
     });
     // Show/hide tab content
     document.getElementById('tab-itinerary').style.display = tab === 'itinerary' ? '' : 'none';
-    document.getElementById('tab-quote').style.display     = tab === 'quote'      ? '' : 'none';
-    document.getElementById('tab-data').style.display      = tab === 'data'       ? '' : 'none';
+    document.getElementById('tab-saved').style.display     = tab === 'saved'     ? '' : 'none';
+    document.getElementById('tab-quote').style.display     = tab === 'quote'     ? '' : 'none';
+    document.getElementById('tab-data').style.display      = tab === 'data'      ? '' : 'none';
 
+    if (tab === 'saved') loadSavedList();
     if (tab === 'quote') loadQuoteDashboard();
     if (tab === 'data')  loadDataDashboard();
 }
