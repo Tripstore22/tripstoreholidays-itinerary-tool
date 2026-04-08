@@ -815,17 +815,20 @@ async function saveItinerary() {
 
     // ── VERSIONING: if this itinerary was opened from a saved record and
     //    the pax name hasn't been changed, save as a new version instead of overwriting.
+    //    Format: <existing saved name>_V1, <existing saved name>_V2, ...
+    //    The base is always the _loadedFromName (the name it was opened from),
+    //    stripping any existing _Vn suffix so versions stay flat (V1, V2, V3…).
     if (_loadedFromName && rawName.toLowerCase() === _loadedFromName.toLowerCase()) {
         try {
             const allRes   = await fetch(`${API_URL}?action=getAllSaved`);
             const allNames = await allRes.json();
-            // Strip any existing _Vn suffix from the base name
-            const base = rawName.replace(/_V\d+$/i, '');
-            // Find highest existing version number for this base
+            // Base = loaded name with any trailing _Vn removed
+            const base    = _loadedFromName.replace(/_V\d+$/i, '');
+            const escaped = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            // Count existing versions for this base name
             const vNums = allNames
-                .filter(n => n.toLowerCase() === base.toLowerCase() ||
-                             new RegExp('^' + base.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '_V(\\d+)$','i').test(n))
-                .map(n => { const m = n.match(/_V(\d+)$/i); return m ? parseInt(m[1]) : 0; });
+                .filter(n => new RegExp('^' + escaped + '_V(\\d+)$', 'i').test(n))
+                .map(n => { const m = n.match(/_V(\d+)$/i); return parseInt(m[1]); });
             const nextV = (vNums.length ? Math.max(...vNums) : 0) + 1;
             saveName = `${base}_V${nextV}`;
             document.getElementById('paxNameInput').value = saveName;
@@ -853,10 +856,9 @@ async function saveItinerary() {
     };
     try {
         await fetch(API_URL, { method: "POST", body: JSON.stringify(data) });
-        _loadedFromName = null;   // clear — next save of THIS name will also version
-        showToast(_loadedFromName === null && saveName !== rawName
-            ? `Saved as new version: ${saveName}`
-            : "Saved Successfully");
+        const wasVersioned = saveName !== rawName;
+        _loadedFromName = null;
+        showToast(wasVersioned ? `Saved as new version: ${saveName}` : "Saved Successfully");
         if (isAdmin) refreshAdminList();
     } catch (e) { showToast("Save Failed", "error"); }
     finally { btn.innerText = "Save Itinerary"; btn.disabled = false; }
