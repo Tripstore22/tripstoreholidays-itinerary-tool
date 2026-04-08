@@ -110,6 +110,18 @@
 
 <!-- MAIN APP -->
 <div id="main-wrapper">
+
+<!-- ADMIN NAV (only shown for admins) -->
+<div id="adminNav" class="hidden no-print" style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);padding:0 24px;display:flex;align-items:center;gap:0;border-bottom:2px solid #2563eb;box-shadow:0 2px 12px rgba(0,0,0,.35);">
+  <div style="color:#fff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;opacity:.5;padding:14px 16px 14px 0;border-right:1px solid rgba(255,255,255,.1);margin-right:4px;">ADMIN</div>
+  <button id="navBtn-itinerary" onclick="switchAdminTab('itinerary')" class="admin-nav-btn active" style="color:#fff;font-size:11px;font-weight:700;padding:14px 18px;border:none;background:none;cursor:pointer;border-bottom:3px solid #2563eb;letter-spacing:.5px;transition:all .2s;">📋 Itinerary Builder</button>
+  <button id="navBtn-quote" onclick="switchAdminTab('quote')" class="admin-nav-btn" style="color:rgba(255,255,255,.6);font-size:11px;font-weight:700;padding:14px 18px;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;letter-spacing:.5px;transition:all .2s;">📊 Quote Dashboard</button>
+  <button id="navBtn-data" onclick="switchAdminTab('data')" class="admin-nav-btn" style="color:rgba(255,255,255,.6);font-size:11px;font-weight:700;padding:14px 18px;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;letter-spacing:.5px;transition:all .2s;">🗂️ Data Dashboard</button>
+  <div style="margin-left:auto;color:rgba(255,255,255,.4);font-size:10px;">TripStore Admin</div>
+</div>
+
+<!-- TAB: ITINERARY BUILDER -->
+<div id="tab-itinerary">
     <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
 
         <!-- LEFT PANEL -->
@@ -168,12 +180,10 @@
                     <div>
                         <label id="hotelBudgetLabel" class="text-[8px] font-bold text-gray-500 uppercase">Hotel Budget</label>
                         <input type="number" id="hotelBudget" class="w-full p-1.5 border rounded text-xs font-bold" placeholder="Enter budget">
-                        <div id="hotelBudgetHint" style="display:none;font-size:9px;color:#94a3b8;margin-top:2px;">Suggested: <span id="hotelBudgetRange" style="font-weight:600;color:#64748b;"></span> <button onclick="applyBudgetSuggestion('hotel')" class="no-print" style="margin-left:4px;font-size:8px;color:#3b82f6;text-decoration:underline;background:none;border:none;cursor:pointer;">Use mid</button></div>
                     </div>
                     <div>
                         <label id="sightBudgetLabel" class="text-[8px] font-bold text-gray-500 uppercase">Land Package Budget</label>
                         <input type="number" id="sightBudget" class="w-full p-1.5 border rounded text-xs font-bold" placeholder="Enter budget">
-                        <div id="sightBudgetHint" style="display:none;font-size:9px;color:#94a3b8;margin-top:2px;">Suggested: <span id="sightBudgetRange" style="font-weight:600;color:#64748b;"></span> <button onclick="applyBudgetSuggestion('land')" class="no-print" style="margin-left:4px;font-size:8px;color:#3b82f6;text-decoration:underline;background:none;border:none;cursor:pointer;">Use mid</button></div>
                     </div>
                 </div>
                 <button onclick="runOptimizer(true, true)"
@@ -380,15 +390,6 @@
                         </div>
                     </div>
 
-                    <!-- Export buttons (screen only) — repeated below Terms -->
-                    <div class="mt-6 no-print">
-                        <div class="grid grid-cols-3 gap-2">
-                            <button onclick="autoSaveThenDo(()=>window.print())" class="bg-slate-700 text-white py-2 rounded font-bold text-xs uppercase">Print</button>
-                            <button onclick="autoSaveThenDo(downloadPDF)" class="bg-orange-500 text-white py-2 rounded font-bold text-xs uppercase">PDF</button>
-                            <button onclick="autoSaveThenDo(downloadExcel)" class="bg-green-600 text-white py-2 rounded font-bold text-xs uppercase">Excel</button>
-                        </div>
-                    </div>
-
                     <!-- Internal Profitability (screen only) -->
                     <div class="mt-12 pt-6 border-t border-dashed no-print">
                         <h3 class="text-[9px] font-bold text-slate-400 uppercase mb-3 tracking-widest">Profitability Analysis (Internal)</h3>
@@ -420,7 +421,98 @@
         </div>
     </div>
     <datalist id="cityList"></datalist>
+</div><!-- /tab-itinerary -->
+
+<!-- TAB: QUOTE DASHBOARD -->
+<div id="tab-quote" class="hidden" style="padding:28px 32px;background:#f1f5f9;min-height:100vh;">
+  <div id="quoteDashContent"><div style="text-align:center;padding:80px;color:#94a3b8;"><div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:dashSpin .8s linear infinite;margin:0 auto 16px;"></div>Loading quote data...</div></div>
 </div>
+
+<!-- TAB: DATA DASHBOARD -->
+<div id="tab-data" class="hidden" style="padding:28px 32px;background:#f1f5f9;min-height:100vh;">
+  <div id="dataDashContent"><div style="text-align:center;padding:80px;color:#94a3b8;"><div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:dashSpin .8s linear infinite;margin:0 auto 16px;"></div>Loading master data...</div></div>
+</div>
+
+<style>
+@keyframes dashSpin { to { transform:rotate(360deg); } }
+.admin-nav-btn:hover { color:#fff !important; background:rgba(255,255,255,.08) !important; }
+/* Dashboard shared styles */
+.db-section { margin-bottom:28px; }
+.db-section-title { font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #e2e8f0;display:flex;align-items:center;gap:8px; }
+.db-section-title .dt { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
+.db-kpi-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px; }
+.db-kpi { border-radius:14px;padding:18px 20px;position:relative;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.06); }
+.db-kpi .dk-label { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;opacity:.75;margin-bottom:6px; }
+.db-kpi .dk-value { font-size:28px;font-weight:900;line-height:1.1;margin-bottom:4px; }
+.db-kpi .dk-sub { font-size:11px;opacity:.7; }
+.db-kpi .dk-icon { position:absolute;right:16px;top:16px;font-size:28px;opacity:.18; }
+.db-kpi-blue   { background:linear-gradient(135deg,#1e40af,#2563eb);color:#fff; }
+.db-kpi-green  { background:linear-gradient(135deg,#065f46,#16a34a);color:#fff; }
+.db-kpi-amber  { background:linear-gradient(135deg,#92400e,#d97706);color:#fff; }
+.db-kpi-red    { background:linear-gradient(135deg,#991b1b,#dc2626);color:#fff; }
+.db-kpi-purple { background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff; }
+.db-kpi-teal   { background:linear-gradient(135deg,#134e4a,#0d9488);color:#fff; }
+.db-kpi-slate  { background:linear-gradient(135deg,#1e293b,#334155);color:#fff; }
+.db-kpi-indigo { background:linear-gradient(135deg,#312e81,#4338ca);color:#fff; }
+.db-card { background:#fff;border-radius:14px;padding:20px 22px;box-shadow:0 2px 12px rgba(0,0,0,.06);border:1px solid #e2e8f0; }
+.db-card h3 { font-size:13px;font-weight:700;color:#0f172a;margin-bottom:16px;display:flex;align-items:center;gap:8px; }
+.db-card h3 .badge { background:#eff6ff;color:#2563eb;font-size:10px;padding:2px 9px;border-radius:20px;font-weight:700; }
+.db-row2 { display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px; }
+.db-row3 { display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:18px; }
+.db-row-full { margin-bottom:18px; }
+.db-table { width:100%;border-collapse:collapse; }
+.db-table th { background:#0f172a;color:#fff;padding:9px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.4px;white-space:nowrap;position:sticky;top:0;z-index:1; }
+.db-table td { padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:12px;white-space:nowrap; }
+.db-table tr:hover td { background:#eff6ff; }
+.db-table .tr { text-align:right; }
+.db-tbl-wrap { overflow-x:auto;max-height:360px;overflow-y:auto; }
+.db-rank { display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:10px;font-weight:800;background:#fef3c7;color:#92400e; }
+.db-rank.r1 { background:#0f172a;color:#fff; }
+.db-rank.r2 { background:#1e3a5f;color:#fff; }
+.db-rank.r3 { background:#2563eb;color:#fff; }
+.db-rank.low { background:#fee2e2;color:#991b1b; }
+.db-bar-row { display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f8fafc; }
+.db-bar-row:last-child { border-bottom:none; }
+.db-bar-label { font-size:11px;font-weight:600;color:#475569;flex-shrink:0;width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.db-bar-track { flex:1;height:20px;background:#f1f5f9;border-radius:6px;overflow:hidden; }
+.db-bar-fill { height:100%;border-radius:6px;display:flex;align-items:center;padding-left:8px;font-size:10px;font-weight:700;color:#fff;transition:width .5s ease; }
+.db-bar-count { font-size:12px;font-weight:800;color:#0f172a;width:32px;text-align:right;flex-shrink:0; }
+.db-pill { display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700; }
+.db-pill-green  { background:#d4edda;color:#16a34a; }
+.db-pill-red    { background:#f8d7da;color:#dc2626; }
+.db-pill-amber  { background:#fff3cd;color:#d97706; }
+.db-pill-blue   { background:#eff6ff;color:#2563eb; }
+.db-pill-grey   { background:#f1f5f9;color:#64748b; }
+.db-dest-grid { display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px; }
+.db-dest-card { background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.05);position:relative;overflow:hidden; }
+.db-dest-card::after { content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#2563eb,#0f172a); }
+.db-dest-card .dc-rank { font-size:18px;margin-bottom:4px; }
+.db-dest-card .dc-city { font-size:14px;font-weight:800;color:#0f172a;margin-bottom:4px; }
+.db-dest-card .dc-num { font-size:26px;font-weight:900;color:#2563eb;line-height:1; }
+.db-dest-card .dc-label { font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px; }
+.db-dest-card .dc-sub { font-size:10px;color:#64748b;margin-top:6px; }
+.db-empty { text-align:center;padding:40px;color:#94a3b8;font-size:12px; }
+.db-info { margin-top:12px;padding:11px 14px;border-radius:8px;font-size:11px;font-weight:600; }
+.db-info-green { background:#f0fdf4;color:#15803d;border-left:3px solid #16a34a; }
+.db-info-red   { background:#fff1f2;color:#be123c;border-left:3px solid #dc2626; }
+.db-info-blue  { background:#eff6ff;color:#1d4ed8;border-left:3px solid #2563eb; }
+.db-info-amber { background:#fffbeb;color:#b45309;border-left:3px solid #d97706; }
+.db-trend { display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:800;padding:2px 7px;border-radius:10px; }
+.db-trend-up   { background:rgba(255,255,255,.2);color:#fff; }
+.db-trend-down { background:rgba(255,50,50,.25);color:#fff; }
+.db-user-row { display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f1f5f9; }
+.db-user-row:last-child { border-bottom:none; }
+.db-avatar { width:34px;height:34px;border-radius:50%;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;flex-shrink:0; }
+.db-online-dot { width:8px;height:8px;border-radius:50%;background:#16a34a;flex-shrink:0;box-shadow:0 0 0 3px #d4edda;animation:onlinePulse 2s infinite; }
+@keyframes onlinePulse { 0%,100%{box-shadow:0 0 0 3px #d4edda}50%{box-shadow:0 0 0 5px #d4edda} }
+.db-cov-bar { height:10px;background:#f1f5f9;border-radius:3px;overflow:hidden;flex:1; }
+.db-cov-fill { height:100%;border-radius:3px; }
+.db-flag-red    { color:#dc2626;font-weight:800; }
+.db-flag-amber  { color:#d97706;font-weight:700; }
+.db-flag-green  { color:#16a34a;font-weight:700; }
+</style>
+
+</div><!-- /main-wrapper -->
 
 <!-- Undo Bar -->
 <div id="undo-bar">
@@ -432,7 +524,7 @@
 // =============================================================
 // CONFIGURATION
 // =============================================================
-const API_URL = "https://script.google.com/macros/s/AKfycbzAbIgzRoN_MNs377jm3u-1r1E8D8gkSvxD84stvDwlvDC2Oe1rYf5qVqlHDE4X5jmsCQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycby8KK3FPdT4vEzHhNpNUhx7wA8GeBvt5lE15OTffqaESGi5wY_Fr0sSVa3VcL3djPI9_Q/exec";
 
 // =============================================================
 // GLOBAL STATE
@@ -589,10 +681,10 @@ async function checkLogin() {
     btn.innerText = "VERIFYING...";
     err.classList.add('hidden');
     try {
-        const res    = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "checkLogin", user, pass }) });
+        const res    = await fetch(`${API_URL}?action=checkLogin&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`);
         const status = await res.text();
         if (status === "ADMIN" || status === "USER") {
-            const session = { isLoggedIn: true, isAdmin: status === "ADMIN", modeText: status === "ADMIN" ? "ADMIN MODE" : "USER MODE", agentName: user };
+            const session = { isLoggedIn: true, isAdmin: status === "ADMIN", modeText: status === "ADMIN" ? "ADMIN MODE" : "USER MODE" };
             localStorage.setItem("tripstore_session", JSON.stringify(session));
             isAdmin = session.isAdmin;
             launchApp(session.modeText);
@@ -636,7 +728,11 @@ function launchApp(modeText) {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('main-wrapper').style.display  = 'block';
     document.getElementById('roleBadge').innerText = modeText;
-    if (isAdmin) { document.getElementById('adminPanel').classList.remove('hidden'); refreshAdminList(); }
+    if (isAdmin) {
+        document.getElementById('adminPanel').classList.remove('hidden');
+        document.getElementById('adminNav').style.display = 'flex';
+        refreshAdminList();
+    }
     init();
     showToast(`System Unlocked: ${modeText}`);
 }
@@ -649,15 +745,7 @@ function handleLogout() {
 
 function checkAutoLogin() {
     const saved = localStorage.getItem("tripstore_session");
-    if (saved) {
-        try {
-            const s = JSON.parse(saved);
-            isAdmin = s.isAdmin;
-            launchApp(s.modeText);
-        } catch (e) {
-            localStorage.removeItem("tripstore_session");
-        }
-    }
+    if (saved) { const s = JSON.parse(saved); isAdmin = s.isAdmin; launchApp(s.modeText); }
 }
 window.addEventListener('DOMContentLoaded', checkAutoLogin);
 
@@ -669,13 +757,7 @@ async function refreshAdminList() {
         const res   = await fetch(`${API_URL}?action=getAllSaved`);
         const names = await res.json();
         const sel   = document.getElementById('adminUserSelect');
-        sel.innerHTML = '<option value="">Select a Saved User...</option>';
-        names.forEach(n => {
-            const opt = document.createElement('option');
-            opt.value = n;
-            opt.textContent = n;
-            sel.appendChild(opt);
-        });
+        sel.innerHTML = '<option value="">Select a Saved User...</option>' + names.map(n => `<option value="${n}">${n}</option>`).join('');
     } catch (e) { console.error(e); }
 }
 
@@ -707,18 +789,16 @@ async function saveItinerary() {
     const btn = document.getElementById('btnSave');
     btn.innerText = "SAVING..."; btn.disabled = true;
     const cfg = getTravelConfigs();
-    const _sess = JSON.parse(localStorage.getItem('tripstore_session') || '{}');
     const data = {
         action: "saveItinerary",
         paxName,
         payload: {
-            agentName:   _sess.agentName || '',
             adults:      cfg.adults,
             children:    cfg.children,
             paxCount:    cfg.totalPax,
-            hotelBudget: document.getElementById('hotelBudget')?.value || 0,
-            sightBudget: document.getElementById('sightBudget')?.value || 0,
-            markup:      document.getElementById('markupInput')?.value || 0,
+            hotelBudget: document.getElementById('hotelBudget').value,
+            sightBudget: document.getElementById('sightBudget').value,
+            markup:      document.getElementById('markupInput').value,
             gstMode:     document.querySelector('input[name="gstMode"]:checked')?.value || 'none',
             vehicleType: document.getElementById('vehicleTypeSelect')?.value || 'auto',
             selectedRoute,
@@ -744,16 +824,14 @@ async function searchItinerary(query) {
         const res  = await fetch(`${API_URL}?action=search&name=${encodeURIComponent(query)}`);
         const text = await res.text();
         if (text === "Not Found") return showToast("No record found", "error");
-        let data;
-        try { data = JSON.parse(text); } catch(e) { return showToast("Corrupted data from server", "error"); }
+        const data = JSON.parse(text);
         document.getElementById('paxNameInput').value        = query;
         document.getElementById('adultCountInput').value     = data.adults   || data.paxCount || 2;
         document.getElementById('childCountInput').value     = data.children || 0;
-        if (document.getElementById('hotelBudget'))  document.getElementById('hotelBudget').value  = data.hotelBudget || '';
-        if (document.getElementById('sightBudget'))  document.getElementById('sightBudget').value  = data.sightBudget || '';
-        if (document.getElementById('markupInput'))  document.getElementById('markupInput').value  = data.markup || '';
-        const gstVal = Number(data.gst) || 0;
-        const gstModeToRestore = data.gstMode || (gstVal === 18 ? '18svc' : gstVal > 0 ? '5pkg' : 'none');
+        document.getElementById('hotelBudget').value         = data.hotelBudget;
+        document.getElementById('sightBudget').value         = data.sightBudget;
+        document.getElementById('markupInput').value         = data.markup;
+        const gstModeToRestore = data.gstMode || (data.gst == 18 ? '18svc' : data.gst > 0 ? '5pkg' : 'none');
         const gstRadio = document.querySelector(`input[name="gstMode"][value="${gstModeToRestore}"]`);
         if (gstRadio) gstRadio.checked = true;
         if (data.vehicleType && document.getElementById('vehicleTypeSelect')) {
@@ -788,70 +866,6 @@ function handlePaxChange() {
     if (el) el.innerText = `Rooms Required: ${roomsRequired}${isManual ? ' (manual)' : ' (auto)'}`;
     document.getElementById('hotelBudgetLabel').innerText = `Hotel Budget (${totalPax} Pax)`;
     document.getElementById('sightBudgetLabel').innerText = `Land Package Budget (${totalPax} Pax)`;
-    suggestBudgets();
-}
-
-// Budget ranges per room per night (hotel) and per pax per night (land)
-const BUDGET_RANGES = {
-    land: { low: 10000, high: 20000 }  // ₹/pax/night (sightseeing + transfers)
-};
-let _lastBudgetSuggestion = { hotelMid: 0, landMid: 0 };
-
-function suggestBudgets() {
-    const hHint = document.getElementById('hotelBudgetHint');
-    const sHint = document.getElementById('sightBudgetHint');
-    if (!hHint || !sHint) return;
-
-    const totalNights = selectedRoute.reduce((s, r) => s + (r.nights || 0), 0);
-    if (totalNights === 0) {
-        hHint.style.display = 'none';
-        sHint.style.display = 'none';
-        return;
-    }
-    const { roomsRequired, totalPax } = getTravelConfigs();
-
-    // ── HOTEL: derive low/high from actual master data per city ──
-    let hotelLow = 0, hotelHigh = 0;
-    const hotels = (masterData && masterData.hotels) || [];
-    if (hotels.length) {
-        selectedRoute.forEach(r => {
-            const cityHotels = hotels
-                .filter(h => h.city && h.city.toLowerCase() === r.city.toLowerCase() && Number(h.cost) > 0)
-                .map(h => Number(h.cost))
-                .sort((a, b) => a - b);
-            if (!cityHotels.length) return;
-            const low  = cityHotels[0];                                      // cheapest
-            const high = cityHotels[cityHotels.length - 1];                  // most expensive
-            hotelLow  += low  * roomsRequired * r.nights;
-            hotelHigh += high * roomsRequired * r.nights;
-        });
-    }
-    // Fallback if masterData not loaded yet or city not found
-    if (!hotelLow && !hotelHigh) {
-        hotelLow  = 15000 * roomsRequired * totalNights;
-        hotelHigh = 50000 * roomsRequired * totalNights;
-    }
-    hotelLow  = Math.round(hotelLow  / 1000) * 1000;
-    hotelHigh = Math.round(hotelHigh / 1000) * 1000;
-    const hotelMid = Math.round((hotelLow + hotelHigh) / 2 / 1000) * 1000;
-
-    // ── LAND: fixed range per pax per night ──
-    const landLow  = Math.round(BUDGET_RANGES.land.low  * totalPax * totalNights / 1000) * 1000;
-    const landHigh = Math.round(BUDGET_RANGES.land.high * totalPax * totalNights / 1000) * 1000;
-    const landMid  = Math.round((landLow + landHigh) / 2 / 1000) * 1000;
-
-    _lastBudgetSuggestion = { hotelMid, landMid };
-
-    const fmt = v => '₹' + v.toLocaleString('en-IN');
-    document.getElementById('hotelBudgetRange').innerText = `${fmt(hotelLow)} – ${fmt(hotelHigh)}`;
-    document.getElementById('sightBudgetRange').innerText = `${fmt(landLow)} – ${fmt(landHigh)}`;
-    hHint.style.display = 'block';
-    sHint.style.display = 'block';
-}
-
-function applyBudgetSuggestion(type) {
-    if (type === 'hotel') document.getElementById('hotelBudget').value = _lastBudgetSuggestion.hotelMid;
-    else                  document.getElementById('sightBudget').value = _lastBudgetSuggestion.landMid;
 }
 
 function updatePaxHeader() {
@@ -873,10 +887,9 @@ function addCityToRoute() {
 function renderRouteInputs() {
     document.getElementById('routeList').innerHTML = selectedRoute.map(r => `
         <div class="flex justify-between items-center bg-white p-2 rounded text-[10px] border">
-            <span><b>${r.city}</b> (${r.nights}N) &nbsp;<span class="text-slate-400">${formatDate(r.cin)} → ${formatDate(r.cout)}</span></span>
+            <span><b>${r.city}</b> (${r.nights}N)</span>
             <button onclick="removeRoute(${r.id})" class="text-red-500 font-bold px-2">✕</button>
         </div>`).join('');
-    suggestBudgets();
 }
 
 function removeRoute(id) {
@@ -904,29 +917,24 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
     const hBudgetTotal    = Number(document.getElementById('hotelBudget').value) || 0;
     const landBudgetTotal = Number(document.getElementById('sightBudget').value) || 0;
 
+    // Land Package Budget: deduct transfer + intercity costs first, remainder = sightseeing allowance
+    const transferCost  = selectedTransfers.reduce((s, t) => s + (Number(t.vehiclePrice || t.avgPrice) || 0), 0);
     const intercityCost = selectedIntercity.reduce((s, ic) => s + Math.round(Number(ic.price || 0) * paxCount), 0);
+    const sBudgetTotal  = Math.max(0, landBudgetTotal - transferCost - intercityCost);
 
-    let spentHotelBudget = 0, spentSightBudget = 0;
+    let spentHotelBudget = 0, systemHotelCitiesCount = 0, spentSightBudget = 0;
     currentPlan.forEach(route => {
         if (route.hotel && route.isHotelManual) spentHotelBudget += calculateHotelPrice(Number(route.hotel.cost), route.nights);
+        else systemHotelCitiesCount++;
         if (route.sights) route.sights.forEach(s => { if (s.isManual) spentSightBudget += Number(s.price) * paxCount; });
     });
 
-    // Count cities/nights that need system-assigned hotels (not manually set)
-    // Use selectedRoute (not currentPlan) so first-run works correctly when currentPlan is empty
-    const systemHotelRoutes = selectedRoute.filter(sr => {
-        const existing = currentPlan.find(p => p.id === sr.id);
-        return !existing || !existing.isHotelManual;
-    });
-    const systemHotelNightsTotal = systemHotelRoutes.reduce((s, sr) => s + Number(sr.nights || 0), 0);
-
     // activeDays = sum of nights only (departure day per city is excluded from activity assignment)
-    const activeDays       = selectedRoute.reduce((sum, r) => sum + Number(r.nights), 0);
-    const remainingHBudget = Math.max(0, hBudgetTotal - spentHotelBudget);
-    // Distribute budget proportionally by nights (not equally per city)
-    const hBudgetPerNight  = systemHotelNightsTotal > 0 ? remainingHBudget / systemHotelNightsTotal : 0;
+    const activeDays        = selectedRoute.reduce((sum, r) => sum + Number(r.nights), 0);
+    const remainingHBudget  = Math.max(0, hBudgetTotal - spentHotelBudget);
+    const hCapPerSystemCity = systemHotelCitiesCount > 0 ? remainingHBudget / systemHotelCitiesCount : 0;
+    const dailyGroupAllowance = activeDays > 0 ? Math.max(0, sBudgetTotal - spentSightBudget) / activeDays : 0;
 
-    // ── Phase 1: assign hotels only (no sights yet) ──────────────────────────
     currentPlan = selectedRoute.map((sourceRoute, routeIdx) => {
         const cityName     = sourceRoute.city.toLowerCase();
         const existingRoute = currentPlan.find(p => p.id === sourceRoute.id) || { ...sourceRoute, hotel: null, sights: [], isHotelManual: false };
@@ -937,28 +945,10 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
             const cityHotels = masterData.hotels.filter(h => h.city.toLowerCase() === cityName);
             if (cityHotels.length > 0) {
                 cityHotels.sort((a, b) => b.cost - a.cost);
-                // Budget cap for this city = per-night rate × its nights
-                const cityNights = Number(sourceRoute.nights) || 1;
-                const hCapForCity = hBudgetPerNight * cityNights;
-                finalHotel = cityHotels.find(h => calculateHotelPrice(Number(h.cost), cityNights) <= hCapForCity) || cityHotels[cityHotels.length - 1];
+                finalHotel = cityHotels.find(h => calculateHotelPrice(Number(h.cost), sourceRoute.nights) <= hCapPerSystemCity) || cityHotels[cityHotels.length - 1];
             }
         }
-        return { ...sourceRoute, hotel: finalHotel, sights: existingRoute.sights || [], isHotelManual, dayNotes: existingRoute.dayNotes || {} };
-    });
 
-    // ── Phase 2: run transfers now that hotels are known ─────────────────────
-    optimizeTransfers(landBudgetTotal, paxCount);
-    optimizeIntercity(landBudgetTotal, paxCount);
-
-    // ── Phase 3: recompute sightseeing budget using actual transfer costs ─────
-    const transferCost   = selectedTransfers.reduce((s, t) => s + (Number(t.vehiclePrice || t.avgPrice) || 0), 0);
-    const sBudgetTotal   = Math.max(0, landBudgetTotal - transferCost - intercityCost);
-    const dailyGroupAllowance = activeDays > 0 ? Math.max(0, sBudgetTotal - spentSightBudget) / activeDays : 0;
-
-    // ── Phase 4: assign sights into currentPlan ───────────────────────────────
-    currentPlan = currentPlan.map((existingRoute, routeIdx) => {
-        const sourceRoute = selectedRoute[routeIdx];
-        const cityName    = sourceRoute.city.toLowerCase();
         let finalSights = [...(existingRoute.sights || [])];
         if (reoptimizeSights || finalSights.length === 0) {
             finalSights = finalSights.filter(s => s.isManual);
@@ -1183,9 +1173,11 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
                 }
             }
         }
-        return { ...existingRoute, sights: finalSights.sort((a, b) => a.assignedDay - b.assignedDay) };
+        return { ...sourceRoute, hotel: finalHotel, isHotelManual, sights: finalSights.sort((a, b) => a.assignedDay - b.assignedDay) };
     });
 
+    optimizeTransfers(landBudgetTotal, paxCount);
+    optimizeIntercity(landBudgetTotal, paxCount);
     renderTables();
     const genBtn = document.getElementById('generateQuoteBtn');
     if (genBtn) genBtn.innerHTML = '↺ Revise Quote';
@@ -1381,16 +1373,16 @@ function renderTables() {
 
             let topLines = '', bottomLines = '';
             if (isFirstDayOfTrip) {
-                topLines += `<div class="text-[12px] text-slate-700 border-b border-slate-100 pb-1 mb-1 font-medium">Arrive at the airport, take a transfer to your hotel</div>`;
+                topLines += `<div class="text-[9px] text-blue-700 italic border-b border-blue-100 pb-1 mb-1 font-medium">Arrive at the airport, take a transfer to your hotel</div>`;
             }
             if (isCheckinOtherCity) {
-                topLines += `<div class="text-[12px] text-slate-700 border-b border-slate-100 pb-1 mb-1 font-medium">Arrive in the city and make your way to the hotel on your own</div>`;
+                topLines += `<div class="text-[9px] text-blue-700 italic border-b border-blue-100 pb-1 mb-1 font-medium">Arrive in the city and make your way to the hotel on your own</div>`;
             }
             if (isCheckoutToNext) {
-                bottomLines += `<div class="text-[12px] text-slate-700 border-b border-slate-100 pb-1 mb-1 font-medium">After Breakfast check out and leave for your next city</div>`;
+                bottomLines += `<div class="text-[9px] text-blue-700 italic border-b border-blue-100 pb-1 mb-1 font-medium">After Breakfast check out and leave for your next city</div>`;
             }
             if (isLastDayOfTrip) {
-                bottomLines += `<div class="text-[12px] text-slate-700 border-b border-slate-100 pb-1 mb-1 font-medium">After breakfast check out and transfer to the airport, tour ends</div>`;
+                bottomLines += `<div class="text-[9px] text-blue-700 italic border-b border-blue-100 pb-1 mb-1 font-medium">After breakfast check out and transfer to the airport, tour ends</div>`;
             }
 
             const actsContent = activities.map(s => {
@@ -1399,20 +1391,18 @@ function renderTables() {
                 const cat    = s.category ? `<span style="font-size:8px;background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;padding:0 3px;border-radius:3px;margin-right:3px;">${s.category}</span>` : '';
                 const dur    = s.duration ? `<span style="font-size:8px;color:#334155;">${s.duration}</span>` : '';
                 return `
-                <div class="flex justify-between items-start text-[12px] mb-1 gap-1 border-b border-slate-50 last:border-0 pb-1">
+                <div class="flex justify-between items-start text-[10px] mb-1 gap-1 border-b border-slate-50 last:border-0 pb-1">
                     <div class="flex-1 min-w-0">
                         <textarea onchange="currentPlan[${planIdx}].sights[${sIdx}].info=this.value; currentPlan[${planIdx}].sights[${sIdx}].category=''; currentPlan[${planIdx}].sights[${sIdx}].duration=''; currentPlan[${planIdx}].sights[${sIdx}].tags=''; renderTables();"
-                            oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
-                            class="pdf-input w-full bg-transparent outline-none font-medium resize-none text-[12px]"
-                            style="overflow:hidden;"
+                            class="pdf-input w-full bg-transparent outline-none font-medium resize-none overflow-hidden text-[10px]"
                             rows="1">${s.info}</textarea>
                         <div class="flex items-center gap-1 mt-0">${cat}${dur}</div>
                     </div>
-                    <div class="price-col flex items-center text-slate-500 whitespace-nowrap ml-1 justify-end" style="min-width:70px;">
-                        <span style="font-size:10px;margin-right:1px;">₹</span>
+                    <div class="price-col flex items-center text-slate-500 whitespace-nowrap ml-2 min-w-[80px] justify-end">
+                        <span class="mr-1">₹</span>
                         <input type="number" value="${sTotal}"
                             onchange="currentPlan[${planIdx}].sights[${sIdx}].price = Number(this.value)/${config.totalPax}; calculateBudgetInvestment();"
-                            class="pdf-input text-right bg-transparent outline-none font-medium" style="width:52px;">
+                            class="pdf-input w-16 text-right bg-transparent outline-none font-medium">
                     </div>
                     <button onclick="deleteSightFromDay(${planIdx},'${s.instanceId}')"
                         class="no-print text-red-400 hover:text-red-600 font-bold text-sm ml-1 flex-shrink-0" title="Remove tour">✕</button>
@@ -1428,7 +1418,7 @@ function renderTables() {
                     placeholder="Free Day / Transfer" rows="1">${noteVal}</textarea>
             </div>`;
             // + Add Tour on every day (including checkout/departure days)
-            const addBtn = `<div class="no-print text-right mt-1"><button onclick="openAddTourDirect(${planIdx},${d},'${item.city}','')" class="text-blue-500 hover:text-blue-700 font-bold text-[11px] border border-blue-300 rounded px-2 py-0.5">+ Add Tour</button></div>`;
+            const addBtn = `<div class="no-print text-right mt-1"><button onclick="openAddTourDirect(${planIdx},${d},'${item.city}','')" class="text-blue-500 hover:text-blue-700 font-bold text-xs border border-blue-300 rounded px-2 py-0.5">+ Add Tour</button></div>`;
             const actsMarkup = topLines + actsContent + noteField + bottomLines + addBtn;
 
             sHtml += `
@@ -1538,13 +1528,6 @@ function renderTables() {
     document.getElementById('resDuration').innerText = `${totalNights} NIGHTS / ${totalNights + 1} DAYS`;
 
     calculateBudgetInvestment();
-    // Auto-resize all tour-name textareas so full text is visible
-    setTimeout(() => {
-        document.querySelectorAll('textarea.pdf-input').forEach(ta => {
-            ta.style.height = 'auto';
-            ta.style.height = ta.scrollHeight + 'px';
-        });
-    }, 0);
 }
 
 // =============================================================
@@ -1827,9 +1810,6 @@ function openHotelSwap(routeId) {
     const minPrice   = options.length > 0 ? Math.min(...options.map(h => Number(h.cost))) : 0;
     const categories = [...new Set(options.map(h => h.category).filter(Boolean))].sort();
     const stars      = [...new Set(options.map(h => h.starRating).filter(Boolean))].sort();
-    window._currentHotelCost = Number(item.hotel?.cost) || 0;
-    window._currentHotelName = (item.hotel?.name || '').toLowerCase();
-    window._currentHotelNights = item.nights || 1;
 
     document.getElementById('modalHeading').innerText = `Select Hotel: ${city}`;
     const mc = document.getElementById('modalContent');
@@ -1864,7 +1844,6 @@ function openHotelSwap(routeId) {
                 <span id="hotelCountBadge" class="bg-blue-600 text-white px-2 py-0.5 rounded-full text-[9px] font-bold whitespace-nowrap">0 Found</span>
             </div>
         </div>
-        <div id="currentHotelBar" class="bg-slate-100 border-b px-3 py-2 flex-shrink-0 flex justify-between items-center" style="display:none!important;"></div>
         <div id="hotelListContainer" class="overflow-y-auto flex-1 p-3 space-y-2"></div>`;
     applyHotelFilters(routeId, city);
     toggleModal(true);
@@ -1877,82 +1856,35 @@ function applyHotelFilters(routeId, city) {
     const starFilter     = document.getElementById('starFilter')?.value || '';
     const categoryFilter = document.getElementById('categoryFilter')?.value || '';
     const allCityHotels  = masterData.hotels.filter(h => h.city.toLowerCase() === city.toLowerCase());
-    const currentName = window._currentHotelName || '';
     const filtered = allCityHotels.filter(h => {
         const cost = Number(h.cost);
-        return h.name.toLowerCase() !== currentName &&   // exclude currently selected hotel
-               h.name.toLowerCase().includes(searchTerm) &&
+        return h.name.toLowerCase().includes(searchTerm) &&
                cost >= minPrice && cost <= maxPrice &&
                (!starFilter     || h.starRating === starFilter) &&
                (!categoryFilter || h.category   === categoryFilter);
     }).sort((a, b) => Number(a.cost) - Number(b.cost)); // lowest price first
     document.getElementById('hotelCountBadge').innerText = `${filtered.length} Found`;
-
-    const currentCost   = window._currentHotelCost   || 0;
-    const nights        = window._currentHotelNights  || 1;
-
-    function diffLabel(h) {
-        if (currentCost === 0) return `<div class="text-xs font-black text-slate-700">₹${(Number(h.cost)*nights).toLocaleString('en-IN')}</div><div class="text-[8px] text-slate-400">${nights}N total</div>`;
-        const diff   = Math.round((Number(h.cost) - currentCost) * nights);
-        const sign   = diff >= 0 ? '+' : '−';
-        const colour = diff > 0 ? '#dc2626' : diff < 0 ? '#16a34a' : '#64748b';
-        return `<div style="font-size:12px;font-weight:900;color:${colour};">${sign}₹${Math.abs(diff).toLocaleString('en-IN')}</div>
-                <div style="font-size:8px;color:#94a3b8;">difference for ${nights} nights</div>`;
-    }
-
-    function hotelCard(h, highlight) {
-        const origIdx = allCityHotels.findIndex(o => o.name === h.name);
-        const border  = highlight ? 'border-green-400 bg-green-50' : 'border bg-white';
-        return `
-        <div onclick="selectHotel(${routeId},${origIdx},'${h.city}')"
-            class="px-3 py-1.5 ${border} rounded-lg cursor-pointer hover:border-blue-500 hover:shadow-sm transition-all group flex justify-between items-center gap-2">
-            <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-1">
+    document.getElementById('hotelListContainer').innerHTML = filtered.length > 0
+        ? filtered.map(h => {
+            const origIdx = allCityHotels.findIndex(o => o.name === h.name);
+            return `
+            <div onclick="selectHotel(${routeId},${origIdx},'${h.city}')"
+                class="px-3 py-2 bg-white border rounded-lg cursor-pointer hover:border-blue-500 hover:shadow-sm transition-all group flex justify-between items-center gap-2">
+                <div class="flex-1 min-w-0">
+                    <div class="text-[9px] text-amber-500 leading-none mb-0.5">${h.starRating || ''}</div>
                     <div class="text-[11px] font-bold uppercase truncate group-hover:text-blue-600">${h.name}</div>
-                    <div class="text-[9px] text-amber-500 whitespace-nowrap flex-shrink-0">${h.starRating || ''}</div>
+                    <div class="flex gap-1 mt-0.5 flex-wrap">
+                        <span class="text-[8px] bg-slate-100 text-slate-500 px-1 rounded">${h.category || ''}</span>
+                        <span class="text-[8px] text-slate-400 italic">${h.roomType || h.type || ''}</span>
+                    </div>
                 </div>
-                <div class="flex gap-1 mt-0.5 flex-wrap">
-                    <span class="text-[8px] bg-slate-100 text-slate-500 px-1 rounded">${h.category || ''}</span>
-                    <span class="text-[8px] text-slate-400 italic">${h.roomType || h.type || ''}</span>
+                <div class="text-right flex-shrink-0">
+                    <div class="text-xs font-black text-slate-700">₹${Number(h.cost).toLocaleString()}</div>
+                    <div class="text-[8px] text-slate-400">per night</div>
                 </div>
-            </div>
-            <div class="text-right flex-shrink-0">${diffLabel(h)}</div>
-        </div>`;
-    }
-
-    // ── Sticky current hotel bar ──
-    const curBar = document.getElementById('currentHotelBar');
-    if (curBar && window._currentHotelName) {
-        const curHotel = allCityHotels.find(h => h.name.toLowerCase() === window._currentHotelName);
-        if (curHotel) {
-            curBar.style.display = 'flex';
-            curBar.innerHTML = `
-                <div>
-                    <div style="font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:1px;">Currently Selected</div>
-                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;">${curHotel.name} <span style="font-size:9px;color:#f59e0b;">${curHotel.starRating||''}</span></div>
-                </div>
-                <div style="text-align:right;font-size:11px;font-weight:900;color:#334155;">₹${(currentCost*nights).toLocaleString('en-IN')}<div style="font-size:8px;font-weight:400;color:#94a3b8;">${nights}N total</div></div>`;
-        }
-    }
-
-    let html = '';
-    if (filtered.length === 0) {
-        html = `<div class="py-8 text-center text-xs text-slate-400 italic">No hotels match your filters.</div>`;
-    } else if (currentCost > 0) {
-        const low  = currentCost * 0.80;
-        const high = currentCost * 1.20;
-        const bestMatch = filtered.filter(h => Number(h.cost) >= low && Number(h.cost) <= high).slice(0, 3);
-        const rest      = filtered.filter(h => !bestMatch.includes(h));
-        if (bestMatch.length > 0) {
-            html += `<div class="text-[9px] font-bold text-green-700 uppercase px-1 mb-1">Within ±20% of current price</div>`;
-            html += bestMatch.map(h => hotelCard(h, true)).join('');
-            if (rest.length > 0) html += `<div class="text-[9px] font-bold text-slate-400 uppercase px-1 mt-3 mb-1">All Options</div>`;
-        }
-        html += rest.map(h => hotelCard(h, false)).join('');
-    } else {
-        html = filtered.map(h => hotelCard(h, false)).join('');
-    }
-    document.getElementById('hotelListContainer').innerHTML = html;
+            </div>`;
+          }).join('')
+        : `<div class="py-8 text-center text-xs text-slate-400 italic">No hotels match your filters.</div>`;
 }
 
 function selectHotel(routeId, hotelIndex, city) {
@@ -2164,14 +2096,7 @@ function openAddTourDirect(planIdx, dayIdx, city, dateStr) {
     mc.style.cssText = '';
     document.getElementById('modalHeading').innerText = `Add Tour — ${city} (Day ${dayIdx + 1})`;
 
-    // Deduplicate by name, then exclude tours already placed in this city's itinerary
-    const seenNames = new Set();
-    const citySights = (masterData.sights || []).filter(s => {
-        if (!s.city || s.city.toLowerCase() !== city.toLowerCase()) return false;
-        if (seenNames.has(s.info)) return false;
-        seenNames.add(s.info);
-        return true;
-    });
+    const citySights = (masterData.sights || []).filter(s => s.city && s.city.toLowerCase() === city.toLowerCase());
     const alreadyPicked = new Set((currentPlan[planIdx]?.sights || []).map(s => s.info));
 
     function buildList() {
@@ -2180,8 +2105,8 @@ function openAddTourDirect(planIdx, dayIdx, city, dateStr) {
         if (!results.length) return '<div class="text-slate-400 text-xs text-center py-4">No tours available</div>';
         return results.map(s => {
             const price = Math.round(Number(s.price) * cfg.totalPax);
-            const enc   = btoa(unescape(encodeURIComponent(JSON.stringify(s))));
-            return `<div onclick="confirmAddTour(window._addTourCtx.planIdx, window._addTourCtx.dayIdx, JSON.parse(decodeURIComponent(escape(atob('${enc}')))))"
+            const enc   = encodeURIComponent(JSON.stringify(s));
+            return `<div onclick="confirmAddTour(window._addTourCtx.planIdx, window._addTourCtx.dayIdx, JSON.parse(decodeURIComponent('${enc}'.replace(/\\+/g,' '))))"
                 class="flex justify-between items-center p-2 rounded-lg bg-white border hover:border-blue-400 cursor-pointer text-[10px] gap-2">
                 <div class="flex-1 min-w-0">
                     <div class="font-medium truncate">${s.info}</div>
@@ -2223,13 +2148,7 @@ function filterAddTourList(q) {
     const { planIdx, city } = window._addTourCtx || {};
     const list = document.getElementById('addTourList');
     if (!list) return;
-    const seenNamesF = new Set();
-    const citySights = (masterData.sights || []).filter(s => {
-        if (!s.city || s.city.toLowerCase() !== city.toLowerCase()) return false;
-        if (seenNamesF.has(s.info)) return false;
-        seenNamesF.add(s.info);
-        return true;
-    });
+    const citySights = (masterData.sights || []).filter(s => s.city && s.city.toLowerCase() === city.toLowerCase());
     const alreadyPicked = new Set((currentPlan[planIdx]?.sights || []).map(s => s.info));
     const cfg = getTravelConfigs();
     const results = citySights
@@ -2293,41 +2212,25 @@ function openAddTransferDirect() {
     mc.className = 'p-4 overflow-y-auto space-y-4 bg-slate-50';
     mc.style.cssText = '';
 
-    // Only show cities from the current itinerary route (not all transfer cities)
-    const routeCities = (selectedRoute || []).map(r => r.city);
-    const transferCitiesSet = new Set((masterData.transfers || []).map(t => t.city.toLowerCase()));
-    const cities = routeCities.filter(c => transferCitiesSet.has(c.toLowerCase()));
-
-    // Auto-detect current city based on today's date
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const todayStr = today.toISOString().slice(0,10);
-    let autoCity = '';
-    for (const r of (selectedRoute || [])) {
-        const cin  = new Date(r.cin);  cin.setHours(0,0,0,0);
-        const cout = new Date(r.cout); cout.setHours(0,0,0,0);
-        if (today >= cin && today <= cout) { autoCity = r.city; break; }
-    }
-    // If not found (trip is future/past), default to first route city
-    if (!autoCity && routeCities.length > 0) autoCity = routeCities[0];
+    const cities = [...new Set((masterData.transfers || []).map(t => t.city))].sort();
 
     mc.innerHTML = `
         <div class="space-y-3">
             <div class="flex gap-2">
                 <div class="flex-1">
                     <label class="text-[10px] font-bold text-slate-500 uppercase">Date</label>
-                    <input id="addTrDate" type="date" value="${todayStr}" class="w-full p-2 border rounded text-xs mt-1 outline-none">
+                    <input id="addTrDate" type="date" class="w-full p-2 border rounded text-xs mt-1 outline-none">
                 </div>
                 <div class="flex-1">
                     <label class="text-[10px] font-bold text-slate-500 uppercase">City</label>
                     <select id="addTrCity" onchange="refreshTransferList()" class="w-full p-2 border rounded text-xs mt-1 outline-none">
                         <option value="">-- Select --</option>
-                        ${cities.map(c => `<option value="${c}" ${c === autoCity ? 'selected' : ''}>${c}</option>`).join('')}
+                        ${cities.map(c => `<option value="${c}">${c}</option>`).join('')}
                     </select>
                 </div>
             </div>
             <input id="addTrSearch" oninput="refreshTransferList()" placeholder="Search transfers..." class="w-full p-2 border rounded text-xs outline-none">
-            <div id="addTrList" class="space-y-1 max-h-40 overflow-y-auto text-[10px] text-slate-400 text-center py-2">${autoCity ? '' : 'Select a city above'}</div>
+            <div id="addTrList" class="space-y-1 max-h-40 overflow-y-auto text-[10px] text-slate-400 text-center py-2">Select a city above</div>
             <div class="border-t pt-3">
                 <div class="text-[10px] font-bold text-slate-500 uppercase mb-2">Or type manually</div>
                 <div class="flex gap-2 mb-2">
@@ -2342,7 +2245,6 @@ function openAddTransferDirect() {
             </div>
         </div>`;
     toggleModal(true);
-    if (autoCity) refreshTransferList();
 }
 
 function refreshTransferList() {
@@ -2368,7 +2270,7 @@ function refreshTransferList() {
 }
 
 function selectTransferFromList(t) {
-    if (typeof t === 'string') { try { t = JSON.parse(t); } catch(e) { return showToast("Invalid transfer data", "error"); } }
+    if (typeof t === 'string') t = JSON.parse(t);
     const date = document.getElementById('addTrDate')?.value || '';
     selectedTransfers.push({
         city:         t.city,
@@ -2440,18 +2342,6 @@ async function autoSaveThenDo(action) {
 
 // EXPORT — PDF
 // =============================================================
-function getExportFilename(ext) {
-    const cfg       = getTravelConfigs();
-    const totalPax  = cfg.totalPax || 2;
-    const rawName   = document.getElementById('paxNameInput').value.trim();
-    const firstCity = selectedRoute.length ? selectedRoute[0].city : '';
-    const name      = rawName || firstCity || 'Traveler';
-    const travelDate = selectedRoute.length
-        ? new Date(selectedRoute[0].cin).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }).replace(/ /g,'-')
-        : new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }).replace(/ /g,'-');
-    return `${name.replace(/\s+/g,'_')}x${totalPax}_${travelDate}.${ext}`;
-}
-
 async function downloadPDF() {
     const element = document.getElementById('pdf-content');
     const paxName = document.getElementById('paxNameInput').value || 'Traveler';
@@ -2514,7 +2404,7 @@ async function downloadPDF() {
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
         const pdf = new jsPDF('p', 'mm', [pdfWidth, pdfHeight]);
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(getExportFilename('pdf'));
+        pdf.save(`TripStore_${paxName.replace(/\s+/g, '_')}.pdf`);
         showToast("PDF Downloaded!");
     } catch (e) { showToast("Error generating PDF", "error"); }
     finally { if (toastEl) toastEl.style.visibility = ''; }
@@ -2611,8 +2501,422 @@ async function downloadExcel() {
     sheet.getColumn(7).width = 15;
 
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), getExportFilename('xlsx'));
+    saveAs(new Blob([buffer]), `TripStore_${paxName.replace(/\s+/g, '_')}.xlsx`);
     showToast("Excel Downloaded Successfully!");
+}
+
+// =============================================================
+// ADMIN DASHBOARD — Tab Switching + Data Loading
+// =============================================================
+
+function switchAdminTab(tab) {
+    // Update nav button styles
+    ['itinerary','quote','data'].forEach(t => {
+        const btn = document.getElementById('navBtn-' + t);
+        if (!btn) return;
+        if (t === tab) {
+            btn.style.color = '#fff';
+            btn.style.borderBottom = '3px solid #2563eb';
+            btn.style.background = 'rgba(255,255,255,.06)';
+        } else {
+            btn.style.color = 'rgba(255,255,255,.6)';
+            btn.style.borderBottom = '3px solid transparent';
+            btn.style.background = 'none';
+        }
+    });
+    // Show/hide tab content
+    document.getElementById('tab-itinerary').style.display = tab === 'itinerary' ? '' : 'none';
+    document.getElementById('tab-quote').style.display     = tab === 'quote'      ? '' : 'none';
+    document.getElementById('tab-data').style.display      = tab === 'data'       ? '' : 'none';
+
+    if (tab === 'quote') loadQuoteDashboard();
+    if (tab === 'data')  loadDataDashboard();
+}
+
+// ── QUOTE DASHBOARD ──────────────────────────────────────────
+async function loadQuoteDashboard() {
+    const el = document.getElementById('quoteDashContent');
+    el.innerHTML = '<div style="text-align:center;padding:60px;color:#94a3b8;"><div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:dashSpin .8s linear infinite;margin:0 auto 12px;"></div>Loading quotes...</div>';
+
+    let Q = [];
+    try {
+        const res = await fetch(API_URL + '?action=getQuoteLog');
+        Q = await res.json();
+        if (!Array.isArray(Q)) Q = [];
+    } catch(e) {
+        el.innerHTML = '<div style="padding:40px;color:#dc2626;text-align:center;">⚠️ Could not load quote data. Check API deployment.</div>';
+        return;
+    }
+    if (!Q.length) {
+        el.innerHTML = '<div style="padding:60px;text-align:center;color:#94a3b8;">No quotes saved yet.</div>';
+        return;
+    }
+
+    // ── KPIs ──
+    const total      = Q.length;
+    const withBudget = Q.filter(q => q.budgetEntered > 0);
+    const won        = Q.filter(q => q.outcome === 'Won').length;
+    const lost       = Q.filter(q => q.outcome === 'Lost').length;
+    const over       = Q.filter(q => q.budgetFlag === 'OVER').length;
+    const target     = Q.filter(q => q.budgetFlag === '✅ TARGET').length;
+    const avgUtil    = withBudget.length ? (withBudget.reduce((s,q)=>s+(parseFloat(q.utilPct)||0),0)/withBudget.length).toFixed(1) : 'N/A';
+    const totalGMV   = Q.reduce((s,q)=>s+(q.grandTotal||0),0);
+    const avgQuote   = total ? Math.round(totalGMV/total) : 0;
+    const avgPax     = total ? (Q.reduce((s,q)=>s+(q.totalPax||0),0)/total).toFixed(1) : 0;
+    const avgNights  = total ? (Q.reduce((s,q)=>s+(q.totalNights||0),0)/total).toFixed(1) : 0;
+    const avgMarkup  = total ? (Q.reduce((s,q)=>s+(q.markupPct||0),0)/total).toFixed(1) : 0;
+    const convRate   = total ? (won/total*100).toFixed(0) : 0;
+    const manualRate = total ? (Q.filter(q=>(q.hotelsManual||0)+(q.sightsManual||0)>0).length/total*100).toFixed(0) : 0;
+
+    // Quote velocity
+    const now=new Date(), w=new Date(now); w.setDate(now.getDate()-7);
+    const pw=new Date(now); pw.setDate(now.getDate()-14);
+    const thisWeek = Q.filter(q=>q.loggedAt&&new Date(q.loggedAt)>=w).length;
+    const lastWeek = Q.filter(q=>q.loggedAt&&new Date(q.loggedAt)>=pw&&new Date(q.loggedAt)<w).length;
+    const vDiff = thisWeek - lastWeek;
+
+    // City frequency
+    const cityFreq = {};
+    Q.forEach(q=>(q.cities||'').split(',').map(c=>c.trim()).filter(Boolean).forEach(c=>cityFreq[c]=(cityFreq[c]||0)+1));
+    const top5 = Object.entries(cityFreq).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+
+    // Avg nights per city
+    const avgNC = {};
+    Q.forEach(q=>{
+        const cs=(q.cities||'').split(',').map(c=>c.trim()).filter(Boolean);
+        if(cs.length&&q.totalNights){const pC=Math.round(q.totalNights/cs.length);cs.forEach(c=>{if(!avgNC[c])avgNC[c]=[];avgNC[c].push(pC);});}
+    });
+
+    // Budget bands
+    const bands = {'✅ TARGET':target,'NEAR':Q.filter(q=>q.budgetFlag==='NEAR').length,'UNDER':Q.filter(q=>q.budgetFlag==='UNDER').length,'OVER':over,'No Budget':Q.filter(q=>q.budgetFlag==='No Budget').length};
+    const bandMax = Math.max(...Object.values(bands),1);
+    const bandCol = {'✅ TARGET':'#16a34a','NEAR':'#f59e0b','UNDER':'#60a5fa','OVER':'#dc2626','No Budget':'#94a3b8'};
+    const bandLbl = {'✅ TARGET':'95–99%','NEAR':'90–94%','UNDER':'<90%','OVER':'>100%','No Budget':'Not Set'};
+
+    // Hotel category mix
+    const catMap = {};
+    Q.forEach(q=>{if(q.category)catMap[q.category]=(catMap[q.category]||0)+1;});
+    const catTotal = Object.values(catMap).reduce((a,b)=>a+b,0)||1;
+
+    // Over budget quotes
+    const overQ = Q.filter(q=>q.budgetFlag==='OVER').sort((a,b)=>(b.utilPct||0)-(a.utilPct||0));
+
+    // Monthly volume
+    const mCnt = {};
+    Q.forEach(q=>{if(q.travelMonth)mCnt[q.travelMonth]=(mCnt[q.travelMonth]||0)+1;});
+    const mLabels = Object.keys(mCnt).sort();
+    const mMax = Math.max(...Object.values(mCnt),1);
+
+    el.innerHTML = `
+    <!-- KPI ROW 1 -->
+    <div class="db-kpi-grid">
+      <div class="db-kpi db-kpi-blue"><div class="dk-icon">📋</div><div class="dk-label">Total Quotes</div><div class="dk-value">${total}</div><div class="dk-sub">This week: ${thisWeek} ${vDiff!==0?`<span class="db-trend ${vDiff>0?'db-trend-up':'db-trend-down'}">${vDiff>0?'▲':'▼'}${Math.abs(vDiff)}</span>`:''}</div></div>
+      <div class="db-kpi db-kpi-green"><div class="dk-icon">💰</div><div class="dk-label">Total GMV</div><div class="dk-value">₹${(totalGMV/100000).toFixed(1)}L</div><div class="dk-sub">Avg markup ${avgMarkup}%</div></div>
+      <div class="db-kpi db-kpi-purple"><div class="dk-icon">🏆</div><div class="dk-label">Conversion Rate</div><div class="dk-value">${convRate}%</div><div class="dk-sub">${won} Won · ${lost} Lost · ${total-won-lost} Pending</div></div>
+      <div class="db-kpi db-kpi-teal"><div class="dk-icon">📈</div><div class="dk-label">Avg Utilisation</div><div class="dk-value">${avgUtil}${avgUtil!=='N/A'?'%':''}</div><div class="dk-sub">${withBudget.length} quotes with budget set</div></div>
+    </div>
+    <div class="db-kpi-grid">
+      <div class="db-kpi db-kpi-slate"><div class="dk-icon">💎</div><div class="dk-label">Avg Quote Value</div><div class="dk-value" style="font-size:22px;">₹${fmtD(avgQuote)}</div><div class="dk-sub">Per itinerary</div></div>
+      <div class="db-kpi db-kpi-amber"><div class="dk-icon">👥</div><div class="dk-label">Avg PAX</div><div class="dk-value">${avgPax}</div><div class="dk-sub">Avg ${avgNights} nights/quote</div></div>
+      <div class="db-kpi db-kpi-red"><div class="dk-icon">⚠️</div><div class="dk-label">Over Budget</div><div class="dk-value">${over}</div><div class="dk-sub">${total?(over/total*100).toFixed(0):0}% of all quotes</div></div>
+      <div class="db-kpi db-kpi-indigo"><div class="dk-icon">✏️</div><div class="dk-label">Manual Override Rate</div><div class="dk-value">${manualRate}%</div><div class="dk-sub">Quotes with custom edits</div></div>
+    </div>
+
+    <!-- TOP 5 DESTINATIONS -->
+    <div class="db-section">
+      <div class="db-section-title"><span class="dt" style="background:#d97706"></span>Top 5 Quoted Destinations</div>
+      <div class="db-dest-grid">
+        ${top5.map(([city,cnt],i)=>{
+          const n=avgNC[city];const avgN=n?Math.round(n.reduce((a,b)=>a+b,0)/n.length):0;
+          return `<div class="db-dest-card"><div class="dc-rank">${medals[i]}</div><div class="dc-city">${city}</div><div class="dc-num">${cnt}</div><div class="dc-label">quotes</div>${avgN?`<div class="dc-sub">~${avgN} nights avg</div>`:''}`;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- BUDGET & REVENUE ROW -->
+    <div class="db-row2">
+      <div class="db-card">
+        <h3>Budget Utilisation Distribution <span class="badge">${withBudget.length} with budget</span></h3>
+        ${Object.entries(bands).map(([k,n])=>`
+          <div class="db-bar-row">
+            <div class="db-bar-label">${k} <span style="font-size:9px;color:#94a3b8;">${bandLbl[k]}</span></div>
+            <div class="db-bar-track"><div class="db-bar-fill" style="width:${Math.max(n/bandMax*100,n>0?5:0)}%;background:${bandCol[k]}">${n>0?n:''}</div></div>
+            <div class="db-bar-count">${n}</div>
+          </div>`).join('')}
+        <div class="db-info db-info-green" style="margin-top:14px;"><strong>Target:</strong> 70%+ of quotes should land in the 95–99% zone.</div>
+      </div>
+      <div class="db-card">
+        <h3>Hotel Category Mix</h3>
+        ${['Luxury','Superior','Standard'].map(cat=>{
+          const n=catMap[cat]||0;const pct=Math.round(n/catTotal*100);
+          const col=cat==='Luxury'?'#0f172a':cat==='Superior'?'#2563eb':'#60a5fa';
+          return `<div class="db-bar-row"><div class="db-bar-label">${cat}</div><div class="db-bar-track"><div class="db-bar-fill" style="width:${pct}%;background:${col}">${pct>10?n+' quotes':''}</div></div><div class="db-bar-count">${pct}%</div></div>`;
+        }).join('')}
+        <div style="margin-top:16px;">
+          <div class="db-section-title" style="font-size:10px;margin-bottom:10px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">Quote Volume by Travel Month</div>
+          ${mLabels.map(m=>`<div class="db-bar-row"><div class="db-bar-label">${m.replace(' 20','·20')}</div><div class="db-bar-track"><div class="db-bar-fill" style="width:${mCnt[m]/mMax*100}%;background:#2563eb">${mCnt[m]>0?mCnt[m]:''}</div></div><div class="db-bar-count">${mCnt[m]}</div></div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- OVER BUDGET + FULL LOG -->
+    <div class="db-row2">
+      <div class="db-card">
+        <h3>Over-Budget Quotes <span class="badge" style="background:#f8d7da;color:#dc2626;">${over} flagged</span></h3>
+        ${overQ.length===0?'<div class="db-empty">✅ No over-budget quotes.</div>':overQ.map(q=>`
+          <div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid #f1f5f9;">
+            <div><div style="font-weight:700;font-size:12px;">${q.paxName}</div><div style="font-size:10px;color:#94a3b8;">${q.cities} · ${q.travelMonth}</div></div>
+            <div style="text-align:right;"><div style="font-size:14px;font-weight:900;color:#dc2626;">${q.utilPct}%</div><div style="font-size:10px;color:#dc2626;">₹${fmtD((q.grandTotal||0)-(q.budgetEntered||0))} over</div></div>
+            <span class="db-pill ${q.outcome==='Won'?'db-pill-green':q.outcome==='Lost'?'db-pill-red':'db-pill-amber'}">${q.outcome}</span>
+          </div>`).join('')}
+      </div>
+      <div class="db-card">
+        <h3>Outcome Breakdown</h3>
+        ${[['Won',won,'#16a34a'],['Pending',total-won-lost,'#d97706'],['Lost',lost,'#dc2626']].map(([label,n,col])=>`
+          <div class="db-bar-row">
+            <div class="db-bar-label">${label}</div>
+            <div class="db-bar-track"><div class="db-bar-fill" style="width:${total?(n/total*100):0}%;background:${col}">${n>0?n:''}</div></div>
+            <div class="db-bar-count">${total?(n/total*100).toFixed(0):0}%</div>
+          </div>`).join('')}
+        <div style="margin-top:20px;">
+          <div class="db-section-title" style="font-size:10px;margin-bottom:10px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">Revenue Composition (avg per quote)</div>
+          ${[['Hotels',Math.round(Q.reduce((s,q)=>s+(q.hotelNet||0),0)/total),'#0f172a'],['Sightseeing',Math.round(Q.reduce((s,q)=>s+(q.sightNet||0),0)/total),'#2563eb'],['Transfers',Math.round(Q.reduce((s,q)=>s+(q.transferNet||0),0)/total),'#d97706'],['Trains/Bus',Math.round(Q.reduce((s,q)=>s+(q.trainsNet||0),0)/total),'#16a34a']].map(([label,val,col])=>`
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f8fafc;font-size:12px;">
+              <span style="display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:50%;background:${col};display:inline-block;"></span>${label}</span>
+              <strong>₹${fmtD(val)}</strong>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- FULL QUOTE TABLE -->
+    <div class="db-card db-row-full">
+      <h3>All Quotes <span class="badge">${Q.length} total</span></h3>
+      <div class="db-tbl-wrap">
+        <table class="db-table">
+          <thead><tr><th>Pax Name</th><th>Cities</th><th>Month</th><th class="tr">Nights</th><th class="tr">PAX</th><th class="tr">Grand Total</th><th class="tr">Util%</th><th>Flag</th><th>Category</th><th>Outcome</th></tr></thead>
+          <tbody>
+            ${Q.slice().sort((a,b)=>new Date(b.loggedAt)-new Date(a.loggedAt)).map(q=>`
+              <tr>
+                <td><strong>${q.paxName}</strong><br><span style="font-size:9px;color:#94a3b8;">${q.loggedAt}</span></td>
+                <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;">${q.cities}</td>
+                <td>${q.travelMonth||'—'}</td>
+                <td class="tr">${q.totalNights}</td>
+                <td class="tr">${q.totalPax}</td>
+                <td class="tr" style="font-weight:700;">₹${fmtD(q.grandTotal)}</td>
+                <td class="tr" style="font-weight:700;color:${q.budgetFlag==='OVER'?'#dc2626':q.budgetFlag==='✅ TARGET'?'#16a34a':'inherit'}">${q.utilPct||'—'}${q.utilPct?'%':''}</td>
+                <td>${q.budgetFlag==='✅ TARGET'?'<span class="db-pill db-pill-green">✅ Target</span>':q.budgetFlag==='OVER'?'<span class="db-pill db-pill-red">Over</span>':q.budgetFlag==='NEAR'?'<span class="db-pill db-pill-amber">Near</span>':q.budgetFlag==='UNDER'?'<span class="db-pill db-pill-blue">Under</span>':'<span class="db-pill db-pill-grey">—</span>'}</td>
+                <td>${q.category||'—'}</td>
+                <td style="font-weight:700;color:${q.outcome==='Won'?'#16a34a':q.outcome==='Lost'?'#dc2626':'#d97706'}">${q.outcome||'Pending'}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ── DATA DASHBOARD ────────────────────────────────────────────
+async function loadDataDashboard() {
+    const el = document.getElementById('dataDashContent');
+    el.innerHTML = '<div style="text-align:center;padding:60px;color:#94a3b8;"><div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:dashSpin .8s linear infinite;margin:0 auto 12px;"></div>Loading master data...</div>';
+
+    let inv = { hotels:[], sights:[] };
+    let activeUsers = { count:0, users:[] };
+    try {
+        const [invRes, usersRes] = await Promise.allSettled([
+            fetch(API_URL + '?action=getMasterInventory').then(r=>r.json()),
+            fetch(API_URL + '?action=getActiveUsers').then(r=>r.json()),
+        ]);
+        if (invRes.status==='fulfilled' && invRes.value?.hotels) inv = invRes.value;
+        if (usersRes.status==='fulfilled' && usersRes.value?.count!=null) activeUsers = usersRes.value;
+    } catch(e) {}
+
+    if (!inv.hotels.length && !inv.sights.length) {
+        el.innerHTML = '<div style="padding:60px;text-align:center;color:#94a3b8;">No master data found. Make sure the Hotels and Sightseeing sheets exist and have data.</div>';
+        return;
+    }
+
+    const totalHotels = inv.hotels.reduce((s,c)=>s+c.count,0);
+    const totalSights = inv.sights.reduce((s,c)=>s+c.count,0);
+    const hotelCities = inv.hotels.length;
+    const sightCities = inv.sights.length;
+
+    // Cities with < 3 hotels = critical, < 6 = low
+    const critHotels = inv.hotels.filter(c=>c.count<3).length;
+    const critSights = inv.sights.filter(c=>c.count<4).length;
+
+    const topHotels    = inv.hotels.slice(0,10);
+    const botHotels    = inv.hotels.slice(-10).reverse();
+    const topSights    = inv.sights.slice(0,10);
+    const botSights    = inv.sights.slice(-10).reverse();
+    const maxH = topHotels[0]?.count || 1;
+    const maxS = topSights[0]?.count || 1;
+
+    function invFlag(n, lowT, critT) {
+        if (n <= critT) return `<span class="db-flag-red">🔴 Critical (${n})</span>`;
+        if (n <= lowT)  return `<span class="db-flag-amber">🟡 Low (${n})</span>`;
+        return `<span class="db-flag-green">✅ Good (${n})</span>`;
+    }
+
+    el.innerHTML = `
+    <!-- KPIs -->
+    <div class="db-kpi-grid">
+      <div class="db-kpi db-kpi-blue"><div class="dk-icon">🏨</div><div class="dk-label">Total Hotels Listed</div><div class="dk-value">${totalHotels}</div><div class="dk-sub">Across ${hotelCities} cities</div></div>
+      <div class="db-kpi db-kpi-teal"><div class="dk-icon">🎭</div><div class="dk-label">Total Sightseeing</div><div class="dk-value">${totalSights}</div><div class="dk-sub">Across ${sightCities} cities</div></div>
+      <div class="db-kpi db-kpi-red"><div class="dk-icon">⚠️</div><div class="dk-label">Critical Hotel Cities</div><div class="dk-value">${critHotels}</div><div class="dk-sub">Fewer than 3 hotels listed</div></div>
+      <div class="db-kpi db-kpi-amber"><div class="dk-icon">⚠️</div><div class="dk-label">Critical Sight Cities</div><div class="dk-value">${critSights}</div><div class="dk-sub">Fewer than 4 activities listed</div></div>
+    </div>
+
+    <!-- ACTIVE USERS -->
+    <div class="db-card db-row-full" style="margin-bottom:18px;">
+      <h3>Active Users (Last 24 hrs) <span class="badge" style="${activeUsers.count>0?'background:#d4edda;color:#16a34a;':''}">${activeUsers.count>0?activeUsers.count+' online':'None active'}</span></h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">
+        ${activeUsers.users.length===0?'<div class="db-empty" style="grid-column:1/-1">No users logged in the last 24 hours.<br><small style="font-size:10px;">Login tracking activates after running setupLastLogin() in Apps Script.</small></div>':
+        activeUsers.users.map(u=>`
+          <div class="db-user-row" style="border:1px solid #f1f5f9;border-radius:10px;padding:10px 14px;background:#fafafa;">
+            <div class="db-online-dot"></div>
+            <div class="db-avatar">${(u.personName||u.username||'?').charAt(0).toUpperCase()}</div>
+            <div style="flex:1;">
+              <div style="font-weight:700;font-size:12px;">${u.personName||u.username}</div>
+              <div style="font-size:10px;color:#94a3b8;">${u.agencyName||'—'}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:10px;color:#16a34a;font-weight:700;">${timeAgoD(u.lastLogin)}</div>
+              <div style="font-size:9px;background:${u.role==='ADMIN'?'#0f172a':'#eff6ff'};color:${u.role==='ADMIN'?'#fff':'#2563eb'};padding:2px 6px;border-radius:4px;font-weight:700;display:inline-block;margin-top:2px;">${u.role}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- HOTEL INVENTORY -->
+    <div class="db-section">
+      <div class="db-section-title"><span class="dt" style="background:#0f172a"></span>Hotel Inventory — Master Sheet Coverage</div>
+      <div class="db-row2">
+        <div class="db-card">
+          <h3>🏆 Top 10 Cities <span class="badge">Most hotel options</span></h3>
+          <div class="db-tbl-wrap">
+            <table class="db-table">
+              <thead><tr><th>#</th><th>City</th><th class="tr">Hotels Listed</th><th style="width:140px;">Coverage</th></tr></thead>
+              <tbody>
+                ${topHotels.map((c,i)=>`<tr>
+                  <td><span class="db-rank ${i===0?'r1':i===1?'r2':i===2?'r3':''}">${i+1}</span></td>
+                  <td><strong>${c.city}</strong></td>
+                  <td class="tr" style="font-weight:800;font-size:13px;">${c.count}</td>
+                  <td><div class="db-cov-bar"><div class="db-cov-fill" style="width:${(c.count/maxH*100).toFixed(0)}%;background:#0f172a;height:10px;border-radius:3px;"></div></div></td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="db-card">
+          <h3>📉 Bottom 10 Cities <span class="badge" style="background:#f8d7da;color:#dc2626;">Need more options</span></h3>
+          <div class="db-tbl-wrap">
+            <table class="db-table">
+              <thead><tr><th>City</th><th class="tr">Hotels Listed</th><th>Status</th></tr></thead>
+              <tbody>
+                ${botHotels.map(c=>`<tr>
+                  <td>${c.city}</td>
+                  <td class="tr" style="font-weight:800;">${c.count}</td>
+                  <td>${invFlag(c.count,5,2)}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div class="db-info db-info-amber">Cities marked 🔴 have fewer than 3 options — agents may struggle to find a match for client budgets. Add hotels to the Hotels sheet.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIGHTSEEING INVENTORY -->
+    <div class="db-section">
+      <div class="db-section-title"><span class="dt" style="background:#0d9488"></span>Sightseeing Inventory — Master Sheet Coverage</div>
+      <div class="db-row2">
+        <div class="db-card">
+          <h3>🏆 Top 10 Cities <span class="badge">Most activities</span></h3>
+          <div class="db-tbl-wrap">
+            <table class="db-table">
+              <thead><tr><th>#</th><th>City</th><th class="tr">Activities Listed</th><th style="width:140px;">Coverage</th></tr></thead>
+              <tbody>
+                ${topSights.map((c,i)=>`<tr>
+                  <td><span class="db-rank ${i===0?'r1':i===1?'r2':i===2?'r3':''}">${i+1}</span></td>
+                  <td><strong>${c.city}</strong></td>
+                  <td class="tr" style="font-weight:800;font-size:13px;">${c.count}</td>
+                  <td><div class="db-cov-bar"><div class="db-cov-fill" style="width:${(c.count/maxS*100).toFixed(0)}%;background:#0d9488;height:10px;border-radius:3px;"></div></div></td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="db-card">
+          <h3>📉 Bottom 10 Cities <span class="badge" style="background:#f8d7da;color:#dc2626;">Need more options</span></h3>
+          <div class="db-tbl-wrap">
+            <table class="db-table">
+              <thead><tr><th>City</th><th class="tr">Activities Listed</th><th>Status</th></tr></thead>
+              <tbody>
+                ${botSights.map(c=>`<tr>
+                  <td>${c.city}</td>
+                  <td class="tr" style="font-weight:800;">${c.count}</td>
+                  <td>${invFlag(c.count,8,3)}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div class="db-info db-info-amber">Cities marked 🔴 have fewer than 4 activities — quotes will have poor sightseeing variety. Add activities to the Sightseeing sheet.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FULL INVENTORY TABLE -->
+    <div class="db-row2">
+      <div class="db-card">
+        <h3>All Cities — Hotel Coverage <span class="badge">${hotelCities} cities</span></h3>
+        <div class="db-tbl-wrap">
+          <table class="db-table">
+            <thead><tr><th>#</th><th>City</th><th class="tr">Hotels</th><th>Status</th></tr></thead>
+            <tbody>
+              ${inv.hotels.map((c,i)=>`<tr>
+                <td style="color:#94a3b8;font-size:10px;">${i+1}</td>
+                <td>${c.city}</td>
+                <td class="tr" style="font-weight:700;">${c.count}</td>
+                <td>${invFlag(c.count,5,2)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="db-card">
+        <h3>All Cities — Sightseeing Coverage <span class="badge">${sightCities} cities</span></h3>
+        <div class="db-tbl-wrap">
+          <table class="db-table">
+            <thead><tr><th>#</th><th>City</th><th class="tr">Activities</th><th>Status</th></tr></thead>
+            <tbody>
+              ${inv.sights.map((c,i)=>`<tr>
+                <td style="color:#94a3b8;font-size:10px;">${i+1}</td>
+                <td>${c.city}</td>
+                <td class="tr" style="font-weight:700;">${c.count}</td>
+                <td>${invFlag(c.count,8,3)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+}
+
+function fmtD(n) {
+    if (!n && n!==0) return '—';
+    return Math.round(n).toLocaleString('en-IN');
+}
+function timeAgoD(isoStr) {
+    if (!isoStr) return '—';
+    const diff = Date.now() - new Date(isoStr).getTime();
+    const mins = Math.floor(diff/60000);
+    if (mins<1)  return 'Just now';
+    if (mins<60) return mins+'m ago';
+    const hrs = Math.floor(mins/60);
+    if (hrs<24)  return hrs+'h ago';
+    return Math.floor(hrs/24)+'d ago';
 }
 </script>
 </body>
