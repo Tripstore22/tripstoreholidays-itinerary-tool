@@ -43,6 +43,9 @@ function doGet(e) {
     if (action === 'getMasterInventory') {
       return getMasterInventory();
     }
+    if (action === 'getSavedList') {
+      return getSavedList();
+    }
     return ContentService.createTextOutput('Invalid action');
   } catch (err) {
     return ContentService.createTextOutput('Server Error: ' + err.message);
@@ -568,6 +571,64 @@ function getCityStats() {
 
   return ContentService
     .createTextOutput(JSON.stringify({ hotels: hotelStats, sights: sightStats }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+
+// ------------------------------------------------------------
+// SAVED LIST — returns summary of all saved itineraries for the
+// "My Itineraries" tab. Parses each payload to extract key fields.
+// ------------------------------------------------------------
+
+function getSavedList() {
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Saved_Itineraries');
+  if (!sheet) return ContentService
+    .createTextOutput(JSON.stringify([]))
+    .setMimeType(ContentService.MimeType.JSON);
+
+  const data   = sheet.getDataRange().getValues();
+  const result = [];
+
+  for (let i = 1; i < data.length; i++) {
+    const paxName = String(data[i][0] || '').trim();
+    if (!paxName) continue;
+
+    let payload = {};
+    try { payload = JSON.parse(String(data[i][1] || '{}')); } catch(e) {}
+
+    const savedAt = data[i][2] ? new Date(data[i][2]).toISOString() : '';
+
+    // Extract cities and nights from selectedRoute (most reliable)
+    const route = payload.selectedRoute || payload.currentPlan || [];
+    const cities = route.map(function(r) { return String(r.city || '').trim(); }).filter(Boolean);
+    const totalNights = route.reduce(function(s, r) { return s + (Number(r.nights) || 0); }, 0);
+
+    const adults   = Number(payload.adults)   || Number(payload.paxCount) || 0;
+    const children = Number(payload.children) || 0;
+    const totalPax = adults + children;
+
+    result.push({
+      paxName:      paxName,
+      adults:       adults,
+      children:     children,
+      totalPax:     totalPax,
+      totalNights:  totalNights,
+      numCities:    cities.length,
+      cities:       cities.join(', '),
+      hotelBudget:  payload.hotelBudget || '',
+      sightBudget:  payload.sightBudget || '',
+      markup:       payload.markup      || '',
+      vehicleType:  payload.vehicleType || '',
+      savedAt:      savedAt
+    });
+  }
+
+  // Sort newest first
+  result.sort(function(a, b) { return new Date(b.savedAt) - new Date(a.savedAt); });
+
+  return ContentService
+    .createTextOutput(JSON.stringify(result))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
