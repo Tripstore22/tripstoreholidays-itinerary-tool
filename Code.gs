@@ -581,30 +581,28 @@ function getCityStats() {
 function getMasterInventory() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  // Hotels: Col A = City
+  // Hotels: Col A = City, Col B = Hotel Name — count ALL rows with a city + name
   const hotelMap = {};
   const hotelSheet = ss.getSheetByName('Hotels');
   if (hotelSheet) {
     const rows = hotelSheet.getDataRange().getValues();
     for (let i = 1; i < rows.length; i++) {
-      const city = String(rows[i][0] || '').trim();
-      if (!city) continue;
-      const annualAvg = parsePrice(rows[i][18]);
-      if (annualAvg <= 0) continue; // skip inactive
+      const city  = String(rows[i][0] || '').trim();
+      const name  = String(rows[i][1] || '').trim();
+      if (!city || !name) continue;
       hotelMap[city] = (hotelMap[city] || 0) + 1;
     }
   }
 
-  // Sightseeing: Col A = City
+  // Sightseeing: Col A = City, Col B = Tour Name — count ALL rows with a city + name
   const sightMap = {};
   const sightSheet = ss.getSheetByName('Sightseeing');
   if (sightSheet) {
     const rows = sightSheet.getDataRange().getValues();
     for (let i = 1; i < rows.length; i++) {
       const city = String(rows[i][0] || '').trim();
-      if (!city) continue;
-      const price = parsePrice(rows[i][5]) || parsePrice(rows[i][6]) || parsePrice(rows[i][8]);
-      if (price <= 0) continue; // skip inactive
+      const name = String(rows[i][1] || '').trim();
+      if (!city || !name) continue;
       sightMap[city] = (sightMap[city] || 0) + 1;
     }
   }

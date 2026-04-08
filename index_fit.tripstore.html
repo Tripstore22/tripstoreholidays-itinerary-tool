@@ -110,6 +110,18 @@
 
 <!-- MAIN APP -->
 <div id="main-wrapper">
+
+<!-- ADMIN NAV (only shown for admins) -->
+<div id="adminNav" class="hidden no-print" style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);padding:0 24px;display:flex;align-items:center;gap:0;border-bottom:2px solid #2563eb;box-shadow:0 2px 12px rgba(0,0,0,.35);">
+  <div style="color:#fff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;opacity:.5;padding:14px 16px 14px 0;border-right:1px solid rgba(255,255,255,.1);margin-right:4px;">ADMIN</div>
+  <button id="navBtn-itinerary" onclick="switchAdminTab('itinerary')" class="admin-nav-btn active" style="color:#fff;font-size:11px;font-weight:700;padding:14px 18px;border:none;background:none;cursor:pointer;border-bottom:3px solid #2563eb;letter-spacing:.5px;transition:all .2s;">📋 Itinerary Builder</button>
+  <button id="navBtn-quote" onclick="switchAdminTab('quote')" class="admin-nav-btn" style="color:rgba(255,255,255,.6);font-size:11px;font-weight:700;padding:14px 18px;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;letter-spacing:.5px;transition:all .2s;">📊 Quote Dashboard</button>
+  <button id="navBtn-data" onclick="switchAdminTab('data')" class="admin-nav-btn" style="color:rgba(255,255,255,.6);font-size:11px;font-weight:700;padding:14px 18px;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;letter-spacing:.5px;transition:all .2s;">🗂️ Data Dashboard</button>
+  <div style="margin-left:auto;color:rgba(255,255,255,.4);font-size:10px;">TripStore Admin</div>
+</div>
+
+<!-- TAB: ITINERARY BUILDER -->
+<div id="tab-itinerary">
     <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
 
         <!-- LEFT PANEL -->
@@ -409,7 +421,98 @@
         </div>
     </div>
     <datalist id="cityList"></datalist>
+</div><!-- /tab-itinerary -->
+
+<!-- TAB: QUOTE DASHBOARD -->
+<div id="tab-quote" class="hidden" style="padding:28px 32px;background:#f1f5f9;min-height:100vh;">
+  <div id="quoteDashContent"><div style="text-align:center;padding:80px;color:#94a3b8;"><div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:dashSpin .8s linear infinite;margin:0 auto 16px;"></div>Loading quote data...</div></div>
 </div>
+
+<!-- TAB: DATA DASHBOARD -->
+<div id="tab-data" class="hidden" style="padding:28px 32px;background:#f1f5f9;min-height:100vh;">
+  <div id="dataDashContent"><div style="text-align:center;padding:80px;color:#94a3b8;"><div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:dashSpin .8s linear infinite;margin:0 auto 16px;"></div>Loading master data...</div></div>
+</div>
+
+<style>
+@keyframes dashSpin { to { transform:rotate(360deg); } }
+.admin-nav-btn:hover { color:#fff !important; background:rgba(255,255,255,.08) !important; }
+/* Dashboard shared styles */
+.db-section { margin-bottom:28px; }
+.db-section-title { font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #e2e8f0;display:flex;align-items:center;gap:8px; }
+.db-section-title .dt { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
+.db-kpi-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px; }
+.db-kpi { border-radius:14px;padding:18px 20px;position:relative;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.06); }
+.db-kpi .dk-label { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;opacity:.75;margin-bottom:6px; }
+.db-kpi .dk-value { font-size:28px;font-weight:900;line-height:1.1;margin-bottom:4px; }
+.db-kpi .dk-sub { font-size:11px;opacity:.7; }
+.db-kpi .dk-icon { position:absolute;right:16px;top:16px;font-size:28px;opacity:.18; }
+.db-kpi-blue   { background:linear-gradient(135deg,#1e40af,#2563eb);color:#fff; }
+.db-kpi-green  { background:linear-gradient(135deg,#065f46,#16a34a);color:#fff; }
+.db-kpi-amber  { background:linear-gradient(135deg,#92400e,#d97706);color:#fff; }
+.db-kpi-red    { background:linear-gradient(135deg,#991b1b,#dc2626);color:#fff; }
+.db-kpi-purple { background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff; }
+.db-kpi-teal   { background:linear-gradient(135deg,#134e4a,#0d9488);color:#fff; }
+.db-kpi-slate  { background:linear-gradient(135deg,#1e293b,#334155);color:#fff; }
+.db-kpi-indigo { background:linear-gradient(135deg,#312e81,#4338ca);color:#fff; }
+.db-card { background:#fff;border-radius:14px;padding:20px 22px;box-shadow:0 2px 12px rgba(0,0,0,.06);border:1px solid #e2e8f0; }
+.db-card h3 { font-size:13px;font-weight:700;color:#0f172a;margin-bottom:16px;display:flex;align-items:center;gap:8px; }
+.db-card h3 .badge { background:#eff6ff;color:#2563eb;font-size:10px;padding:2px 9px;border-radius:20px;font-weight:700; }
+.db-row2 { display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px; }
+.db-row3 { display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:18px; }
+.db-row-full { margin-bottom:18px; }
+.db-table { width:100%;border-collapse:collapse; }
+.db-table th { background:#0f172a;color:#fff;padding:9px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.4px;white-space:nowrap;position:sticky;top:0;z-index:1; }
+.db-table td { padding:9px 12px;border-bottom:1px solid #f1f5f9;font-size:12px;white-space:nowrap; }
+.db-table tr:hover td { background:#eff6ff; }
+.db-table .tr { text-align:right; }
+.db-tbl-wrap { overflow-x:auto;max-height:360px;overflow-y:auto; }
+.db-rank { display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:10px;font-weight:800;background:#fef3c7;color:#92400e; }
+.db-rank.r1 { background:#0f172a;color:#fff; }
+.db-rank.r2 { background:#1e3a5f;color:#fff; }
+.db-rank.r3 { background:#2563eb;color:#fff; }
+.db-rank.low { background:#fee2e2;color:#991b1b; }
+.db-bar-row { display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f8fafc; }
+.db-bar-row:last-child { border-bottom:none; }
+.db-bar-label { font-size:11px;font-weight:600;color:#475569;flex-shrink:0;width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.db-bar-track { flex:1;height:20px;background:#f1f5f9;border-radius:6px;overflow:hidden; }
+.db-bar-fill { height:100%;border-radius:6px;display:flex;align-items:center;padding-left:8px;font-size:10px;font-weight:700;color:#fff;transition:width .5s ease; }
+.db-bar-count { font-size:12px;font-weight:800;color:#0f172a;width:32px;text-align:right;flex-shrink:0; }
+.db-pill { display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700; }
+.db-pill-green  { background:#d4edda;color:#16a34a; }
+.db-pill-red    { background:#f8d7da;color:#dc2626; }
+.db-pill-amber  { background:#fff3cd;color:#d97706; }
+.db-pill-blue   { background:#eff6ff;color:#2563eb; }
+.db-pill-grey   { background:#f1f5f9;color:#64748b; }
+.db-dest-grid { display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px; }
+.db-dest-card { background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.05);position:relative;overflow:hidden; }
+.db-dest-card::after { content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#2563eb,#0f172a); }
+.db-dest-card .dc-rank { font-size:18px;margin-bottom:4px; }
+.db-dest-card .dc-city { font-size:14px;font-weight:800;color:#0f172a;margin-bottom:4px; }
+.db-dest-card .dc-num { font-size:26px;font-weight:900;color:#2563eb;line-height:1; }
+.db-dest-card .dc-label { font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px; }
+.db-dest-card .dc-sub { font-size:10px;color:#64748b;margin-top:6px; }
+.db-empty { text-align:center;padding:40px;color:#94a3b8;font-size:12px; }
+.db-info { margin-top:12px;padding:11px 14px;border-radius:8px;font-size:11px;font-weight:600; }
+.db-info-green { background:#f0fdf4;color:#15803d;border-left:3px solid #16a34a; }
+.db-info-red   { background:#fff1f2;color:#be123c;border-left:3px solid #dc2626; }
+.db-info-blue  { background:#eff6ff;color:#1d4ed8;border-left:3px solid #2563eb; }
+.db-info-amber { background:#fffbeb;color:#b45309;border-left:3px solid #d97706; }
+.db-trend { display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:800;padding:2px 7px;border-radius:10px; }
+.db-trend-up   { background:rgba(255,255,255,.2);color:#fff; }
+.db-trend-down { background:rgba(255,50,50,.25);color:#fff; }
+.db-user-row { display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f1f5f9; }
+.db-user-row:last-child { border-bottom:none; }
+.db-avatar { width:34px;height:34px;border-radius:50%;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;flex-shrink:0; }
+.db-online-dot { width:8px;height:8px;border-radius:50%;background:#16a34a;flex-shrink:0;box-shadow:0 0 0 3px #d4edda;animation:onlinePulse 2s infinite; }
+@keyframes onlinePulse { 0%,100%{box-shadow:0 0 0 3px #d4edda}50%{box-shadow:0 0 0 5px #d4edda} }
+.db-cov-bar { height:10px;background:#f1f5f9;border-radius:3px;overflow:hidden;flex:1; }
+.db-cov-fill { height:100%;border-radius:3px; }
+.db-flag-red    { color:#dc2626;font-weight:800; }
+.db-flag-amber  { color:#d97706;font-weight:700; }
+.db-flag-green  { color:#16a34a;font-weight:700; }
+</style>
+
+</div><!-- /main-wrapper -->
 
 <!-- Undo Bar -->
 <div id="undo-bar">
@@ -625,7 +728,11 @@ function launchApp(modeText) {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('main-wrapper').style.display  = 'block';
     document.getElementById('roleBadge').innerText = modeText;
-    if (isAdmin) { document.getElementById('adminPanel').classList.remove('hidden'); refreshAdminList(); }
+    if (isAdmin) {
+        document.getElementById('adminPanel').classList.remove('hidden');
+        document.getElementById('adminNav').style.display = 'flex';
+        refreshAdminList();
+    }
     init();
     showToast(`System Unlocked: ${modeText}`);
 }
@@ -2396,6 +2503,420 @@ async function downloadExcel() {
     const buffer = await workbook.xlsx.writeBuffer();
     saveAs(new Blob([buffer]), `TripStore_${paxName.replace(/\s+/g, '_')}.xlsx`);
     showToast("Excel Downloaded Successfully!");
+}
+
+// =============================================================
+// ADMIN DASHBOARD — Tab Switching + Data Loading
+// =============================================================
+
+function switchAdminTab(tab) {
+    // Update nav button styles
+    ['itinerary','quote','data'].forEach(t => {
+        const btn = document.getElementById('navBtn-' + t);
+        if (!btn) return;
+        if (t === tab) {
+            btn.style.color = '#fff';
+            btn.style.borderBottom = '3px solid #2563eb';
+            btn.style.background = 'rgba(255,255,255,.06)';
+        } else {
+            btn.style.color = 'rgba(255,255,255,.6)';
+            btn.style.borderBottom = '3px solid transparent';
+            btn.style.background = 'none';
+        }
+    });
+    // Show/hide tab content
+    document.getElementById('tab-itinerary').style.display = tab === 'itinerary' ? '' : 'none';
+    document.getElementById('tab-quote').style.display     = tab === 'quote'      ? '' : 'none';
+    document.getElementById('tab-data').style.display      = tab === 'data'       ? '' : 'none';
+
+    if (tab === 'quote') loadQuoteDashboard();
+    if (tab === 'data')  loadDataDashboard();
+}
+
+// ── QUOTE DASHBOARD ──────────────────────────────────────────
+async function loadQuoteDashboard() {
+    const el = document.getElementById('quoteDashContent');
+    el.innerHTML = '<div style="text-align:center;padding:60px;color:#94a3b8;"><div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:dashSpin .8s linear infinite;margin:0 auto 12px;"></div>Loading quotes...</div>';
+
+    let Q = [];
+    try {
+        const res = await fetch(API_URL + '?action=getQuoteLog');
+        Q = await res.json();
+        if (!Array.isArray(Q)) Q = [];
+    } catch(e) {
+        el.innerHTML = '<div style="padding:40px;color:#dc2626;text-align:center;">⚠️ Could not load quote data. Check API deployment.</div>';
+        return;
+    }
+    if (!Q.length) {
+        el.innerHTML = '<div style="padding:60px;text-align:center;color:#94a3b8;">No quotes saved yet.</div>';
+        return;
+    }
+
+    // ── KPIs ──
+    const total      = Q.length;
+    const withBudget = Q.filter(q => q.budgetEntered > 0);
+    const won        = Q.filter(q => q.outcome === 'Won').length;
+    const lost       = Q.filter(q => q.outcome === 'Lost').length;
+    const over       = Q.filter(q => q.budgetFlag === 'OVER').length;
+    const target     = Q.filter(q => q.budgetFlag === '✅ TARGET').length;
+    const avgUtil    = withBudget.length ? (withBudget.reduce((s,q)=>s+(parseFloat(q.utilPct)||0),0)/withBudget.length).toFixed(1) : 'N/A';
+    const totalGMV   = Q.reduce((s,q)=>s+(q.grandTotal||0),0);
+    const avgQuote   = total ? Math.round(totalGMV/total) : 0;
+    const avgPax     = total ? (Q.reduce((s,q)=>s+(q.totalPax||0),0)/total).toFixed(1) : 0;
+    const avgNights  = total ? (Q.reduce((s,q)=>s+(q.totalNights||0),0)/total).toFixed(1) : 0;
+    const avgMarkup  = total ? (Q.reduce((s,q)=>s+(q.markupPct||0),0)/total).toFixed(1) : 0;
+    const convRate   = total ? (won/total*100).toFixed(0) : 0;
+    const manualRate = total ? (Q.filter(q=>(q.hotelsManual||0)+(q.sightsManual||0)>0).length/total*100).toFixed(0) : 0;
+
+    // Quote velocity
+    const now=new Date(), w=new Date(now); w.setDate(now.getDate()-7);
+    const pw=new Date(now); pw.setDate(now.getDate()-14);
+    const thisWeek = Q.filter(q=>q.loggedAt&&new Date(q.loggedAt)>=w).length;
+    const lastWeek = Q.filter(q=>q.loggedAt&&new Date(q.loggedAt)>=pw&&new Date(q.loggedAt)<w).length;
+    const vDiff = thisWeek - lastWeek;
+
+    // City frequency
+    const cityFreq = {};
+    Q.forEach(q=>(q.cities||'').split(',').map(c=>c.trim()).filter(Boolean).forEach(c=>cityFreq[c]=(cityFreq[c]||0)+1));
+    const top5 = Object.entries(cityFreq).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+
+    // Avg nights per city
+    const avgNC = {};
+    Q.forEach(q=>{
+        const cs=(q.cities||'').split(',').map(c=>c.trim()).filter(Boolean);
+        if(cs.length&&q.totalNights){const pC=Math.round(q.totalNights/cs.length);cs.forEach(c=>{if(!avgNC[c])avgNC[c]=[];avgNC[c].push(pC);});}
+    });
+
+    // Budget bands
+    const bands = {'✅ TARGET':target,'NEAR':Q.filter(q=>q.budgetFlag==='NEAR').length,'UNDER':Q.filter(q=>q.budgetFlag==='UNDER').length,'OVER':over,'No Budget':Q.filter(q=>q.budgetFlag==='No Budget').length};
+    const bandMax = Math.max(...Object.values(bands),1);
+    const bandCol = {'✅ TARGET':'#16a34a','NEAR':'#f59e0b','UNDER':'#60a5fa','OVER':'#dc2626','No Budget':'#94a3b8'};
+    const bandLbl = {'✅ TARGET':'95–99%','NEAR':'90–94%','UNDER':'<90%','OVER':'>100%','No Budget':'Not Set'};
+
+    // Hotel category mix
+    const catMap = {};
+    Q.forEach(q=>{if(q.category)catMap[q.category]=(catMap[q.category]||0)+1;});
+    const catTotal = Object.values(catMap).reduce((a,b)=>a+b,0)||1;
+
+    // Over budget quotes
+    const overQ = Q.filter(q=>q.budgetFlag==='OVER').sort((a,b)=>(b.utilPct||0)-(a.utilPct||0));
+
+    // Monthly volume
+    const mCnt = {};
+    Q.forEach(q=>{if(q.travelMonth)mCnt[q.travelMonth]=(mCnt[q.travelMonth]||0)+1;});
+    const mLabels = Object.keys(mCnt).sort();
+    const mMax = Math.max(...Object.values(mCnt),1);
+
+    el.innerHTML = `
+    <!-- KPI ROW 1 -->
+    <div class="db-kpi-grid">
+      <div class="db-kpi db-kpi-blue"><div class="dk-icon">📋</div><div class="dk-label">Total Quotes</div><div class="dk-value">${total}</div><div class="dk-sub">This week: ${thisWeek} ${vDiff!==0?`<span class="db-trend ${vDiff>0?'db-trend-up':'db-trend-down'}">${vDiff>0?'▲':'▼'}${Math.abs(vDiff)}</span>`:''}</div></div>
+      <div class="db-kpi db-kpi-green"><div class="dk-icon">💰</div><div class="dk-label">Total GMV</div><div class="dk-value">₹${(totalGMV/100000).toFixed(1)}L</div><div class="dk-sub">Avg markup ${avgMarkup}%</div></div>
+      <div class="db-kpi db-kpi-purple"><div class="dk-icon">🏆</div><div class="dk-label">Conversion Rate</div><div class="dk-value">${convRate}%</div><div class="dk-sub">${won} Won · ${lost} Lost · ${total-won-lost} Pending</div></div>
+      <div class="db-kpi db-kpi-teal"><div class="dk-icon">📈</div><div class="dk-label">Avg Utilisation</div><div class="dk-value">${avgUtil}${avgUtil!=='N/A'?'%':''}</div><div class="dk-sub">${withBudget.length} quotes with budget set</div></div>
+    </div>
+    <div class="db-kpi-grid">
+      <div class="db-kpi db-kpi-slate"><div class="dk-icon">💎</div><div class="dk-label">Avg Quote Value</div><div class="dk-value" style="font-size:22px;">₹${fmtD(avgQuote)}</div><div class="dk-sub">Per itinerary</div></div>
+      <div class="db-kpi db-kpi-amber"><div class="dk-icon">👥</div><div class="dk-label">Avg PAX</div><div class="dk-value">${avgPax}</div><div class="dk-sub">Avg ${avgNights} nights/quote</div></div>
+      <div class="db-kpi db-kpi-red"><div class="dk-icon">⚠️</div><div class="dk-label">Over Budget</div><div class="dk-value">${over}</div><div class="dk-sub">${total?(over/total*100).toFixed(0):0}% of all quotes</div></div>
+      <div class="db-kpi db-kpi-indigo"><div class="dk-icon">✏️</div><div class="dk-label">Manual Override Rate</div><div class="dk-value">${manualRate}%</div><div class="dk-sub">Quotes with custom edits</div></div>
+    </div>
+
+    <!-- TOP 5 DESTINATIONS -->
+    <div class="db-section">
+      <div class="db-section-title"><span class="dt" style="background:#d97706"></span>Top 5 Quoted Destinations</div>
+      <div class="db-dest-grid">
+        ${top5.map(([city,cnt],i)=>{
+          const n=avgNC[city];const avgN=n?Math.round(n.reduce((a,b)=>a+b,0)/n.length):0;
+          return `<div class="db-dest-card"><div class="dc-rank">${medals[i]}</div><div class="dc-city">${city}</div><div class="dc-num">${cnt}</div><div class="dc-label">quotes</div>${avgN?`<div class="dc-sub">~${avgN} nights avg</div>`:''}`;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- BUDGET & REVENUE ROW -->
+    <div class="db-row2">
+      <div class="db-card">
+        <h3>Budget Utilisation Distribution <span class="badge">${withBudget.length} with budget</span></h3>
+        ${Object.entries(bands).map(([k,n])=>`
+          <div class="db-bar-row">
+            <div class="db-bar-label">${k} <span style="font-size:9px;color:#94a3b8;">${bandLbl[k]}</span></div>
+            <div class="db-bar-track"><div class="db-bar-fill" style="width:${Math.max(n/bandMax*100,n>0?5:0)}%;background:${bandCol[k]}">${n>0?n:''}</div></div>
+            <div class="db-bar-count">${n}</div>
+          </div>`).join('')}
+        <div class="db-info db-info-green" style="margin-top:14px;"><strong>Target:</strong> 70%+ of quotes should land in the 95–99% zone.</div>
+      </div>
+      <div class="db-card">
+        <h3>Hotel Category Mix</h3>
+        ${['Luxury','Superior','Standard'].map(cat=>{
+          const n=catMap[cat]||0;const pct=Math.round(n/catTotal*100);
+          const col=cat==='Luxury'?'#0f172a':cat==='Superior'?'#2563eb':'#60a5fa';
+          return `<div class="db-bar-row"><div class="db-bar-label">${cat}</div><div class="db-bar-track"><div class="db-bar-fill" style="width:${pct}%;background:${col}">${pct>10?n+' quotes':''}</div></div><div class="db-bar-count">${pct}%</div></div>`;
+        }).join('')}
+        <div style="margin-top:16px;">
+          <div class="db-section-title" style="font-size:10px;margin-bottom:10px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">Quote Volume by Travel Month</div>
+          ${mLabels.map(m=>`<div class="db-bar-row"><div class="db-bar-label">${m.replace(' 20','·20')}</div><div class="db-bar-track"><div class="db-bar-fill" style="width:${mCnt[m]/mMax*100}%;background:#2563eb">${mCnt[m]>0?mCnt[m]:''}</div></div><div class="db-bar-count">${mCnt[m]}</div></div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- OVER BUDGET + FULL LOG -->
+    <div class="db-row2">
+      <div class="db-card">
+        <h3>Over-Budget Quotes <span class="badge" style="background:#f8d7da;color:#dc2626;">${over} flagged</span></h3>
+        ${overQ.length===0?'<div class="db-empty">✅ No over-budget quotes.</div>':overQ.map(q=>`
+          <div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid #f1f5f9;">
+            <div><div style="font-weight:700;font-size:12px;">${q.paxName}</div><div style="font-size:10px;color:#94a3b8;">${q.cities} · ${q.travelMonth}</div></div>
+            <div style="text-align:right;"><div style="font-size:14px;font-weight:900;color:#dc2626;">${q.utilPct}%</div><div style="font-size:10px;color:#dc2626;">₹${fmtD((q.grandTotal||0)-(q.budgetEntered||0))} over</div></div>
+            <span class="db-pill ${q.outcome==='Won'?'db-pill-green':q.outcome==='Lost'?'db-pill-red':'db-pill-amber'}">${q.outcome}</span>
+          </div>`).join('')}
+      </div>
+      <div class="db-card">
+        <h3>Outcome Breakdown</h3>
+        ${[['Won',won,'#16a34a'],['Pending',total-won-lost,'#d97706'],['Lost',lost,'#dc2626']].map(([label,n,col])=>`
+          <div class="db-bar-row">
+            <div class="db-bar-label">${label}</div>
+            <div class="db-bar-track"><div class="db-bar-fill" style="width:${total?(n/total*100):0}%;background:${col}">${n>0?n:''}</div></div>
+            <div class="db-bar-count">${total?(n/total*100).toFixed(0):0}%</div>
+          </div>`).join('')}
+        <div style="margin-top:20px;">
+          <div class="db-section-title" style="font-size:10px;margin-bottom:10px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">Revenue Composition (avg per quote)</div>
+          ${[['Hotels',Math.round(Q.reduce((s,q)=>s+(q.hotelNet||0),0)/total),'#0f172a'],['Sightseeing',Math.round(Q.reduce((s,q)=>s+(q.sightNet||0),0)/total),'#2563eb'],['Transfers',Math.round(Q.reduce((s,q)=>s+(q.transferNet||0),0)/total),'#d97706'],['Trains/Bus',Math.round(Q.reduce((s,q)=>s+(q.trainsNet||0),0)/total),'#16a34a']].map(([label,val,col])=>`
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f8fafc;font-size:12px;">
+              <span style="display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:50%;background:${col};display:inline-block;"></span>${label}</span>
+              <strong>₹${fmtD(val)}</strong>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- FULL QUOTE TABLE -->
+    <div class="db-card db-row-full">
+      <h3>All Quotes <span class="badge">${Q.length} total</span></h3>
+      <div class="db-tbl-wrap">
+        <table class="db-table">
+          <thead><tr><th>Pax Name</th><th>Cities</th><th>Month</th><th class="tr">Nights</th><th class="tr">PAX</th><th class="tr">Grand Total</th><th class="tr">Util%</th><th>Flag</th><th>Category</th><th>Outcome</th></tr></thead>
+          <tbody>
+            ${Q.slice().sort((a,b)=>new Date(b.loggedAt)-new Date(a.loggedAt)).map(q=>`
+              <tr>
+                <td><strong>${q.paxName}</strong><br><span style="font-size:9px;color:#94a3b8;">${q.loggedAt}</span></td>
+                <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;">${q.cities}</td>
+                <td>${q.travelMonth||'—'}</td>
+                <td class="tr">${q.totalNights}</td>
+                <td class="tr">${q.totalPax}</td>
+                <td class="tr" style="font-weight:700;">₹${fmtD(q.grandTotal)}</td>
+                <td class="tr" style="font-weight:700;color:${q.budgetFlag==='OVER'?'#dc2626':q.budgetFlag==='✅ TARGET'?'#16a34a':'inherit'}">${q.utilPct||'—'}${q.utilPct?'%':''}</td>
+                <td>${q.budgetFlag==='✅ TARGET'?'<span class="db-pill db-pill-green">✅ Target</span>':q.budgetFlag==='OVER'?'<span class="db-pill db-pill-red">Over</span>':q.budgetFlag==='NEAR'?'<span class="db-pill db-pill-amber">Near</span>':q.budgetFlag==='UNDER'?'<span class="db-pill db-pill-blue">Under</span>':'<span class="db-pill db-pill-grey">—</span>'}</td>
+                <td>${q.category||'—'}</td>
+                <td style="font-weight:700;color:${q.outcome==='Won'?'#16a34a':q.outcome==='Lost'?'#dc2626':'#d97706'}">${q.outcome||'Pending'}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ── DATA DASHBOARD ────────────────────────────────────────────
+async function loadDataDashboard() {
+    const el = document.getElementById('dataDashContent');
+    el.innerHTML = '<div style="text-align:center;padding:60px;color:#94a3b8;"><div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:dashSpin .8s linear infinite;margin:0 auto 12px;"></div>Loading master data...</div>';
+
+    let inv = { hotels:[], sights:[] };
+    let activeUsers = { count:0, users:[] };
+    try {
+        const [invRes, usersRes] = await Promise.allSettled([
+            fetch(API_URL + '?action=getMasterInventory').then(r=>r.json()),
+            fetch(API_URL + '?action=getActiveUsers').then(r=>r.json()),
+        ]);
+        if (invRes.status==='fulfilled' && invRes.value?.hotels) inv = invRes.value;
+        if (usersRes.status==='fulfilled' && usersRes.value?.count!=null) activeUsers = usersRes.value;
+    } catch(e) {}
+
+    if (!inv.hotels.length && !inv.sights.length) {
+        el.innerHTML = '<div style="padding:60px;text-align:center;color:#94a3b8;">No master data found. Make sure the Hotels and Sightseeing sheets exist and have data.</div>';
+        return;
+    }
+
+    const totalHotels = inv.hotels.reduce((s,c)=>s+c.count,0);
+    const totalSights = inv.sights.reduce((s,c)=>s+c.count,0);
+    const hotelCities = inv.hotels.length;
+    const sightCities = inv.sights.length;
+
+    // Cities with < 3 hotels = critical, < 6 = low
+    const critHotels = inv.hotels.filter(c=>c.count<3).length;
+    const critSights = inv.sights.filter(c=>c.count<4).length;
+
+    const topHotels    = inv.hotels.slice(0,10);
+    const botHotels    = inv.hotels.slice(-10).reverse();
+    const topSights    = inv.sights.slice(0,10);
+    const botSights    = inv.sights.slice(-10).reverse();
+    const maxH = topHotels[0]?.count || 1;
+    const maxS = topSights[0]?.count || 1;
+
+    function invFlag(n, lowT, critT) {
+        if (n <= critT) return `<span class="db-flag-red">🔴 Critical (${n})</span>`;
+        if (n <= lowT)  return `<span class="db-flag-amber">🟡 Low (${n})</span>`;
+        return `<span class="db-flag-green">✅ Good (${n})</span>`;
+    }
+
+    el.innerHTML = `
+    <!-- KPIs -->
+    <div class="db-kpi-grid">
+      <div class="db-kpi db-kpi-blue"><div class="dk-icon">🏨</div><div class="dk-label">Total Hotels Listed</div><div class="dk-value">${totalHotels}</div><div class="dk-sub">Across ${hotelCities} cities</div></div>
+      <div class="db-kpi db-kpi-teal"><div class="dk-icon">🎭</div><div class="dk-label">Total Sightseeing</div><div class="dk-value">${totalSights}</div><div class="dk-sub">Across ${sightCities} cities</div></div>
+      <div class="db-kpi db-kpi-red"><div class="dk-icon">⚠️</div><div class="dk-label">Critical Hotel Cities</div><div class="dk-value">${critHotels}</div><div class="dk-sub">Fewer than 3 hotels listed</div></div>
+      <div class="db-kpi db-kpi-amber"><div class="dk-icon">⚠️</div><div class="dk-label">Critical Sight Cities</div><div class="dk-value">${critSights}</div><div class="dk-sub">Fewer than 4 activities listed</div></div>
+    </div>
+
+    <!-- ACTIVE USERS -->
+    <div class="db-card db-row-full" style="margin-bottom:18px;">
+      <h3>Active Users (Last 24 hrs) <span class="badge" style="${activeUsers.count>0?'background:#d4edda;color:#16a34a;':''}">${activeUsers.count>0?activeUsers.count+' online':'None active'}</span></h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;">
+        ${activeUsers.users.length===0?'<div class="db-empty" style="grid-column:1/-1">No users logged in the last 24 hours.<br><small style="font-size:10px;">Login tracking activates after running setupLastLogin() in Apps Script.</small></div>':
+        activeUsers.users.map(u=>`
+          <div class="db-user-row" style="border:1px solid #f1f5f9;border-radius:10px;padding:10px 14px;background:#fafafa;">
+            <div class="db-online-dot"></div>
+            <div class="db-avatar">${(u.personName||u.username||'?').charAt(0).toUpperCase()}</div>
+            <div style="flex:1;">
+              <div style="font-weight:700;font-size:12px;">${u.personName||u.username}</div>
+              <div style="font-size:10px;color:#94a3b8;">${u.agencyName||'—'}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:10px;color:#16a34a;font-weight:700;">${timeAgoD(u.lastLogin)}</div>
+              <div style="font-size:9px;background:${u.role==='ADMIN'?'#0f172a':'#eff6ff'};color:${u.role==='ADMIN'?'#fff':'#2563eb'};padding:2px 6px;border-radius:4px;font-weight:700;display:inline-block;margin-top:2px;">${u.role}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- HOTEL INVENTORY -->
+    <div class="db-section">
+      <div class="db-section-title"><span class="dt" style="background:#0f172a"></span>Hotel Inventory — Master Sheet Coverage</div>
+      <div class="db-row2">
+        <div class="db-card">
+          <h3>🏆 Top 10 Cities <span class="badge">Most hotel options</span></h3>
+          <div class="db-tbl-wrap">
+            <table class="db-table">
+              <thead><tr><th>#</th><th>City</th><th class="tr">Hotels Listed</th><th style="width:140px;">Coverage</th></tr></thead>
+              <tbody>
+                ${topHotels.map((c,i)=>`<tr>
+                  <td><span class="db-rank ${i===0?'r1':i===1?'r2':i===2?'r3':''}">${i+1}</span></td>
+                  <td><strong>${c.city}</strong></td>
+                  <td class="tr" style="font-weight:800;font-size:13px;">${c.count}</td>
+                  <td><div class="db-cov-bar"><div class="db-cov-fill" style="width:${(c.count/maxH*100).toFixed(0)}%;background:#0f172a;height:10px;border-radius:3px;"></div></div></td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="db-card">
+          <h3>📉 Bottom 10 Cities <span class="badge" style="background:#f8d7da;color:#dc2626;">Need more options</span></h3>
+          <div class="db-tbl-wrap">
+            <table class="db-table">
+              <thead><tr><th>City</th><th class="tr">Hotels Listed</th><th>Status</th></tr></thead>
+              <tbody>
+                ${botHotels.map(c=>`<tr>
+                  <td>${c.city}</td>
+                  <td class="tr" style="font-weight:800;">${c.count}</td>
+                  <td>${invFlag(c.count,5,2)}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div class="db-info db-info-amber">Cities marked 🔴 have fewer than 3 options — agents may struggle to find a match for client budgets. Add hotels to the Hotels sheet.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIGHTSEEING INVENTORY -->
+    <div class="db-section">
+      <div class="db-section-title"><span class="dt" style="background:#0d9488"></span>Sightseeing Inventory — Master Sheet Coverage</div>
+      <div class="db-row2">
+        <div class="db-card">
+          <h3>🏆 Top 10 Cities <span class="badge">Most activities</span></h3>
+          <div class="db-tbl-wrap">
+            <table class="db-table">
+              <thead><tr><th>#</th><th>City</th><th class="tr">Activities Listed</th><th style="width:140px;">Coverage</th></tr></thead>
+              <tbody>
+                ${topSights.map((c,i)=>`<tr>
+                  <td><span class="db-rank ${i===0?'r1':i===1?'r2':i===2?'r3':''}">${i+1}</span></td>
+                  <td><strong>${c.city}</strong></td>
+                  <td class="tr" style="font-weight:800;font-size:13px;">${c.count}</td>
+                  <td><div class="db-cov-bar"><div class="db-cov-fill" style="width:${(c.count/maxS*100).toFixed(0)}%;background:#0d9488;height:10px;border-radius:3px;"></div></div></td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="db-card">
+          <h3>📉 Bottom 10 Cities <span class="badge" style="background:#f8d7da;color:#dc2626;">Need more options</span></h3>
+          <div class="db-tbl-wrap">
+            <table class="db-table">
+              <thead><tr><th>City</th><th class="tr">Activities Listed</th><th>Status</th></tr></thead>
+              <tbody>
+                ${botSights.map(c=>`<tr>
+                  <td>${c.city}</td>
+                  <td class="tr" style="font-weight:800;">${c.count}</td>
+                  <td>${invFlag(c.count,8,3)}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div class="db-info db-info-amber">Cities marked 🔴 have fewer than 4 activities — quotes will have poor sightseeing variety. Add activities to the Sightseeing sheet.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FULL INVENTORY TABLE -->
+    <div class="db-row2">
+      <div class="db-card">
+        <h3>All Cities — Hotel Coverage <span class="badge">${hotelCities} cities</span></h3>
+        <div class="db-tbl-wrap">
+          <table class="db-table">
+            <thead><tr><th>#</th><th>City</th><th class="tr">Hotels</th><th>Status</th></tr></thead>
+            <tbody>
+              ${inv.hotels.map((c,i)=>`<tr>
+                <td style="color:#94a3b8;font-size:10px;">${i+1}</td>
+                <td>${c.city}</td>
+                <td class="tr" style="font-weight:700;">${c.count}</td>
+                <td>${invFlag(c.count,5,2)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="db-card">
+        <h3>All Cities — Sightseeing Coverage <span class="badge">${sightCities} cities</span></h3>
+        <div class="db-tbl-wrap">
+          <table class="db-table">
+            <thead><tr><th>#</th><th>City</th><th class="tr">Activities</th><th>Status</th></tr></thead>
+            <tbody>
+              ${inv.sights.map((c,i)=>`<tr>
+                <td style="color:#94a3b8;font-size:10px;">${i+1}</td>
+                <td>${c.city}</td>
+                <td class="tr" style="font-weight:700;">${c.count}</td>
+                <td>${invFlag(c.count,8,3)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+}
+
+function fmtD(n) {
+    if (!n && n!==0) return '—';
+    return Math.round(n).toLocaleString('en-IN');
+}
+function timeAgoD(isoStr) {
+    if (!isoStr) return '—';
+    const diff = Date.now() - new Date(isoStr).getTime();
+    const mins = Math.floor(diff/60000);
+    if (mins<1)  return 'Just now';
+    if (mins<60) return mins+'m ago';
+    const hrs = Math.floor(mins/60);
+    if (hrs<24)  return hrs+'h ago';
+    return Math.floor(hrs/24)+'d ago';
 }
 </script>
 </body>
