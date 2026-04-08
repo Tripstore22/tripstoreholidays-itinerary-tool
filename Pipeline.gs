@@ -542,6 +542,7 @@ function repairTrainMonthlyPrices() {
     const batchRows = toRepair.slice(b, b + REPAIR_BATCH);
     const pending   = batchRows.map(r => ({ data: r.data, rowNum: r.rowNum }));
     Logger.log(`Batch ${Math.floor(b/REPAIR_BATCH)+1}: sending ${pending.length} rows...`);
+    if (b > 0) Utilities.sleep(3000); // 3s gap between batches
 
     const results = enrichTrains(pending);
     if (!results || !Array.isArray(results)) { Logger.log('Claude returned no results for this batch, skipping.'); continue; }
@@ -649,38 +650,53 @@ function getApiKey() {
 }
 
 function callClaudeAPI(prompt, expectedCount) {
-  try {
-    const response = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
-      method: 'post',
-      contentType: 'application/json',
-      headers: {
-        'x-api-key': getApiKey(),
-        'anthropic-version': '2023-06-01',
-      },
-      payload: JSON.stringify({
-        model: CFG.MODEL,
-        max_tokens: Math.min(4096, Math.max(1024, expectedCount * 300)),
-        messages: [{ role: 'user', content: prompt }],
-      }),
-      muteHttpExceptions: true,
-    });
+  const MAX_RETRIES = 4;
+  const BASE_DELAY  = 8000; // 8s → 16s → 32s → 64s
 
-    if (response.getResponseCode() !== 200) {
-      throw new Error(`Claude API returned ${response.getResponseCode()}: ${response.getContentText().slice(0, 300)}`);
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      if (attempt > 0) {
+        const wait = BASE_DELAY * Math.pow(2, attempt - 1);
+        Logger.log(`Retry ${attempt}/${MAX_RETRIES} — waiting ${wait/1000}s...`);
+        Utilities.sleep(wait);
+      }
+
+      const response = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+        method: 'post',
+        contentType: 'application/json',
+        headers: {
+          'x-api-key': getApiKey(),
+          'anthropic-version': '2023-06-01',
+        },
+        payload: JSON.stringify({
+          model: CFG.MODEL,
+          max_tokens: Math.min(4096, Math.max(1024, expectedCount * 300)),
+          messages: [{ role: 'user', content: prompt }],
+        }),
+        muteHttpExceptions: true,
+      });
+
+      const code = response.getResponseCode();
+      if (code === 529 || code === 503 || code === 429) {
+        Logger.log(`API overloaded (${code}) — will retry...`);
+        continue;
+      }
+      if (code !== 200) {
+        throw new Error(`Claude API returned ${code}: ${response.getContentText().slice(0, 300)}`);
+      }
+
+      const responseData = JSON.parse(response.getContentText());
+      const text         = responseData.content[0].text;
+      const cleaned      = text.replace(/```json|```/g, '').trim();
+      return JSON.parse(cleaned);
+
+    } catch (e) {
+      if (attempt === MAX_RETRIES) {
+        Logger.log(`Claude API failed after ${MAX_RETRIES} retries: ${e.message}`);
+        return Array(expectedCount).fill({ valid: false, error_reason: `Claude API error: ${e.message}` });
+      }
+      Logger.log(`Attempt ${attempt+1} error: ${e.message} — retrying...`);
     }
-
-    const responseData = JSON.parse(response.getContentText());
-    const text         = responseData.content[0].text;
-    const cleaned      = text.replace(/```json|```/g, '').trim();
-    return JSON.parse(cleaned);
-
-  } catch (e) {
-    Logger.log(`Claude API error: ${e.message}`);
-    // Return error result for every row in the batch — they will be retried next run
-    return Array(expectedCount).fill({
-      valid: false,
-      error_reason: `Claude API error — will retry next run: ${e.message}`,
-    });
   }
 }
 
@@ -801,7 +817,8 @@ function sendSummaryEmail(results, durationSeconds) {
 // ================================================================
 
 function setupSheets() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+          || SpreadsheetApp.openById('1U3f6PhTpvbEO7JG937t2z9EW9dfB0gcIOUVA_GATIHM');
 
   _buildInputSheet(ss, CFG.INPUT.HOTELS, [
     'City','Hotel Name','Star Rating','Hotel Category','Chain / Brand','Room Type',
