@@ -34,6 +34,12 @@ function doGet(e) {
     if (action === 'getQuoteLog') {
       return getQuoteLog();
     }
+    if (action === 'getActiveUsers') {
+      return getActiveUsers();
+    }
+    if (action === 'getCityStats') {
+      return getCityStats();
+    }
     return ContentService.createTextOutput('Invalid action');
   } catch (err) {
     return ContentService.createTextOutput('Server Error: ' + err.message);
@@ -260,12 +266,30 @@ function checkLogin(user, pass) {
 
     if (dbUser === user.trim().toLowerCase() && dbPass === pass.trim()) {
       if (dbRole === 'PENDING') return ContentService.createTextOutput('PENDING_APPROVAL');
+      // Record last login timestamp in column I (index 8)
+      sheet.getRange(i + 1, 9).setValue(new Date());
       if (dbRole === 'ADMIN')   return ContentService.createTextOutput('ADMIN');
       return ContentService.createTextOutput('USER');
     }
   }
 
   return ContentService.createTextOutput('INVALID');
+}
+
+
+// ------------------------------------------------------------
+// ONE-TIME SETUP — adds LastLogin header to Users sheet column I
+// Run this once manually from Apps Script editor
+// ------------------------------------------------------------
+
+function setupLastLogin() {
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Users');
+  if (!sheet) return;
+  const header = sheet.getRange(1, 9).getValue();
+  if (!header || String(header).trim() === '') {
+    sheet.getRange(1, 9).setValue('LastLogin');
+  }
 }
 
 
@@ -414,6 +438,133 @@ function getQuoteLog() {
 
   return ContentService
     .createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+
+// ------------------------------------------------------------
+// ACTIVE USERS — returns users who logged in within last 24 hours
+// Reads Users sheet column I (LastLogin)
+// ------------------------------------------------------------
+
+function getActiveUsers() {
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Users');
+  if (!sheet) return ContentService
+    .createTextOutput(JSON.stringify({ count: 0, users: [] }))
+    .setMimeType(ContentService.MimeType.JSON);
+
+  const data    = sheet.getDataRange().getValues();
+  const cutoff  = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24 hours ago
+  const active  = [];
+
+  for (let i = 1; i < data.length; i++) {
+    const username   = String(data[i][0] || '').trim();
+    const role       = String(data[i][2] || '').trim().toUpperCase();
+    const agencyName = String(data[i][4] || '').trim();
+    const personName = String(data[i][5] || '').trim();
+    const lastLogin  = data[i][8]; // Column I
+
+    if (!username || role === 'PENDING') continue;
+
+    if (lastLogin && lastLogin instanceof Date && lastLogin > cutoff) {
+      active.push({
+        username:   username,
+        agencyName: agencyName,
+        personName: personName,
+        role:       role,
+        lastLogin:  lastLogin.toISOString()
+      });
+    }
+  }
+
+  // Sort most recently active first
+  active.sort((a, b) => new Date(b.lastLogin) - new Date(a.lastLogin));
+
+  return ContentService
+    .createTextOutput(JSON.stringify({ count: active.length, users: active }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+
+// ------------------------------------------------------------
+// CITY STATS — parses all saved itineraries to build per-city
+// hotel and sightseeing stats for the admin dashboard
+// ------------------------------------------------------------
+
+function getCityStats() {
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Saved_Itineraries');
+  if (!sheet) return ContentService
+    .createTextOutput(JSON.stringify({ hotels: [], sights: [] }))
+    .setMimeType(ContentService.MimeType.JSON);
+
+  const data = sheet.getDataRange().getValues();
+
+  const hotelMap = {}; // city → { quoteCount, totalCost, totalNights }
+  const sightMap = {}; // city → { quoteCount, totalSpend }
+
+  for (let i = 1; i < data.length; i++) {
+    if (!data[i][1]) continue;
+    let payload;
+    try {
+      payload = JSON.parse(String(data[i][1]));
+    } catch (e) {
+      continue;
+    }
+
+    const plan = payload.currentPlan || [];
+    const pax  = (payload.adults || 1) + (payload.children || 0);
+
+    plan.forEach(function(cityBlock) {
+      const city   = String(cityBlock.city || '').trim();
+      const nights = Number(cityBlock.nights) || 1;
+      if (!city) return;
+
+      // Hotel stats
+      const hotel = cityBlock.hotel;
+      if (hotel && hotel.cost > 0) {
+        if (!hotelMap[city]) hotelMap[city] = { quoteCount: 0, totalCost: 0, totalNights: 0 };
+        hotelMap[city].quoteCount++;
+        hotelMap[city].totalCost   += hotel.cost * nights;
+        hotelMap[city].totalNights += nights;
+      }
+
+      // Sightseeing stats
+      const sights     = cityBlock.sights || [];
+      const sightSpend = sights.reduce(function(sum, s) {
+        return sum + (Number(s.price) || 0) * pax;
+      }, 0);
+
+      if (!sightMap[city]) sightMap[city] = { quoteCount: 0, totalSpend: 0 };
+      sightMap[city].quoteCount++;
+      sightMap[city].totalSpend += sightSpend;
+    });
+  }
+
+  // Convert to arrays and compute averages
+  const hotelStats = Object.keys(hotelMap).map(function(city) {
+    const h = hotelMap[city];
+    return {
+      city:        city,
+      quoteCount:  h.quoteCount,
+      avgCostPerNight: h.totalNights > 0 ? Math.round(h.totalCost / h.totalNights) : 0,
+      totalSpend:  Math.round(h.totalCost)
+    };
+  }).sort(function(a, b) { return b.quoteCount - a.quoteCount; });
+
+  const sightStats = Object.keys(sightMap).map(function(city) {
+    const s = sightMap[city];
+    return {
+      city:       city,
+      quoteCount: s.quoteCount,
+      avgSpend:   s.quoteCount > 0 ? Math.round(s.totalSpend / s.quoteCount) : 0,
+      totalSpend: Math.round(s.totalSpend)
+    };
+  }).sort(function(a, b) { return b.quoteCount - a.quoteCount; });
+
+  return ContentService
+    .createTextOutput(JSON.stringify({ hotels: hotelStats, sights: sightStats }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
