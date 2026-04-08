@@ -533,20 +533,23 @@ function repairTrainMonthlyPrices() {
   }
 
   if (toRepair.length === 0) { Logger.log('No rows need repair — all monthly prices already filled.'); return; }
-  Logger.log(`Found ${toRepair.length} rows with missing monthly € prices. Sending to Claude...`);
+  Logger.log(`Found ${toRepair.length} rows with missing monthly € prices. Processing in batches...`);
 
-  // Build pending format matching enrichTrains input
-  const pending = toRepair.map(r => ({ data: r.data, rowNum: r.rowNum }));
-
-  // Reuse enrichTrains which now includes proper monthly price logic
-  const results = enrichTrains(pending);
-  if (!results || !Array.isArray(results)) { Logger.log('Claude returned no results'); return; }
-
+  const REPAIR_BATCH = 8;
   let updated = 0;
-  results.forEach(res => {
-    if (!res.valid || !res.rows || !res.rows.length) return;
-    const targetRow = toRepair[res.idx];
-    if (!targetRow) return;
+
+  for (let b = 0; b < toRepair.length; b += REPAIR_BATCH) {
+    const batchRows = toRepair.slice(b, b + REPAIR_BATCH);
+    const pending   = batchRows.map(r => ({ data: r.data, rowNum: r.rowNum }));
+    Logger.log(`Batch ${Math.floor(b/REPAIR_BATCH)+1}: sending ${pending.length} rows...`);
+
+    const results = enrichTrains(pending);
+    if (!results || !Array.isArray(results)) { Logger.log('Claude returned no results for this batch, skipping.'); continue; }
+
+    results.forEach(res => {
+      if (!res.valid || !res.rows || !res.rows.length) return;
+      const targetRow = batchRows[res.idx];  // idx is relative to this batch
+      if (!targetRow) return;
 
     // Use the first row (forward direction) to update monthly prices
     const enriched = res.rows[0];
@@ -568,8 +571,9 @@ function repairTrainMonthlyPrices() {
         break;
       }
     }
-    updated++;
-  });
+      updated++;
+    });
+  } // end batch loop
 
   Logger.log(`✅ Repair complete. ${updated} route pairs updated with monthly € prices.`);
   SpreadsheetApp.getActiveSpreadsheet().toast(`Updated ${updated} train routes with monthly prices.`, '✅ Done', 5);
@@ -655,7 +659,7 @@ function callClaudeAPI(prompt, expectedCount) {
       },
       payload: JSON.stringify({
         model: CFG.MODEL,
-        max_tokens: CFG.MAX_TOKENS,
+        max_tokens: Math.min(4096, Math.max(1024, expectedCount * 300)),
         messages: [{ role: 'user', content: prompt }],
       }),
       muteHttpExceptions: true,
