@@ -181,10 +181,12 @@
                     <div>
                         <label id="hotelBudgetLabel" class="text-[8px] font-bold text-gray-500 uppercase">Hotel Budget</label>
                         <input type="number" id="hotelBudget" class="w-full p-1.5 border rounded text-xs font-bold" placeholder="Enter budget">
+                        <div id="hotelBudgetHint" style="display:none;font-size:9px;color:#94a3b8;margin-top:2px;">Suggested: <span id="hotelBudgetRange" style="font-weight:600;color:#64748b;"></span> <button onclick="applyBudgetSuggestion('hotel')" class="no-print" style="margin-left:4px;font-size:8px;color:#3b82f6;text-decoration:underline;background:none;border:none;cursor:pointer;">Use mid</button></div>
                     </div>
                     <div>
                         <label id="sightBudgetLabel" class="text-[8px] font-bold text-gray-500 uppercase">Land Package Budget</label>
                         <input type="number" id="sightBudget" class="w-full p-1.5 border rounded text-xs font-bold" placeholder="Enter budget">
+                        <div id="sightBudgetHint" style="display:none;font-size:9px;color:#94a3b8;margin-top:2px;">Suggested: <span id="sightBudgetRange" style="font-weight:600;color:#64748b;"></span> <button onclick="applyBudgetSuggestion('land')" class="no-print" style="margin-left:4px;font-size:8px;color:#3b82f6;text-decoration:underline;background:none;border:none;cursor:pointer;">Use mid</button></div>
                     </div>
                 </div>
                 <button onclick="runOptimizer(true, true)"

@@ -413,7 +413,7 @@ function getQuoteLog() {
     .map(r => ({
       quoteId:      r[0]  || '',
       paxName:      r[1]  || '',
-      loggedAt:     r[2]  ? new Date(r[2]).toISOString().slice(0,10) : '',
+      loggedAt:     (function(v){ try { var d=new Date(v); return (!v||isNaN(d.getTime())) ? '' : d.toISOString().slice(0,10); } catch(e){ return ''; } })(r[2]),
       travelMonth:  r[3]  || '',
       adults:       r[4]  || 0,
       children:     r[5]  || 0,
