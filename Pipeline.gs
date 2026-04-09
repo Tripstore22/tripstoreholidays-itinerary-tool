@@ -453,6 +453,7 @@ OUTPUT — JSON array only, no markdown:
 // ================================================================
 
 function enrichTrains(pending) {
+  if (!pending || !pending.length) throw new Error('enrichTrains is an internal function — run runMidnightEnrichment() instead.');
   const input = pending.map((r, idx) => ({
     idx,
     mode:      r.data[TC.MODE-1]     || '',
