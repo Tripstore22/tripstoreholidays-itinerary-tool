@@ -475,8 +475,16 @@ VALIDATE — valid=false if:
 ENRICH (if valid=true):
 - Standardise city name capitalisation e.g. "amsterdam" → "Amsterdam"
 - Standardise mode capitalisation
-- avg_e: calculate average of provided € columns. If all € columns blank, back-calculate: round(inr_price / 110, 1)
-- Generate BOTH directions as two separate rows (same price for the return)
+- MONTHLY € PRICES (may_e, aug_e, oct_e, dec_e): Use your knowledge of real rail/ferry fares for this route.
+  These are one-way 2nd class / standard fares in EUR for an adult.
+  Seasonal pattern: May ≈ shoulder, Aug ≈ peak (highest), Oct ≈ shoulder-low, Dec ≈ varies by route.
+  If the route already has some months filled, use those as anchors and derive the rest using:
+  May=1.0x, Aug=1.25x, Oct=0.90x, Dec=1.05x relative multipliers.
+  If inr_price is provided and all months blank, back-calculate avg_e = round(inr_price/110, 1)
+  then derive months: may=round(avg*1.00,1), aug=round(avg*1.25,1), oct=round(avg*0.90,1), dec=round(avg*1.05,1).
+- avg_e: average of may_e, aug_e, oct_e, dec_e rounded to 1 decimal.
+- inr_price: if blank, calculate round(avg_e * 110). If already set, keep it.
+- Generate BOTH directions as two separate rows (same prices for the return leg).
 
 OUTPUT — JSON array only, no markdown:
 [{
@@ -490,6 +498,86 @@ OUTPUT — JSON array only, no markdown:
 }]`;
 
   return callClaudeAPI(prompt, pending.length);
+}
+
+
+// ================================================================
+// REPAIR — Fill missing monthly € prices in existing Trains master rows
+// Run manually: select repairTrainMonthlyPrices → Run
+// ================================================================
+function repairTrainMonthlyPrices() {
+  const ss     = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet  = ss.getSheetByName(CFG.MASTER.TRAINS);
+  if (!sheet) { Logger.log('Trains sheet not found'); return; }
+
+  const data   = sheet.getDataRange().getValues();
+  const header = data[0];
+
+  // Column indices (1-based from header row)
+  // A:Mode B:From C:To D:Stops E:Stopover F:INR G:May H:Aug I:Oct J:Dec K:Avg
+  const COL = { MODE:1, FROM:2, TO:3, STOPS:4, STOP:5, INR:6, MAY:7, AUG:8, OCT:9, DEC:10, AVG:11 };
+
+  // Find rows where INR is filled but all monthly € columns are blank
+  const toRepair = [];
+  for (let i = 1; i < data.length; i++) {
+    const row    = data[i];
+    const inr    = Number(row[COL.INR-1]);
+    const mayE   = row[COL.MAY-1];
+    const augE   = row[COL.AUG-1];
+    const octE   = row[COL.OCT-1];
+    const decE   = row[COL.DEC-1];
+    const hasMonthly = [mayE, augE, octE, decE].some(v => v !== '' && v !== 0 && v !== null);
+    if (inr > 0 && !hasMonthly) {
+      toRepair.push({ rowNum: i + 1, data: row });
+    }
+  }
+
+  if (toRepair.length === 0) { Logger.log('No rows need repair — all monthly prices already filled.'); return; }
+  Logger.log(`Found ${toRepair.length} rows with missing monthly € prices. Processing in batches...`);
+
+  const REPAIR_BATCH = 8;
+  let updated = 0;
+
+  for (let b = 0; b < toRepair.length; b += REPAIR_BATCH) {
+    const batchRows = toRepair.slice(b, b + REPAIR_BATCH);
+    const pending   = batchRows.map(r => ({ data: r.data, rowNum: r.rowNum }));
+    Logger.log(`Batch ${Math.floor(b/REPAIR_BATCH)+1}: sending ${pending.length} rows...`);
+    if (b > 0) Utilities.sleep(3000); // 3s gap between batches
+
+    const results = enrichTrains(pending);
+    if (!results || !Array.isArray(results)) { Logger.log('Claude returned no results for this batch, skipping.'); continue; }
+
+    results.forEach(res => {
+      if (!res.valid || !res.rows || !res.rows.length) return;
+      const targetRow = batchRows[res.idx];  // idx is relative to this batch
+      if (!targetRow) return;
+
+    // Use the first row (forward direction) to update monthly prices
+    const enriched = res.rows[0];
+    const mayE  = enriched[6]  || '';
+    const augE  = enriched[7]  || '';
+    const octE  = enriched[8]  || '';
+    const decE  = enriched[9]  || '';
+    const avgE  = enriched[10] || '';
+
+    sheet.getRange(targetRow.rowNum, COL.MAY, 1, 5).setValues([[mayE, augE, octE, decE, avgE]]);
+
+    // Also find and update the reverse direction row
+    const fromCity = String(targetRow.data[COL.FROM-1]).toLowerCase();
+    const toCity   = String(targetRow.data[COL.TO-1]).toLowerCase();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][COL.FROM-1]).toLowerCase() === toCity &&
+          String(data[i][COL.TO-1]).toLowerCase() === fromCity) {
+        sheet.getRange(i + 1, COL.MAY, 1, 5).setValues([[mayE, augE, octE, decE, avgE]]);
+        break;
+      }
+    }
+      updated++;
+    });
+  } // end batch loop
+
+  Logger.log(`✅ Repair complete. ${updated} route pairs updated with monthly € prices.`);
+  SpreadsheetApp.getActiveSpreadsheet().toast(`Updated ${updated} train routes with monthly prices.`, '✅ Done', 5);
 }
 
 
@@ -562,38 +650,53 @@ function getApiKey() {
 }
 
 function callClaudeAPI(prompt, expectedCount) {
-  try {
-    const response = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
-      method: 'post',
-      contentType: 'application/json',
-      headers: {
-        'x-api-key': getApiKey(),
-        'anthropic-version': '2023-06-01',
-      },
-      payload: JSON.stringify({
-        model: CFG.MODEL,
-        max_tokens: CFG.MAX_TOKENS,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-      muteHttpExceptions: true,
-    });
+  const MAX_RETRIES = 4;
+  const BASE_DELAY  = 8000; // 8s → 16s → 32s → 64s
 
-    if (response.getResponseCode() !== 200) {
-      throw new Error(`Claude API returned ${response.getResponseCode()}: ${response.getContentText().slice(0, 300)}`);
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      if (attempt > 0) {
+        const wait = BASE_DELAY * Math.pow(2, attempt - 1);
+        Logger.log(`Retry ${attempt}/${MAX_RETRIES} — waiting ${wait/1000}s...`);
+        Utilities.sleep(wait);
+      }
+
+      const response = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+        method: 'post',
+        contentType: 'application/json',
+        headers: {
+          'x-api-key': getApiKey(),
+          'anthropic-version': '2023-06-01',
+        },
+        payload: JSON.stringify({
+          model: CFG.MODEL,
+          max_tokens: Math.min(4096, Math.max(1024, expectedCount * 300)),
+          messages: [{ role: 'user', content: prompt }],
+        }),
+        muteHttpExceptions: true,
+      });
+
+      const code = response.getResponseCode();
+      if (code === 529 || code === 503 || code === 429) {
+        Logger.log(`API overloaded (${code}) — will retry...`);
+        continue;
+      }
+      if (code !== 200) {
+        throw new Error(`Claude API returned ${code}: ${response.getContentText().slice(0, 300)}`);
+      }
+
+      const responseData = JSON.parse(response.getContentText());
+      const text         = responseData.content[0].text;
+      const cleaned      = text.replace(/```json|```/g, '').trim();
+      return JSON.parse(cleaned);
+
+    } catch (e) {
+      if (attempt === MAX_RETRIES) {
+        Logger.log(`Claude API failed after ${MAX_RETRIES} retries: ${e.message}`);
+        return Array(expectedCount).fill({ valid: false, error_reason: `Claude API error: ${e.message}` });
+      }
+      Logger.log(`Attempt ${attempt+1} error: ${e.message} — retrying...`);
     }
-
-    const responseData = JSON.parse(response.getContentText());
-    const text         = responseData.content[0].text;
-    const cleaned      = text.replace(/```json|```/g, '').trim();
-    return JSON.parse(cleaned);
-
-  } catch (e) {
-    Logger.log(`Claude API error: ${e.message}`);
-    // Return error result for every row in the batch — they will be retried next run
-    return Array(expectedCount).fill({
-      valid: false,
-      error_reason: `Claude API error — will retry next run: ${e.message}`,
-    });
   }
 }
 
@@ -714,8 +817,8 @@ function sendSummaryEmail(results, durationSeconds) {
 // ================================================================
 
 function setupSheets() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+          || SpreadsheetApp.openById('1U3f6PhTpvbEO7JG937t2z9EW9dfB0gcIOUVA_GATIHM');
 
   _buildInputSheet(ss, CFG.INPUT.HOTELS, [
     'City','Hotel Name','Star Rating','Hotel Category','Chain / Brand','Room Type',
@@ -755,7 +858,7 @@ function setupSheets() {
   _buildLogSheet(ss, CFG.LOG.DUPLICATES, 'e67e22', ['Logged_At','Data_Type','City / Route','Name','Duplicate_Reason','Row_Data']);
   _buildLogSheet(ss, CFG.LOG.AUDIT,      '2c3e50', ['Timestamp','Event']);
 
-  ui.alert('✅ Setup complete!\n\nAll INPUT and LOG tabs have been prepared.\n\nNext: run setupTrigger() to activate the midnight automation.');
+  Logger.log('✅ Setup complete! All INPUT and LOG tabs have been prepared. Next: run setupTrigger() to activate the midnight automation.');
 }
 
 function _buildInputSheet(ss, name, headers, statusColIndex, infoText) {

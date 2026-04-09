@@ -37,7 +37,9 @@ function logQuote(paxName, data) {
   }
 
   try {
+    if (!data || !paxName) return;
     const row = buildQuoteLogRow(paxName, data);
+    if (!row || !row.length) return;
     logSheet.appendRow(row);
     colorLogRow(logSheet, logSheet.getLastRow(), row);
   } catch (e) {
@@ -50,6 +52,8 @@ function logQuote(paxName, data) {
 // ── ROW BUILDER ───────────────────────────────────────────────────
 
 function buildQuoteLogRow(paxName, d) {
+  if (!d || typeof d !== 'object') return [];
+  const agentName  = d.agentName         || '';
   const plan       = d.currentPlan       || [];
   const transfers  = d.selectedTransfers || [];
   const intercity  = d.selectedIntercity || [];
@@ -57,7 +61,7 @@ function buildQuoteLogRow(paxName, d) {
   // ── PAX ──
   const adults   = d.adults   || 0;
   const children = d.children || 0;
-  const paxCount = adults + children || d.paxCount || 0;
+  const paxCount = (adults + children) > 0 ? (adults + children) : (d.paxCount || 0);
 
   // ── DESTINATIONS ──
   const cities     = plan.map(p => _titleCase(p.city || '')).filter(Boolean);
@@ -116,20 +120,24 @@ function buildQuoteLogRow(paxName, d) {
   const markupPct    = Number(d.markup) || 0;
   const subTotal     = hotelNet + sightNet + transferNet + intercityNet;
   const markupAmt    = Math.round(subTotal * markupPct / 100);
-  const gstPct       = d.gst || 5;
+  let gstPct = 0;
+  if (d.gstMode === '18svc') gstPct = 18;
+  else if (d.gstMode === '5pkg') gstPct = 5;
+  else if (typeof d.gst === 'number') gstPct = d.gst; // legacy fallback
   const gstAmt       = Math.round(markupAmt * gstPct / 100);
   const grandTotal   = subTotal + markupAmt + gstAmt;
 
   // ── BUDGET & UTILISATION ──
-  // Budget entered by agent (sum of component budgets, or a single totalBudget field)
+  // Budget entered by agent = net component budgets (before markup/GST)
+  // Compare against subTotal (net cost) so markup/GST don't inflate utilisation
   const budgetEntered = (Number(d.totalBudget) || 0)
     || (Number(d.hotelBudget || 0) + Number(d.sightBudget || 0) + Number(d.transferBudget || 0))
     || 0;
   const utilPct = budgetEntered > 0
-    ? Math.round((grandTotal / budgetEntered) * 100 * 10) / 10
+    ? Math.round((subTotal / budgetEntered) * 100 * 10) / 10
     : '';
   const overUnderFlag = budgetEntered > 0
-    ? (grandTotal > budgetEntered ? 'OVER' : (utilPct >= 95 ? '✅ TARGET' : (utilPct >= 90 ? 'NEAR' : 'UNDER')))
+    ? (subTotal > budgetEntered ? 'OVER' : (utilPct >= 95 ? '✅ TARGET' : (utilPct >= 90 ? 'NEAR' : 'UNDER')))
     : 'No Budget';
 
   // ── COMPOSITION ──
@@ -141,12 +149,13 @@ function buildQuoteLogRow(paxName, d) {
 
   return [
     quoteId,                    // A: Quote ID
-    paxName,                    // B: Pax Name
-    new Date(),                 // C: Logged At
-    travelMonth,                // D: Travel Month
-    adults,                     // E: Adults
-    children,                   // F: Children
-    paxCount,                   // G: Total PAX
+    agentName,                  // B: Agent Name
+    paxName,                    // C: Pax Name
+    new Date(),                 // D: Logged At
+    travelMonth,                // E: Travel Month
+    adults,                     // F: Adults
+    children,                   // G: Children
+    paxCount,                   // H: Total PAX
     cityStr,                    // H: Cities
     totalNights,                // I: Total Nights
     numCities,                  // J: No. of Cities
@@ -176,7 +185,7 @@ function buildQuoteLogRow(paxName, d) {
 // ── COLOR ROW BY BUDGET FLAG ──────────────────────────────────────
 
 function colorLogRow(sheet, rowNum, row) {
-  const flag = row[21]; // column V: Budget Flag
+  const flag = row[22]; // column W: Budget Flag (index 22 — shifted after Agent Name added at col B)
   let bg = '#ffffff';
   if      (flag === '✅ TARGET') bg = '#d4edda'; // green
   else if (flag === 'OVER')      bg = '#f8d7da'; // red
@@ -197,34 +206,35 @@ function setupQuoteLog() {
 
   const headers = [
     'Quote ID',         // A
-    'Pax Name',         // B
-    'Logged At',        // C
-    'Travel Month',     // D
-    'Adults',           // E
-    'Children',         // F
-    'Total PAX',        // G
-    'Cities',           // H
-    'Total Nights',     // I
-    'No. of Cities',    // J
-    'Hotel Net (₹)',    // K
-    'Sightseeing Net (₹)', // L
-    'Transfers Net (₹)',  // M
-    'Trains Net (₹)',   // N
-    'Sub Total (₹)',    // O
-    'Markup %',         // P
-    'Markup Amount (₹)', // Q
-    'GST Amount (₹)',   // R
-    'Grand Total (₹)',  // S
-    'Budget Entered (₹)', // T
-    'Utilisation %',    // U
-    'Budget Flag',      // V
-    'Hotel Manual Overrides', // W
-    'Sightseeing Manual', // X
-    'Intercity Manual', // Y
-    'Dominant Hotel Category', // Z
-    'Vehicle Type',     // AA
-    'Outcome',          // AB
-    'Notes',            // AC
+    'Agent Name',       // B
+    'Pax Name',         // C
+    'Logged At',        // D
+    'Travel Month',     // E
+    'Adults',           // F
+    'Children',         // G
+    'Total PAX',        // H
+    'Cities',           // I
+    'Total Nights',     // J
+    'No. of Cities',    // K
+    'Hotel Net (₹)',    // L
+    'Sightseeing Net (₹)', // M
+    'Transfers Net (₹)',  // N
+    'Trains Net (₹)',   // O
+    'Sub Total (₹)',    // P
+    'Markup %',         // Q
+    'Markup Amount (₹)', // R
+    'GST Amount (₹)',   // S
+    'Grand Total (₹)',  // T
+    'Budget Entered (₹)', // U
+    'Utilisation %',    // V
+    'Budget Flag',      // W
+    'Hotel Manual Overrides', // X
+    'Sightseeing Manual', // Y
+    'Intercity Manual', // Z
+    'Dominant Hotel Category', // AA
+    'Vehicle Type',     // AB
+    'Outcome',          // AC
+    'Notes',            // AD
   ];
 
   const headerRange = ws.getRange(1, 1, 1, headers.length);
@@ -238,7 +248,7 @@ function setupQuoteLog() {
   headerRange.setVerticalAlignment('middle');
   ws.setRowHeight(1, 36);
   ws.setFrozenRows(1);
-  ws.setFrozenColumns(2); // Freeze Quote ID + Pax Name
+  ws.setFrozenColumns(3); // Freeze Quote ID + Agent Name + Pax Name
 
   // Column widths
   const widths = {
@@ -254,21 +264,66 @@ function setupQuoteLog() {
     ws.setColumnWidth(parseInt(col), w);
   });
 
-  // Outcome dropdown on AB column (col 28)
+  // Outcome dropdown on AC column (col 29)
   const dv = SpreadsheetApp.newDataValidation()
     .requireValueInList(['Pending', 'Won', 'Lost', 'Cancelled'], true)
     .setAllowInvalid(false)
     .build();
-  ws.getRange('AB2:AB2000').setDataValidation(dv);
+  ws.getRange('AC2:AC2000').setDataValidation(dv);
 
-  // Number formatting for INR columns
+  // Number formatting — new column layout (Agent Name added as col B shifts everything)
+  // Cols A–K: text / plain numbers (Quote ID, Agent, Pax, Date, Travel Month, Adults, Children, PAX, Cities, Nights, No.Cities)
+  // Cols L–P: INR (Hotel Net, Sightseeing, Transfers, Trains, Sub Total)
+  // Col  Q:   plain number (Markup %)
+  // Cols R–U: INR (Markup Amount, GST Amount, Grand Total, Budget Entered)
+  // Col  V:   custom % display (Utilisation %)
   const inrFmt = '₹#,##0';
-  ws.getRange('K2:S2000').setNumberFormat(inrFmt);
-  ws.getRange('T2:T2000').setNumberFormat(inrFmt);
-  ws.getRange('P2:P2000').setNumberFormat('0"%"');
-  ws.getRange('U2:U2000').setNumberFormat('0.0"%"');
+  ws.getRange('L2:P2000').setNumberFormat(inrFmt);   // Hotel Net → Sub Total
+  ws.getRange('R2:U2000').setNumberFormat(inrFmt);   // Markup Amount → Budget Entered
+  ws.getRange('Q2:Q2000').setNumberFormat('0');       // Markup % — plain integer
+  ws.getRange('V2:V2000').setNumberFormat('0.0"%"'); // Utilisation % — e.g. 90.5%
+  ws.getRange('D2:D2000').setNumberFormat('dd/mm/yyyy hh:mm'); // Logged At
 
   Logger.log('✅ Quote_Log tab created. Now run backfillQuoteLog() to import existing itineraries.');
+}
+
+
+// ── FIX FORMATS: run once to repair column formats on existing data ──
+
+function fixQuoteLogFormats() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet()
+          || SpreadsheetApp.openById('1U3f6PhTpvbEO7JG937t2z9EW9dfB0gcIOUVA_GATIHM');
+  const ws = ss.getSheetByName('Quote_Log');
+  if (!ws) { Logger.log('Quote_Log not found'); return; }
+
+  const lastRow = Math.max(ws.getLastRow(), 2);
+  const dataRows = lastRow - 1;
+
+  // 1. Clear all number formats on data range (rows 2 onwards)
+  ws.getRange(2, 1, dataRows, 30).setNumberFormat('@'); // reset to plain text first
+  ws.getRange(2, 1, dataRows, 30).setNumberFormat('General');
+
+  // 2. Apply correct formats
+  const inrFmt = '₹#,##0';
+  ws.getRange('L2:P' + lastRow).setNumberFormat(inrFmt);
+  ws.getRange('R2:U' + lastRow).setNumberFormat(inrFmt);
+  ws.getRange('Q2:Q' + lastRow).setNumberFormat('0');
+  ws.getRange('V2:V' + lastRow).setNumberFormat('0.0"%"');
+  ws.getRange('D2:D' + lastRow).setNumberFormat('dd/mm/yyyy hh:mm');
+
+  // 3. Re-apply row colors based on Budget Flag (column W = col index 23, 0-based index 22)
+  const data = ws.getRange(2, 1, dataRows, 30).getValues();
+  data.forEach((row, i) => {
+    const flag = row[22]; // Budget Flag at 0-based index 22 = column W
+    let bg = '#ffffff';
+    if      (flag === '✅ TARGET') bg = '#d4edda';
+    else if (flag === 'OVER')      bg = '#f8d7da';
+    else if (flag === 'NEAR')      bg = '#fff3cd';
+    else if (flag === 'UNDER')     bg = '#e8f4fd';
+    ws.getRange(i + 2, 1, 1, 30).setBackground(bg);
+  });
+
+  Logger.log('✅ fixQuoteLogFormats complete. ' + dataRows + ' rows reformatted.');
 }
 
 
