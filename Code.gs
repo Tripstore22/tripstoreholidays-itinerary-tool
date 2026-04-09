@@ -46,6 +46,9 @@ function doGet(e) {
     if (action === 'getSavedList') {
       return getSavedList();
     }
+    if (action === 'validateSession') {
+      return validateSession(e.parameter.user || '', e.parameter.token || '');
+    }
     return ContentService.createTextOutput('Invalid action');
   } catch (err) {
     return ContentService.createTextOutput('Server Error: ' + err.message);
