@@ -337,6 +337,7 @@ function isDuplicate(data, type, masterKeySet) {
 // ================================================================
 
 function enrichHotels(pending) {
+  if (!pending || !pending.length) throw new Error('enrichHotels is an internal function — run runMidnightEnrichment() instead.');
   const input = pending.map((r, idx) => ({
     idx,
     city:        r.data[HC.CITY-1]     || '',
