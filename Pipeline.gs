@@ -939,12 +939,12 @@ function _fixOldCols(ss, sheetName, oldStatusCol, oldErrCol, newStatusCol, newEr
   let migrated = 0, cleaned = 0;
 
   for (let i = startIdx; i < data.length; i++) {
-    const row = data[i];
-    if (!row[0]) continue; // skip blank rows
+    const row     = data[i];
+    const sheetRow = i + 1; // 1-based
+    const isBlankRow = !row[0]; // no City / first-column value
 
-    const newStatus = (row[newStatusCol - 1] || '').toString().trim();
-    const oldVal    = (row[oldStatusCol - 1] || '').toString().trim();
-    const oldUpper  = oldVal.toUpperCase();
+    const oldVal   = (row[oldStatusCol - 1] || '').toString().trim();
+    const oldUpper = oldVal.toUpperCase();
     const isStatusWord = validStatuses.includes(oldUpper) ||
                          oldUpper.startsWith('DUPLICATE:') ||
                          oldUpper.startsWith('INVALID:') ||
@@ -958,7 +958,15 @@ function _fixOldCols(ss, sheetName, oldStatusCol, oldErrCol, newStatusCol, newEr
 
     if (!oldVal || !isStatusWord) continue; // nothing to fix
 
-    const sheetRow = i + 1; // 1-based
+    if (isBlankRow) {
+      // Empty row — old Automation pre-filled PENDING for 1000 rows; just clear, never migrate
+      ws.getRange(sheetRow, oldStatusCol).clearContent();
+      ws.getRange(sheetRow, oldErrCol).clearContent();
+      cleaned++;
+      continue;
+    }
+
+    const newStatus = (row[newStatusCol - 1] || '').toString().trim();
 
     if (!newStatus) {
       // MIGRATE: new status col is empty — move old status there
@@ -980,6 +988,7 @@ function _fixOldCols(ss, sheetName, oldStatusCol, oldErrCol, newStatusCol, newEr
       cleaned++;
     }
   }
+  SpreadsheetApp.flush();
   Logger.log(sheetName + ': migrated=' + migrated + ', cleaned=' + cleaned);
 }
 
