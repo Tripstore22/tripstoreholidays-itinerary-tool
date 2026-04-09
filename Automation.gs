@@ -1,4 +1,10 @@
 // ============================================================
+// ⚠️  LEGACY FILE — superseded by Pipeline.gs
+// All functions below are renamed with _LEGACY suffix to avoid
+// naming conflicts. DO NOT run these — use Pipeline.gs instead.
+// ============================================================
+
+// ============================================================
 // TRIP STORE HOLIDAYS — Data Enrichment Automation
 // Paste this into a NEW Apps Script file called Automation.gs
 // in the same Apps Script project as Code.gs
