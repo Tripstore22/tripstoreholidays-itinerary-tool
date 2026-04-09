@@ -702,7 +702,7 @@ function setupSheets_LEGACY() {
 // WARNING: removes all existing project triggers first
 // ============================================================
 
-function setupTrigger() {
+function setupTrigger_LEGACY() {
   // Remove any existing triggers to avoid duplicates
   ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
 
