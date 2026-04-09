@@ -229,9 +229,9 @@
                     </div>
                 </div>
                 <div class="grid grid-cols-3 gap-2">
-                    <button onclick="autoSaveThenDo(()=>window.print())" class="bg-slate-700 text-white py-1.5 rounded font-bold text-[9px] uppercase">Print</button>
-                    <button onclick="autoSaveThenDo(downloadPDF)" class="bg-orange-500 text-white py-1.5 rounded font-bold text-[9px] uppercase">PDF</button>
-                    <button onclick="autoSaveThenDo(downloadExcel)" class="bg-green-600 text-white py-1.5 rounded font-bold text-[9px] uppercase">Excel</button>
+                    <button id="printBtn" onclick="triggerExport('print', this)" class="bg-slate-700 text-white py-1.5 rounded font-bold text-[9px] uppercase">Print</button>
+                    <button id="pdfBtn" onclick="triggerExport('pdf', this)" class="bg-orange-500 text-white py-1.5 rounded font-bold text-[9px] uppercase">PDF</button>
+                    <button id="excelBtn" onclick="triggerExport('excel', this)" class="bg-green-600 text-white py-1.5 rounded font-bold text-[9px] uppercase">Excel</button>
                 </div>
             </div>
 
@@ -395,9 +395,9 @@
 
                     <!-- Export Buttons (after terms, screen only) -->
                     <div class="mt-6 no-print flex gap-3 justify-end">
-                        <button onclick="autoSaveThenDo(()=>window.print())" style="background:#334155;color:#fff;padding:8px 20px;border-radius:6px;font-weight:700;font-size:11px;text-transform:uppercase;border:none;cursor:pointer;">🖨 Print</button>
-                        <button onclick="autoSaveThenDo(downloadPDF)" style="background:#ea580c;color:#fff;padding:8px 20px;border-radius:6px;font-weight:700;font-size:11px;text-transform:uppercase;border:none;cursor:pointer;">📄 PDF</button>
-                        <button onclick="autoSaveThenDo(downloadExcel)" style="background:#16a34a;color:#fff;padding:8px 20px;border-radius:6px;font-weight:700;font-size:11px;text-transform:uppercase;border:none;cursor:pointer;">📊 Excel</button>
+                        <button onclick="triggerExport('print', this)" style="background:#334155;color:#fff;padding:8px 20px;border-radius:6px;font-weight:700;font-size:11px;text-transform:uppercase;border:none;cursor:pointer;">🖨 Print</button>
+                        <button onclick="triggerExport('pdf', this)" style="background:#ea580c;color:#fff;padding:8px 20px;border-radius:6px;font-weight:700;font-size:11px;text-transform:uppercase;border:none;cursor:pointer;">📄 PDF</button>
+                        <button onclick="triggerExport('excel', this)" style="background:#16a34a;color:#fff;padding:8px 20px;border-radius:6px;font-weight:700;font-size:11px;text-transform:uppercase;border:none;cursor:pointer;">📊 Excel</button>
                     </div>
 
                     <!-- Internal Profitability (screen only) -->
@@ -829,37 +829,45 @@ async function init() {
 let _loadedFromName = null;   // set by searchItinerary / loadAndOpen
 
 async function saveItinerary() {
+    const cfg     = getTravelConfigs();
     const rawName = document.getElementById('paxNameInput').value.trim();
-    if (!rawName) return showToast("Enter Pax Name to save", "error");
+
+    // Auto-generate name: "PaxName x2_09Apr" or "Rome x2_09Apr" if no name
+    function buildSaveName(base) {
+        const n = cfg.totalPax;
+        const firstDate = selectedRoute.length > 0
+            ? new Date(selectedRoute[0].cin).toLocaleDateString('en-GB', {day:'2-digit', month:'short'}).replace(' ','')
+            : new Date().toLocaleDateString('en-GB', {day:'2-digit', month:'short'}).replace(' ','');
+        return `${base} x${n}_${firstDate}`;
+    }
+    const fallback = selectedRoute.length > 0 ? selectedRoute[0].city : 'Draft';
+    const autoName = buildSaveName(rawName || fallback);
+    if (!rawName) document.getElementById('paxNameInput').value = autoName;
 
     const btn = document.getElementById('btnSave');
     btn.innerText = "SAVING..."; btn.disabled = true;
 
-    let saveName = rawName;
+    let saveName = autoName;
 
-    // ── VERSIONING: if this itinerary was opened from a saved record and
-    //    the pax name hasn't been changed, save as a new version instead of overwriting.
-    //    Format: <existing saved name>_V1, <existing saved name>_V2, ...
-    //    The base is always the _loadedFromName (the name it was opened from),
-    //    stripping any existing _Vn suffix so versions stay flat (V1, V2, V3…).
-    if (_loadedFromName && rawName.toLowerCase() === _loadedFromName.toLowerCase()) {
+    // ── VERSIONING: if itinerary was loaded from saved, ALWAYS create a new version
+    //    so the original is never overwritten.
+    //    Format: <base name>_V1, V2, V3 … (flat — V2 is not built on V1)
+    if (_loadedFromName) {
         try {
             const allRes   = await fetch(`${API_URL}?action=getAllSaved`);
             const allNames = await allRes.json();
-            // Base = loaded name with any trailing _Vn removed
-            const base    = _loadedFromName.replace(/_V\d+$/i, '');
+            // Base = auto-generated name with any trailing _Vn stripped
+            const base    = autoName.replace(/_V\d+$/i, '');
             const escaped = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            // Count existing versions for this base name
             const vNums = allNames
                 .filter(n => new RegExp('^' + escaped + '_V(\\d+)$', 'i').test(n))
                 .map(n => { const m = n.match(/_V(\d+)$/i); return parseInt(m[1]); });
             const nextV = (vNums.length ? Math.max(...vNums) : 0) + 1;
             saveName = `${base}_V${nextV}`;
             document.getElementById('paxNameInput').value = saveName;
-        } catch(e) { /* fall through, save with raw name */ }
+        } catch(e) { /* fall through, save with auto name */ }
     }
 
-    const cfg  = getTravelConfigs();
     const data = {
         action: "saveItinerary",
         paxName: saveName,
@@ -1194,6 +1202,11 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
         else systemHotelCitiesCount++;
         if (route.sights) route.sights.forEach(s => { if (s.isManual) spentSightBudget += Number(s.price) * paxCount; });
     });
+    // FIX: first run — currentPlan is empty so systemHotelCitiesCount=0 → hCapPerSystemCity=0 → cheapest hotel picked.
+    // Use total route count so budget divides correctly on first Generate Quote click.
+    if (systemHotelCitiesCount === 0 && spentHotelBudget === 0) {
+        systemHotelCitiesCount = selectedRoute.length;
+    }
 
     // activeDays = sum of nights only (departure day per city is excluded from activity assignment)
     const activeDays        = selectedRoute.reduce((sum, r) => sum + Number(r.nights), 0);
@@ -1603,7 +1616,7 @@ function renderTables() {
             <td class="p-2 border" style="min-width:120px;">
                 <textarea onchange="currentPlan[${planIdx}].hotel.name = this.value"
                     class="pdf-input w-full bg-transparent outline-none uppercase font-bold text-[10px] resize-none overflow-hidden"
-                    rows="1">${item.hotel?.name || ''}</textarea>
+                    rows="2">${item.hotel?.name || ''}</textarea>
                 ${starLine}
             </td>
             <td class="p-2 border" style="min-width:80px;">
@@ -1654,8 +1667,8 @@ function renderTables() {
             const actsContent = activities.map(s => {
                 const sIdx   = item.sights.findIndex(f => f.instanceId === s.instanceId);
                 const sTotal = Math.round(s.price * config.totalPax);
-                const cat    = s.category ? `<span style="font-size:8px;background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;padding:0 3px;border-radius:3px;margin-right:3px;">${s.category}</span>` : '';
-                const dur    = s.duration ? `<span style="font-size:8px;color:#334155;">${s.duration}</span>` : '';
+                const cat    = s.category ? `<span style="font-size:9px;background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;padding:0 3px;border-radius:3px;margin-right:3px;">${s.category}</span>` : '';
+                const dur    = s.duration ? `<span style="font-size:9px;color:#334155;">${s.duration}</span>` : '';
                 return `
                 <div class="flex justify-between items-start text-[10px] mb-1 gap-1 border-b border-slate-50 last:border-0 pb-1">
                     <div class="flex-1 min-w-0">
@@ -1664,11 +1677,11 @@ function renderTables() {
                             rows="1">${s.info}</textarea>
                         <div class="flex items-center gap-1 mt-0">${cat}${dur}</div>
                     </div>
-                    <div class="price-col flex items-center text-slate-500 whitespace-nowrap ml-2 min-w-[80px] justify-end">
-                        <span class="mr-1">₹</span>
+                    <div class="price-col flex items-center text-slate-500 whitespace-nowrap ml-1 justify-end">
+                        <span style="font-size:10px;flex-shrink:0;">₹</span>
                         <input type="number" value="${sTotal}"
                             onchange="currentPlan[${planIdx}].sights[${sIdx}].price = Number(this.value)/${config.totalPax}; calculateBudgetInvestment();"
-                            class="pdf-input w-16 text-right bg-transparent outline-none font-medium">
+                            class="pdf-input w-14 text-right bg-transparent outline-none font-medium">
                     </div>
                     <button onclick="deleteSightFromDay(${planIdx},'${s.instanceId}')"
                         class="no-print text-red-400 hover:text-red-600 font-bold text-sm ml-1 flex-shrink-0" title="Remove tour">✕</button>
@@ -1784,7 +1797,12 @@ function renderTables() {
                     <button onclick="openIntercitySwap('${ic.legId}')" class="text-blue-600 font-bold text-[10px]">SWAP</button>
                 </td>
             </tr>`;
-        }).join('');
+        }).join('') + `
+        <tr class="no-print">
+            <td colspan="6" class="p-2 border text-right">
+                <button onclick="openAddTrainDirect()" class="text-blue-500 hover:text-blue-700 font-bold text-xs border border-blue-300 rounded px-3 py-1">+ Add Train / Ferry / Bus</button>
+            </td>
+        </tr>`;
     }
 
     // Summary
@@ -2158,7 +2176,7 @@ function applyHotelFilters(routeId, city) {
             <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-1">
                     <div class="text-[11px] font-bold uppercase truncate group-hover:text-blue-600">${h.name}</div>
-                    <div class="text-[9px] text-amber-500 whitespace-nowrap flex-shrink-0">${h.starRating || ''}</div>
+                    <div style="font-size:9px;color:#B8860B;font-weight:600;flex-shrink:0;white-space:nowrap;">${h.starRating || ''}</div>
                 </div>
                 <div class="flex gap-1 mt-0.5 flex-wrap">
                     <span class="text-[8px] bg-slate-100 text-slate-500 px-1 rounded">${h.category || ''}</span>
@@ -2521,6 +2539,76 @@ function addManualTourDirect(planIdx, dayIdx) {
 }
 
 // =============================================================
+// ADD TRAIN / FERRY / BUS MANUALLY
+// =============================================================
+function openAddTrainDirect() {
+    document.getElementById('modalHeading').innerText = 'Add Train / Ferry / Bus';
+    const mc = document.getElementById('modalContent');
+    mc.className = 'p-4 overflow-y-auto space-y-4 bg-slate-50';
+    mc.style.cssText = '';
+    mc.innerHTML = `
+        <div class="space-y-3">
+            <p class="text-[10px] text-slate-400">Fill in the details and click Add. Date must match one of your travel dates.</p>
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="text-[8px] font-bold text-slate-400 uppercase">Date</label>
+                    <input type="date" id="trainDate" class="w-full p-2 border rounded text-xs outline-none mt-0.5">
+                </div>
+                <div>
+                    <label class="text-[8px] font-bold text-slate-400 uppercase">Mode</label>
+                    <select id="trainMode" class="w-full p-2 border rounded text-xs outline-none mt-0.5">
+                        <option value="Train">Train</option>
+                        <option value="Ferry">Ferry</option>
+                        <option value="Bus">Bus</option>
+                        <option value="Flight">Flight</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="text-[8px] font-bold text-slate-400 uppercase">Route (From → To)</label>
+                <input type="text" id="trainRoute" placeholder="e.g. Rome → Florence" class="w-full p-2 border rounded text-xs outline-none mt-0.5">
+            </div>
+            <div>
+                <label class="text-[8px] font-bold text-slate-400 uppercase">Schedule / Notes</label>
+                <input type="text" id="trainNotes" placeholder="e.g. 08:30 Trenitalia FR9613, 1h 30m" class="w-full p-2 border rounded text-xs outline-none mt-0.5">
+            </div>
+            <div>
+                <label class="text-[8px] font-bold text-slate-400 uppercase">Price Per Person (₹)</label>
+                <input type="number" id="trainPrice" placeholder="0" class="w-full p-2 border rounded text-xs outline-none mt-0.5">
+            </div>
+            <button onclick="confirmAddTrain()" class="w-full bg-blue-600 text-white py-2 rounded font-bold text-xs uppercase hover:bg-blue-700">+ Add to Itinerary</button>
+        </div>`;
+    // Pre-fill date with first travel date
+    if (selectedRoute.length > 0) {
+        document.getElementById('trainDate').value = selectedRoute[0].cin || '';
+    }
+    toggleModal(true);
+}
+
+function confirmAddTrain() {
+    const date  = document.getElementById('trainDate').value;
+    const mode  = document.getElementById('trainMode').value;
+    const route = document.getElementById('trainRoute').value.trim();
+    const notes = document.getElementById('trainNotes').value.trim();
+    const price = parseFloat(document.getElementById('trainPrice').value) || 0;
+    if (!route) { showToast('Enter a route (e.g. Rome → Florence)', 'error'); return; }
+    const paxCount = getPaxCount();
+    selectedIntercity.push({
+        legId:    'manual-' + Date.now(),
+        date:     date,
+        mode:     mode,
+        fromTo:   route,
+        notes:    notes,
+        price:    paxCount > 0 ? price / paxCount : price,
+        isManual: true
+    });
+    renderTables();
+    calculateBudgetInvestment();
+    closeModal();
+    showToast('Added: ' + mode + ' ' + route);
+}
+
 // ADD TRANSFER MANUALLY (search list OR type manually)
 // =============================================================
 function openAddTransferDirect() {
@@ -2627,16 +2715,35 @@ function confirmAddTransfer() {
 }
 
 // =============================================================
+// EXPORT WRAPPER — immediate visual feedback so users don't double-click
+function triggerExport(type, btnEl) {
+    if (btnEl.disabled) return;
+    const origText = btnEl.innerText;
+    btnEl.innerText = '⏳ Wait...';
+    btnEl.disabled  = true;
+    btnEl.style.opacity = '0.7';
+    const restore = () => { btnEl.innerText = origText; btnEl.disabled = false; btnEl.style.opacity = ''; };
+    const actionFn = type === 'print' ? () => window.print()
+                   : type === 'pdf'   ? downloadPDF
+                   : downloadExcel;
+    setTimeout(async () => {
+        try { await autoSaveThenDo(actionFn); } finally { restore(); }
+    }, 50);
+}
+
 // AUTO-SAVE before any export action
 async function autoSaveThenDo(action) {
     if (currentPlan.length > 0) {
         try {
             const cfg     = getTravelConfigs();
-            const nameRaw = document.getElementById('paxNameInput').value.trim();
-            // Use entered name, or auto-generate from cities + date
-            const cities  = selectedRoute.map(r => r.city).join('-') || 'Draft';
-            const dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).replace(' ', '');
-            const paxName = nameRaw || `${cities}_${dateStr}`;
+            const nameRaw  = document.getElementById('paxNameInput').value.trim();
+            const cfg2     = getTravelConfigs();
+            const firstCity = selectedRoute.length > 0 ? selectedRoute[0].city : 'Draft';
+            const firstDate = selectedRoute.length > 0
+                ? new Date(selectedRoute[0].cin).toLocaleDateString('en-GB', {day:'2-digit', month:'short'}).replace(' ','')
+                : new Date().toLocaleDateString('en-GB', {day:'2-digit', month:'short'}).replace(' ','');
+            const base    = nameRaw || firstCity;
+            const paxName = `${base} x${cfg2.totalPax}_${firstDate}`;
             const payload = {
                 adults:      cfg.adults,
                 children:    cfg.children,
