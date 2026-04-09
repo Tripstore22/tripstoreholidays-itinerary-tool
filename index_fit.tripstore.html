@@ -3560,6 +3560,8 @@ async function loadDataDashboard(force = false) {
         </div>
       </div>
     </div>`;
+    _dataDashCache = { mainHtml: _ddMain, at: Date.now() };
+    el.innerHTML = _ddRefreshBar('data') + _ddMain;
 }
 
 function fmtD(n) {
