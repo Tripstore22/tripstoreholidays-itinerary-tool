@@ -1610,7 +1610,7 @@ function renderTables() {
     currentPlan.forEach((item, planIdx) => {
         const hotelCostTotal = calculateHotelPrice(Number(item.hotel?.cost) || 0, item.nights);
         const starLine = item.hotel?.starRating
-            ? `<div style="font-size:8px;font-weight:bold;color:#B8860B;margin-top:1px;line-height:1.2;">${item.hotel.starRating}</div>`
+            ? `<div style="font-size:8px;font-weight:bold;color:#c8990a;margin-top:1px;line-height:1.2;">${renderStars(item.hotel.starRating)}</div>`
             : '';
         const catLine  = item.hotel?.category
             ? `<div style="font-size:8px;font-weight:bold;color:#334155;margin-top:1px;line-height:1.2;">${item.hotel.category}</div>`
