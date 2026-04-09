@@ -691,9 +691,11 @@ async function checkLogin() {
     try {
         const res    = await fetch(`${API_URL}?action=checkLogin&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`);
         const status = await res.text();
-        if (status === "ADMIN" || status === "USER") {
-            const uname = document.getElementById('loginUser')?.value?.trim() || '';
-            const session = { isLoggedIn: true, isAdmin: status === "ADMIN", modeText: status === "ADMIN" ? "ADMIN MODE" : "USER MODE", username: uname };
+        if (status.startsWith("ADMIN:") || status.startsWith("USER:")) {
+            const parts = status.split(':');
+            const role  = parts[0];
+            const token = parts[1];
+            const session = { username: user, token: token, isAdmin: role === "ADMIN", modeText: role === "ADMIN" ? "ADMIN MODE" : "USER MODE" };
             localStorage.setItem("tripstore_session", JSON.stringify(session));
             isAdmin = session.isAdmin;
             launchApp(session.modeText);
