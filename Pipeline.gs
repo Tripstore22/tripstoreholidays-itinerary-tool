@@ -399,6 +399,7 @@ OUTPUT — JSON array only, no markdown, no explanation:
 // ================================================================
 
 function enrichSightseeing(pending) {
+  if (!pending || !pending.length) throw new Error('enrichSightseeing is an internal function — run runMidnightEnrichment() instead.');
   const input = pending.map((r, idx) => ({
     idx,
     city:         r.data[SC.CITY-1]     || '',
