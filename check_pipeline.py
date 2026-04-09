@@ -62,18 +62,18 @@ if not conflict_found:
 # ── 2. AUTOMATION.GS LEGACY RENAMES (only when Automation.gs or Pipeline.gs changed) ──────────
 
 if SCOPE in ('pipeline', 'automation'):
+    auto_src = read(AUTOMATION)
+    legacy_must_not_exist = ['runMidnightEnrichment', 'callClaudeAPI', 'setupSheets', 'setupTrigger']
+    for fn in legacy_must_not_exist:
+        pattern = rf'^function\s+{fn}\s*\('
+        if re.search(pattern, auto_src, re.MULTILINE):
+            fail(f'Automation.gs still has "{fn}()" without _LEGACY suffix — naming conflict with Pipeline.gs')
+        else:
+            ok(f'Automation.gs: "{fn}" correctly renamed to _LEGACY')
 
-auto_src = read(AUTOMATION)
-legacy_must_not_exist = ['runMidnightEnrichment', 'callClaudeAPI', 'setupSheets', 'setupTrigger']
-for fn in legacy_must_not_exist:
-    # function must not appear WITHOUT _LEGACY suffix
-    pattern = rf'^function\s+{fn}\s*\('
-    if re.search(pattern, auto_src, re.MULTILINE):
-        fail(f'Automation.gs still has "{fn}()" without _LEGACY suffix — naming conflict with Pipeline.gs')
-    else:
-        ok(f'Automation.gs: "{fn}" correctly renamed to _LEGACY')
+# ── 3–6. PIPELINE-ONLY CHECKS (column maps, dangerous ops, archive safety) ────
 
-# ── 3. COLUMN MAP vs SETUP HEADERS ────────────────────────────────────────────
+if SCOPE == 'pipeline':
 
 pipe_src = read(PIPELINE)
 
