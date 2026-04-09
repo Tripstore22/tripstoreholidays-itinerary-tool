@@ -688,42 +688,176 @@ function getSavedList() {
 function getMasterInventory() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  // Hotels: Col A = City, Col B = Hotel Name — count ALL rows with a city + name
-  const hotelMap = {};
-  const hotelSheet = ss.getSheetByName('Hotels');
+  // ── Helper: parse star rating string to a number ─────────────
+  function parseStars(s) {
+    s = String(s || '').trim();
+    var n = (s.match(/[⭐★]/g) || []).length;
+    if (n) return n;
+    n = parseInt(s);
+    return isNaN(n) ? 0 : n;
+  }
+
+  // ── 1. HOTELS — count + star breakdown per city ───────────────
+  var hotelMap = {};   // city → { count, s3, s4, s5, sOther }
+  var hotelSheet = ss.getSheetByName('Hotels');
   if (hotelSheet) {
-    const rows = hotelSheet.getDataRange().getValues();
-    for (let i = 1; i < rows.length; i++) {
-      const city  = String(rows[i][0] || '').trim();
-      const name  = String(rows[i][1] || '').trim();
+    var rows = hotelSheet.getDataRange().getValues();
+    for (var i = 1; i < rows.length; i++) {
+      var city = String(rows[i][0] || '').trim();
+      var name = String(rows[i][1] || '').trim();
       if (!city || !name) continue;
-      hotelMap[city] = (hotelMap[city] || 0) + 1;
+      if (!hotelMap[city]) hotelMap[city] = { count:0, s3:0, s4:0, s5:0, sOther:0 };
+      hotelMap[city].count++;
+      var stars = parseStars(rows[i][2]);
+      if      (stars === 3) hotelMap[city].s3++;
+      else if (stars === 4) hotelMap[city].s4++;
+      else if (stars === 5) hotelMap[city].s5++;
+      else                  hotelMap[city].sOther++;
     }
   }
 
-  // Sightseeing: Col A = City, Col B = Tour Name — count ALL rows with a city + name
-  const sightMap = {};
-  const sightSheet = ss.getSheetByName('Sightseeing');
+  // ── 2. SIGHTSEEING — count + unique tags per city ─────────────
+  var sightMap = {};   // city → { count, tagSet }
+  var sightSheet = ss.getSheetByName('Sightseeing');
   if (sightSheet) {
-    const rows = sightSheet.getDataRange().getValues();
-    for (let i = 1; i < rows.length; i++) {
-      const city = String(rows[i][0] || '').trim();
-      const name = String(rows[i][1] || '').trim();
-      if (!city || !name) continue;
-      sightMap[city] = (sightMap[city] || 0) + 1;
+    var rows2 = sightSheet.getDataRange().getValues();
+    for (var j = 1; j < rows2.length; j++) {
+      var scity = String(rows2[j][0] || '').trim();
+      var sname = String(rows2[j][1] || '').trim();
+      if (!scity || !sname) continue;
+      if (!sightMap[scity]) sightMap[scity] = { count:0, tagSet:{} };
+      sightMap[scity].count++;
+      var tagStr = String(rows2[j][10] || '');  // Col K = Attraction Tags
+      tagStr.split(',').forEach(function(t) {
+        var tt = t.trim().toLowerCase();
+        if (tt) sightMap[scity].tagSet[tt] = 1;
+      });
     }
   }
 
-  const hotels = Object.entries(hotelMap)
-    .map(function(e) { return { city: e[0], count: e[1] }; })
-    .sort(function(a, b) { return b.count - a.count; });
+  // ── 3. TRANSFERS — city coverage from master Transfers sheet ──
+  var transferMap = {};
+  var xferSheet = ss.getSheetByName('Transfers');
+  if (xferSheet) {
+    var xrows = xferSheet.getDataRange().getValues();
+    for (var k = 1; k < xrows.length; k++) {
+      var xcity = String(xrows[k][0] || '').trim();
+      if (!xcity) continue;
+      var xstatus = String(xrows[k][15] || '').trim().toLowerCase();
+      if (xstatus && xstatus !== 'active' && xstatus !== 'zone-averaged') continue;
+      transferMap[xcity] = (transferMap[xcity] || 0) + 1;
+    }
+  }
 
-  const sights = Object.entries(sightMap)
-    .map(function(e) { return { city: e[0], count: e[1] }; })
-    .sort(function(a, b) { return b.count - a.count; });
+  // ── 4. TRAINS — route count + covered cities ──────────────────
+  var trainRouteSet = {};
+  var trainCitySet  = {};
+  var trainSheet = ss.getSheetByName('Trains');
+  if (trainSheet) {
+    var trows = trainSheet.getDataRange().getValues();
+    for (var m = 1; m < trows.length; m++) {
+      var tfrom = String(trows[m][1] || '').trim();
+      var tto   = String(trows[m][2] || '').trim();
+      if (!tfrom || !tto) continue;
+      trainRouteSet[tfrom + '|' + tto] = 1;
+      trainCitySet[tfrom] = 1;
+      trainCitySet[tto]   = 1;
+    }
+  }
+  var trainRouteCount = Object.keys(trainRouteSet).length;
+  var trainCities     = Object.keys(trainCitySet);
+
+  // ── 5. PIPELINE STATUS — PENDING/ERROR/DUP counts per INPUT sheet
+  function getPipeStatus(sheetName, statusColIdx) {
+    var ws = ss.getSheetByName(sheetName);
+    var r  = { pending:0, error:0, dup:0, processed:0 };
+    if (!ws) return r;
+    var d = ws.getDataRange().getValues();
+    for (var x = 2; x < d.length; x++) {   // row 1=header, row 2=banner → data from row 3
+      if (!d[x][0]) continue;
+      var s = String(d[x][statusColIdx] || '').trim().toUpperCase();
+      if      (s === '' || s === 'PENDING')   r.pending++;
+      else if (s === 'ERROR')                 r.error++;
+      else if (s === 'DUPLICATE')             r.dup++;
+      else if (s === 'PROCESSED')             r.processed++;
+    }
+    return r;
+  }
+  var pipeline = {
+    hotels:      getPipeStatus('INPUT_Hotels',      22),  // col 23 (1-based)
+    sightseeing: getPipeStatus('INPUT_Sightseeing', 13),  // col 14
+    trains:      getPipeStatus('INPUT_Trains',      14),  // col 15
+    transfers:   getPipeStatus('INPUT_Transfers',   18),  // col 19
+  };
+
+  // ── 6. DEMAND GAPS — cities most quoted but thin on data ──────
+  var cityDemand = {};
+  var qSheet = ss.getSheetByName('Quote_Log');
+  if (qSheet) {
+    var qrows = qSheet.getDataRange().getValues();
+    for (var q = 1; q < qrows.length; q++) {
+      if (!qrows[q][0]) continue;
+      var citiesStr = String(qrows[q][7] || '').trim();
+      if (!citiesStr) continue;
+      citiesStr.split(',').forEach(function(c) {
+        var cc = c.trim();
+        if (cc) cityDemand[cc] = (cityDemand[cc] || 0) + 1;
+      });
+    }
+  }
+
+  // ── 7. BUILD OUTPUT ──────────────────────────────────────────
+  var hotels = Object.keys(hotelMap).map(function(city) {
+    var v = hotelMap[city];
+    return { city:city, count:v.count, stars:{ 3:v.s3, 4:v.s4, 5:v.s5, other:v.sOther } };
+  }).sort(function(a,b){ return b.count-a.count; });
+
+  var sights = Object.keys(sightMap).map(function(city) {
+    var v = sightMap[city];
+    return { city:city, count:v.count, uniqueTags: Object.keys(v.tagSet).length };
+  }).sort(function(a,b){ return b.count-a.count; });
+
+  var transfers = Object.keys(transferMap).map(function(city) {
+    return { city:city, count:transferMap[city] };
+  }).sort(function(a,b){ return b.count-a.count; });
+
+  // Cities with hotels but no sightseeing, or sightseeing but no hotels
+  var allCities = {};
+  Object.keys(hotelMap).forEach(function(c){ allCities[c]=1; });
+  Object.keys(sightMap).forEach(function(c){ allCities[c]=1; });
+  var gapCities = [];
+  Object.keys(allCities).forEach(function(city) {
+    var h = hotelMap[city] ? hotelMap[city].count : 0;
+    var s = sightMap[city] ? sightMap[city].count : 0;
+    if (h > 0 && s === 0) gapCities.push({ city:city, hotels:h, sights:0, gap:'no-sights' });
+    else if (s > 0 && h === 0) gapCities.push({ city:city, hotels:0, sights:s, gap:'no-hotels' });
+  });
+  gapCities.sort(function(a,b){ return (b.hotels+b.sights)-(a.hotels+a.sights); });
+
+  // High demand but thin data
+  var demandGaps = Object.keys(cityDemand).map(function(city) {
+    return {
+      city:        city,
+      quoteCount:  cityDemand[city],
+      hotels:      hotelMap[city]  ? hotelMap[city].count  : 0,
+      sights:      sightMap[city]  ? sightMap[city].count  : 0,
+      hasTransfer: !!transferMap[city],
+      hasTrains:   !!trainCitySet[city],
+    };
+  }).filter(function(d) {
+    return d.hotels < 10 || d.sights < 8 || !d.hasTrains || !d.hasTransfer;
+  }).sort(function(a,b){ return b.quoteCount - a.quoteCount; }).slice(0, 10);
 
   return ContentService
-    .createTextOutput(JSON.stringify({ hotels: hotels, sights: sights }))
+    .createTextOutput(JSON.stringify({
+      hotels:      hotels,
+      sights:      sights,
+      transfers:   transfers,
+      trains:      { routeCount: trainRouteCount, cityCount: trainCities.length, cities: trainCities },
+      pipeline:    pipeline,
+      gapCities:   gapCities.slice(0, 20),
+      demandGaps:  demandGaps,
+    }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
