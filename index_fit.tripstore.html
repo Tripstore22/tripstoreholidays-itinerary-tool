@@ -938,6 +938,22 @@ async function searchItinerary(query) {
         if (_el) _el.innerText = `Rooms Required: ${_cfg.roomsRequired} (auto)`;
         document.getElementById('hotelBudgetLabel').innerText = `Hotel Budget (${_cfg.totalPax} Pax)`;
         document.getElementById('sightBudgetLabel').innerText = `Land Package Budget (${_cfg.totalPax} Pax)`;
+
+        // Fix 1 — Budget: recalculate hotelBudget from actual plan costs using the
+        // restored pax count. Saved budget may be stale if pax changed between versions.
+        const _hActual = currentPlan.reduce((sum, p) => {
+            return sum + calculateHotelPrice(Number(p.hotel?.cost) || 0, p.nights || 0);
+        }, 0);
+        if (_hActual > 0) document.getElementById('hotelBudget').value = _hActual;
+
+        // Fix 2 — Vehicle type: if saved as a sedan but pax is now ≥ 4, reset to auto
+        // so transfers use Standard Van instead of carrying over a sedan from an old version.
+        const _savedVehicle = data.vehicleType || 'auto';
+        const _isSedanType  = ['economySedan', 'executiveSedan'].includes(_savedVehicle);
+        if (_isSedanType && _cfg.totalPax >= 4) {
+            document.getElementById('vehicleTypeSelect').value = 'auto';
+        }
+
         renderRouteInputs();
         renderTables();
         _loadedFromName = query;   // ← mark as "opened from saved"
