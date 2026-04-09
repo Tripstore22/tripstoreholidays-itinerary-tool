@@ -703,15 +703,6 @@ function setupSheets_LEGACY() {
 // ============================================================
 
 function setupTrigger_LEGACY() {
-  // Remove any existing triggers to avoid duplicates
-  ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
-
-  // Create daily trigger at midnight (00:00–01:00 Apps Script time)
-  ScriptApp.newTrigger('runMidnightEnrichment')
-    .timeBased()
-    .atHour(0)
-    .everyDays(1)
-    .create();
-
-  SpreadsheetApp.getUi().alert('✅ Midnight trigger created. runMidnightEnrichment will run daily at ~12:00 AM.');
+  // ⚠️ LEGACY — use Pipeline.gs → setupTrigger() instead. This function is disabled.
+  SpreadsheetApp.getUi().alert('⚠️ setupTrigger_LEGACY is disabled.\n\nUse Pipeline.gs → setupTrigger() instead.\nIt sets the correct midnight trigger without wiping other project triggers.');
 }
