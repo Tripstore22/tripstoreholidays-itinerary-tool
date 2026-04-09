@@ -1,32 +1,35 @@
 # Session Handoff
 
-## Latest Session — 2026-04-09 (evening continuation)
+## Latest Session — 2026-04-09 (evening, continued)
 
-### Completed — 2026-04-09 (this session)
-- enrichSightseeing TypeError fixed: guard added to all 4 enrich functions (blocks direct calls from Apps Script editor)
-- INPUT_Hotels wipe incident fixed: `_archiveAndClear` removed from auto-call in `processSheet()` — now manual only
-- `restoreFromDone()` added: copies rows from DONE_*/DUPL_* back to input sheets if data gets wiped
-- `archiveAndClearInput()` added: manual-only archive function after team reviews pipeline results
-- Naming conflicts fixed: 4 duplicate functions in Automation.gs renamed with `_LEGACY` suffix
-- Column pollution fixed: old Automation.gs wrote STATUS to wrong columns across all 4 sheet types
-- `fixOldStatusData()` extended to cover all 12 sheets (INPUT + DONE + DUPL for all 4 types)
-- `_fixOldCols()` updated with hasBanner param — handles both INPUT sheets (header+banner) and archive sheets (header only)
-- `check_pipeline.py` created: static validator run by Claude before any .gs changes
-- Validator scoped by file: pipeline scope = full check, automation = naming+legacy only, code = naming only
-- Pre-commit hook updated: passes correct scope arg based on which .gs file is staged
-- Pre-push hook (Guard 5) wired to `check_pipeline.py`
-- `runCodeCheck()` added to Pipeline.gs: live health check inside Apps Script (reads sheet headers, checks column maps, checks for status pollution)
-- `setupTrigger_LEGACY` in Automation.gs disabled — was deleting ALL project triggers (dangerous)
-- `_buildInputSheet()` fixed: no longer inserts duplicate banner row if `setupSheets()` is run twice
-- `runNow()` alert in Automation.gs corrected: now points to AUDIT_LOG (was incorrectly saying ENRICHMENT_LOG)
-- Pre-push hook URL comment added: explains how to update hardcoded Apps Script deployment URL if redeployed
+### Completed — this session
+- `check_html.py` created: static validator for index_fit.tripstore.html (duplicate functions, missing features, index.html sync, API URL count, script tag balance)
+- Pre-commit hook updated: runs `check_html.py` when HTML file is staged
+- Pre-push hook updated: Guard 6 added — runs `check_html.py` before every push
+- Sightseeing prompt fixed: GYG-only or Viator-only rows now explicitly valid (old wording was ambiguous)
+- Hotels prompt fixed: removed "European location" restriction — now allows any real location (Dubai, Maldives etc.)
+- Trains prompt fixed: inr_price=0 now valid if monthly € prices exist (old rule contradicted the enrich path)
+- `processSheet()` fixed: now uses `res.idx` (Claude's index) not forEach index — prevents wrong row being marked if Claude reorders results
+- `callClaudeAPI` max_tokens raised to 8192: Trains returns 2 rows per input; old 4096 cap risked truncated JSON
+- `check_pipeline.py` Section 6 added: prompt logic regression checks for all 4 enrichment functions + processSheet idx fix
+- Save name bug fixed: re-saving no longer doubles the suffix (e.g. "Sumit Spain x2_09Apr x4_09Apr_V1" → "Sumit Spain x4_09Apr_V1")
+- Star ratings fixed: ⭐ emoji replaced with ★ Unicode in all display locations — now renders as solid gold, not gradient
+- Budget on load fixed: hotelBudget recalculated from actual plan costs after loading a saved itinerary (was stale from old version)
+- Vehicle type on load fixed: if saved as sedan but pax ≥ 4, automatically resets to auto (Standard Van) on load
+- PDF speed fixed: auto-save before export changed to fire-and-forget — export now starts instantly instead of waiting 3-6s for API
+- html2canvas scale reduced 2→1.5 and JPEG quality 0.95→0.90 for faster PDF rendering
+- Users tab headers confirmed already complete — no changes needed
+- Trains master sheet: rows 638-642 identified as bad data (transfers/invalid routes) — user to delete manually
+- London-Liverpool price identified as wrong (Claude estimated ₹27,630, should be ~₹4,400) — user to fix manually
 
-### Still Pending — copy updated Pipeline.gs + Automation.gs into Apps Script, then:
-- Run `fixOldStatusData()` once — cleans column pollution across all 12 sheets
-- Run `restoreFromDone()` if INPUT_Hotels is still empty
-- Run `setupSheets()` and `setupTrigger()` once if not already done (midnight automation)
-- Google Sheet Users tab: columns D–H headers still need labels (Created, Agency Name, Person Name, Mobile, Email)
-- Trains and Transfers data quality not yet reviewed
+### Still Pending
+- Trains master: manually delete rows 638, 639, 640, 642 (bad transfer/invalid data)
+- Trains master rows 620-621: fix INR price for London-Liverpool (₹27,630 → correct price ~₹4,400), clear monthly € cols, run `repairTrainMonthlyPrices()`
+- INPUT_Trains: delete rows with blank From City or blank To City ("MISSING: From" error rows)
+- INPUT_Transfers: delete itinerary text rows (wrong data entered in wrong sheet)
+- After cleanup: run `resetErrorRows()` then `runMidnightEnrichment()`
+- Run `setupTrigger()` once to activate midnight automation
+- Copy updated Pipeline.gs into Apps Script (has prompt fixes + processSheet res.idx fix + token cap fix)
 
 ---
 
