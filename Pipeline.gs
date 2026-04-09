@@ -905,7 +905,6 @@ function fixOldStatusData() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
 
   // Hotels: old Automation.gs wrote STATUS to col 9 (now Jan), ERROR to col 10 (now Apr)
-  // Process INPUT, DONE, and DUPL sheets — all may have pollution
   _fixOldCols(ss, CFG.INPUT.HOTELS, 9, 10, HC.STATUS, HC.ERR, HC.TOTAL, true);
   _fixOldCols(ss, 'DONE_Hotels',    9, 10, HC.STATUS, HC.ERR, HC.TOTAL, false);
   _fixOldCols(ss, 'DUPL_Hotels',    9, 10, HC.STATUS, HC.ERR, HC.TOTAL, false);
@@ -914,6 +913,16 @@ function fixOldStatusData() {
   _fixOldCols(ss, CFG.INPUT.SIGHTSEEING, 10, 11, SC.STATUS, SC.ERR, SC.TOTAL, true);
   _fixOldCols(ss, 'DONE_Sightseeing',    10, 11, SC.STATUS, SC.ERR, SC.TOTAL, false);
   _fixOldCols(ss, 'DUPL_Sightseeing',    10, 11, SC.STATUS, SC.ERR, SC.TOTAL, false);
+
+  // Trains: old Automation.gs wrote STATUS to col 7 (now May €), ERROR to col 8 (now Aug €)
+  _fixOldCols(ss, CFG.INPUT.TRAINS, 7, 8, TC.STATUS, TC.ERR, TC.TOTAL, true);
+  _fixOldCols(ss, 'DONE_Trains',    7, 8, TC.STATUS, TC.ERR, TC.TOTAL, false);
+  _fixOldCols(ss, 'DUPL_Trains',    7, 8, TC.STATUS, TC.ERR, TC.TOTAL, false);
+
+  // Transfers: old Automation.gs wrote STATUS to col 13 (now Executive Sedan), ERROR to col 14 (now Schedule)
+  _fixOldCols(ss, CFG.INPUT.TRANSFERS, 13, 14, XC.STATUS, XC.ERR, XC.TOTAL, true);
+  _fixOldCols(ss, 'DONE_Transfers',    13, 14, XC.STATUS, XC.ERR, XC.TOTAL, false);
+  _fixOldCols(ss, 'DUPL_Transfers',    13, 14, XC.STATUS, XC.ERR, XC.TOTAL, false);
 
   Logger.log('✅ fixOldStatusData complete. Run runMidnightEnrichment() to process remaining PENDING rows.');
 }
