@@ -3166,18 +3166,68 @@ async function loadQuoteDashboard() {
 }
 
 // ── DATA DASHBOARD ────────────────────────────────────────────
+function _ddStarBar(n, total) {
+    if (!total) return '<span style="color:#94a3b8;font-size:10px;">—</span>';
+    const pct = Math.round(n / total * 100);
+    return `<div style="display:flex;align-items:center;gap:6px;">
+      <div style="flex:1;background:#f1f5f9;border-radius:3px;height:7px;min-width:60px;">
+        <div style="width:${pct}%;background:#c8990a;height:7px;border-radius:3px;"></div>
+      </div>
+      <span style="font-size:10px;color:#64748b;width:28px;text-align:right;">${n}</span>
+    </div>`;
+}
+function _ddPipeCard(label, icon, col, d) {
+    const total = d.pending + d.error + d.dup + d.processed;
+    return `<div class="db-kpi" style="background:#fff;border:1px solid #e2e8f0;color:#0f172a;box-shadow:0 1px 6px rgba(0,0,0,.05);">
+      <div class="dk-icon" style="opacity:.12;color:#0f172a;">${icon}</div>
+      <div class="dk-label" style="color:#64748b;">${label}</div>
+      <div style="margin-top:4px;display:flex;flex-direction:column;gap:5px;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;">
+          <span style="color:#64748b;">Pending</span>
+          <span style="font-weight:800;color:${d.pending>0?'#d97706':'#16a34a'};">${d.pending}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;">
+          <span style="color:#64748b;">Error</span>
+          <span style="font-weight:800;color:${d.error>0?'#dc2626':'#94a3b8'};">${d.error}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;">
+          <span style="color:#64748b;">Duplicate</span>
+          <span style="font-weight:800;color:${d.dup>0?'#2563eb':'#94a3b8'};">${d.dup}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;border-top:1px solid #f1f5f9;padding-top:4px;">
+          <span style="color:#64748b;">Processed</span>
+          <span style="font-weight:800;color:#16a34a;">${d.processed}</span>
+        </div>
+      </div>
+      <div class="dk-sub" style="margin-top:6px;color:#94a3b8;">${total} rows total</div>
+    </div>`;
+}
+function _ddInvFlag(n, lowT, critT) {
+    if (n <= critT) return `<span class="db-flag-red">🔴 Critical</span>`;
+    if (n <= lowT)  return `<span class="db-flag-amber">🟡 Low</span>`;
+    return `<span class="db-flag-green">✅ Good</span>`;
+}
+function toggleStarRow(idx) {
+    const sub = document.getElementById('star-sub-' + idx);
+    const btn = document.getElementById('star-btn-' + idx);
+    if (!sub) return;
+    const open = sub.style.display !== 'none';
+    sub.style.display = open ? 'none' : '';
+    if (btn) btn.textContent = open ? '▸' : '▾';
+}
+
 async function loadDataDashboard() {
     const el = document.getElementById('dataDashContent');
     el.innerHTML = '<div style="text-align:center;padding:60px;color:#94a3b8;"><div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:dashSpin .8s linear infinite;margin:0 auto 12px;"></div>Loading master data...</div>';
 
-    let inv = { hotels:[], sights:[] };
+    let inv = { hotels:[], sights:[], transfers:[], trains:{routeCount:0,cityCount:0,cities:[]}, pipeline:{hotels:{pending:0,error:0,dup:0,processed:0},sightseeing:{pending:0,error:0,dup:0,processed:0},trains:{pending:0,error:0,dup:0,processed:0},transfers:{pending:0,error:0,dup:0,processed:0}}, gapCities:[], demandGaps:[] };
     let activeUsers = { count:0, users:[] };
     try {
         const [invRes, usersRes] = await Promise.allSettled([
             fetch(API_URL + '?action=getMasterInventory').then(r=>r.json()),
             fetch(API_URL + '?action=getActiveUsers').then(r=>r.json()),
         ]);
-        if (invRes.status==='fulfilled' && invRes.value?.hotels) inv = invRes.value;
+        if (invRes.status==='fulfilled' && invRes.value?.hotels) inv = {...inv, ...invRes.value};
         if (usersRes.status==='fulfilled' && usersRes.value?.count!=null) activeUsers = usersRes.value;
     } catch(e) {}
 
@@ -3190,31 +3240,33 @@ async function loadDataDashboard() {
     const totalSights = inv.sights.reduce((s,c)=>s+c.count,0);
     const hotelCities = inv.hotels.length;
     const sightCities = inv.sights.length;
+    const critHotels  = inv.hotels.filter(c=>c.count<3).length;
+    const critSights  = inv.sights.filter(c=>c.count<4).length;
 
-    // Cities with < 3 hotels = critical, < 6 = low
-    const critHotels = inv.hotels.filter(c=>c.count<3).length;
-    const critSights = inv.sights.filter(c=>c.count<4).length;
-
-    const topHotels    = inv.hotels.slice(0,10);
-    const botHotels    = inv.hotels.slice(-10).reverse();
-    const topSights    = inv.sights.slice(0,10);
-    const botSights    = inv.sights.slice(-10).reverse();
+    const topHotels = inv.hotels.slice(0,10);
+    const botHotels = inv.hotels.slice(-10).reverse();
+    const topSights = inv.sights.slice(0,10);
+    const botSights = inv.sights.slice(-10).reverse();
     const maxH = topHotels[0]?.count || 1;
     const maxS = topSights[0]?.count || 1;
 
-    function invFlag(n, lowT, critT) {
-        if (n <= critT) return `<span class="db-flag-red">🔴 Critical (${n})</span>`;
-        if (n <= lowT)  return `<span class="db-flag-amber">🟡 Low (${n})</span>`;
-        return `<span class="db-flag-green">✅ Good (${n})</span>`;
-    }
+    // Tag diversity — top 10 by uniqueTags
+    const topTags = [...inv.sights].sort((a,b)=>b.uniqueTags-a.uniqueTags).slice(0,10);
+    const maxTags = topTags[0]?.uniqueTags || 1;
 
     el.innerHTML = `
     <!-- KPIs -->
     <div class="db-kpi-grid">
       <div class="db-kpi db-kpi-blue"><div class="dk-icon">🏨</div><div class="dk-label">Total Hotels Listed</div><div class="dk-value">${totalHotels}</div><div class="dk-sub">Across ${hotelCities} cities</div></div>
       <div class="db-kpi db-kpi-teal"><div class="dk-icon">🎭</div><div class="dk-label">Total Sightseeing</div><div class="dk-value">${totalSights}</div><div class="dk-sub">Across ${sightCities} cities</div></div>
+      <div class="db-kpi db-kpi-slate"><div class="dk-icon">🚆</div><div class="dk-label">Train Routes</div><div class="dk-value">${inv.trains.routeCount}</div><div class="dk-sub">Covering ${inv.trains.cityCount} cities</div></div>
+      <div class="db-kpi db-kpi-purple"><div class="dk-icon">🚐</div><div class="dk-label">Transfer Cities</div><div class="dk-value">${inv.transfers.length}</div><div class="dk-sub">Cities with airport pricing</div></div>
+    </div>
+    <div class="db-kpi-grid" style="margin-top:-10px;">
       <div class="db-kpi db-kpi-red"><div class="dk-icon">⚠️</div><div class="dk-label">Critical Hotel Cities</div><div class="dk-value">${critHotels}</div><div class="dk-sub">Fewer than 3 hotels listed</div></div>
       <div class="db-kpi db-kpi-amber"><div class="dk-icon">⚠️</div><div class="dk-label">Critical Sight Cities</div><div class="dk-value">${critSights}</div><div class="dk-sub">Fewer than 4 activities listed</div></div>
+      <div class="db-kpi db-kpi-green"><div class="dk-icon">🗺️</div><div class="dk-label">Coverage Gaps</div><div class="dk-value">${inv.gapCities.length}</div><div class="dk-sub">Cities missing hotels or sights</div></div>
+      <div class="db-kpi db-kpi-indigo"><div class="dk-icon">🔥</div><div class="dk-label">Demand + Thin Data</div><div class="dk-value">${inv.demandGaps.length}</div><div class="dk-sub">Quoted cities with low coverage</div></div>
     </div>
 
     <!-- ACTIVE USERS -->
@@ -3238,22 +3290,50 @@ async function loadDataDashboard() {
       </div>
     </div>
 
+    <!-- PIPELINE STATUS -->
+    <div class="db-section">
+      <div class="db-section-title"><span class="dt" style="background:#7c3aed"></span>Pipeline Input Status — What needs processing</div>
+      <div class="db-kpi-grid">
+        ${_ddPipeCard('Hotels INPUT','🏨','hotels',inv.pipeline.hotels)}
+        ${_ddPipeCard('Sightseeing INPUT','🎭','sightseeing',inv.pipeline.sightseeing)}
+        ${_ddPipeCard('Trains INPUT','🚆','trains',inv.pipeline.trains)}
+        ${_ddPipeCard('Transfers INPUT','🚐','transfers',inv.pipeline.transfers)}
+      </div>
+    </div>
+
     <!-- HOTEL INVENTORY -->
     <div class="db-section">
-      <div class="db-section-title"><span class="dt" style="background:#0f172a"></span>Hotel Inventory — Master Sheet Coverage</div>
+      <div class="db-section-title"><span class="dt" style="background:#0f172a"></span>Hotel Inventory — click any city to see star breakdown</div>
       <div class="db-row2">
         <div class="db-card">
           <h3>🏆 Top 10 Cities <span class="badge">Most hotel options</span></h3>
           <div class="db-tbl-wrap">
             <table class="db-table">
-              <thead><tr><th>#</th><th>City</th><th class="tr">Hotels Listed</th><th style="width:140px;">Coverage</th></tr></thead>
+              <thead><tr><th></th><th>#</th><th>City</th><th class="tr">Total</th><th style="width:130px;">Coverage</th></tr></thead>
               <tbody>
-                ${topHotels.map((c,i)=>`<tr>
-                  <td><span class="db-rank ${i===0?'r1':i===1?'r2':i===2?'r3':''}">${i+1}</span></td>
-                  <td><strong>${c.city}</strong></td>
-                  <td class="tr" style="font-weight:800;font-size:13px;">${c.count}</td>
-                  <td><div class="db-cov-bar"><div class="db-cov-fill" style="width:${(c.count/maxH*100).toFixed(0)}%;background:#0f172a;height:10px;border-radius:3px;"></div></div></td>
-                </tr>`).join('')}
+                ${topHotels.map((c,i)=>{
+                  const st = c.stars || {};
+                  return `<tr onclick="toggleStarRow('h${i}')" style="cursor:pointer;">
+                    <td style="width:20px;color:#94a3b8;font-size:11px;" id="star-btn-h${i}">▸</td>
+                    <td><span class="db-rank ${i===0?'r1':i===1?'r2':i===2?'r3':''}">${i+1}</span></td>
+                    <td><strong>${c.city}</strong></td>
+                    <td class="tr" style="font-weight:800;font-size:13px;">${c.count}</td>
+                    <td><div class="db-cov-bar"><div class="db-cov-fill" style="width:${(c.count/maxH*100).toFixed(0)}%;background:#0f172a;height:10px;border-radius:3px;"></div></div></td>
+                  </tr>
+                  <tr id="star-sub-h${i}" style="display:none;background:#f8fafc;">
+                    <td colspan="5" style="padding:10px 16px 12px 36px;">
+                      <div style="display:grid;grid-template-columns:repeat(4,auto);gap:10px 20px;font-size:11px;">
+                        <div><span style="color:#c8990a;font-weight:700;">★★★★★</span> 5-star</div><div style="font-weight:800;">${st[5]||0}</div>
+                        <div>${_ddStarBar(st[5]||0, c.count)}</div><div></div>
+                        <div><span style="color:#c8990a;font-weight:700;">★★★★</span> 4-star</div><div style="font-weight:800;">${st[4]||0}</div>
+                        <div>${_ddStarBar(st[4]||0, c.count)}</div><div></div>
+                        <div><span style="color:#c8990a;font-weight:700;">★★★</span> 3-star</div><div style="font-weight:800;">${st[3]||0}</div>
+                        <div>${_ddStarBar(st[3]||0, c.count)}</div><div></div>
+                        ${(st.other||0)>0?`<div style="color:#94a3b8;">Other</div><div style="font-weight:800;color:#94a3b8;">${st.other}</div><div></div><div></div>`:''}
+                      </div>
+                    </td>
+                  </tr>`;
+                }).join('')}
               </tbody>
             </table>
           </div>
@@ -3262,35 +3342,36 @@ async function loadDataDashboard() {
           <h3>📉 Bottom 10 Cities <span class="badge" style="background:#f8d7da;color:#dc2626;">Need more options</span></h3>
           <div class="db-tbl-wrap">
             <table class="db-table">
-              <thead><tr><th>City</th><th class="tr">Hotels Listed</th><th>Status</th></tr></thead>
+              <thead><tr><th>City</th><th class="tr">Hotels</th><th>Status</th></tr></thead>
               <tbody>
                 ${botHotels.map(c=>`<tr>
                   <td>${c.city}</td>
                   <td class="tr" style="font-weight:800;">${c.count}</td>
-                  <td>${invFlag(c.count,5,2)}</td>
+                  <td>${_ddInvFlag(c.count,5,2)}</td>
                 </tr>`).join('')}
               </tbody>
             </table>
           </div>
-          <div class="db-info db-info-amber">Cities marked 🔴 have fewer than 3 options — agents may struggle to find a match for client budgets. Add hotels to the Hotels sheet.</div>
+          <div class="db-info db-info-amber">Cities marked 🔴 have fewer than 3 options — agents may struggle to find a match for client budgets.</div>
         </div>
       </div>
     </div>
 
     <!-- SIGHTSEEING INVENTORY -->
     <div class="db-section">
-      <div class="db-section-title"><span class="dt" style="background:#0d9488"></span>Sightseeing Inventory — Master Sheet Coverage</div>
+      <div class="db-section-title"><span class="dt" style="background:#0d9488"></span>Sightseeing Inventory — activities + tag diversity</div>
       <div class="db-row2">
         <div class="db-card">
           <h3>🏆 Top 10 Cities <span class="badge">Most activities</span></h3>
           <div class="db-tbl-wrap">
             <table class="db-table">
-              <thead><tr><th>#</th><th>City</th><th class="tr">Activities Listed</th><th style="width:140px;">Coverage</th></tr></thead>
+              <thead><tr><th>#</th><th>City</th><th class="tr">Activities</th><th class="tr">Unique Tags</th><th style="width:110px;">Coverage</th></tr></thead>
               <tbody>
                 ${topSights.map((c,i)=>`<tr>
                   <td><span class="db-rank ${i===0?'r1':i===1?'r2':i===2?'r3':''}">${i+1}</span></td>
                   <td><strong>${c.city}</strong></td>
                   <td class="tr" style="font-weight:800;font-size:13px;">${c.count}</td>
+                  <td class="tr" style="font-weight:700;color:${c.uniqueTags>=10?'#16a34a':c.uniqueTags>=5?'#d97706':'#dc2626'};">${c.uniqueTags}</td>
                   <td><div class="db-cov-bar"><div class="db-cov-fill" style="width:${(c.count/maxS*100).toFixed(0)}%;background:#0d9488;height:10px;border-radius:3px;"></div></div></td>
                 </tr>`).join('')}
               </tbody>
@@ -3298,56 +3379,158 @@ async function loadDataDashboard() {
           </div>
         </div>
         <div class="db-card">
-          <h3>📉 Bottom 10 Cities <span class="badge" style="background:#f8d7da;color:#dc2626;">Need more options</span></h3>
+          <h3>🏷️ Tag Diversity — Top 10 Cities <span class="badge">Unique activity categories</span></h3>
           <div class="db-tbl-wrap">
             <table class="db-table">
-              <thead><tr><th>City</th><th class="tr">Activities Listed</th><th>Status</th></tr></thead>
+              <thead><tr><th>#</th><th>City</th><th class="tr">Activities</th><th class="tr">Unique Tags</th><th style="width:110px;">Tag Coverage</th></tr></thead>
               <tbody>
-                ${botSights.map(c=>`<tr>
-                  <td>${c.city}</td>
-                  <td class="tr" style="font-weight:800;">${c.count}</td>
-                  <td>${invFlag(c.count,8,3)}</td>
+                ${topTags.map((c,i)=>`<tr>
+                  <td><span class="db-rank ${i===0?'r1':i===1?'r2':i===2?'r3':''}">${i+1}</span></td>
+                  <td><strong>${c.city}</strong></td>
+                  <td class="tr" style="color:#64748b;">${c.count}</td>
+                  <td class="tr" style="font-weight:800;font-size:13px;color:#0d9488;">${c.uniqueTags}</td>
+                  <td><div class="db-cov-bar"><div class="db-cov-fill" style="width:${(c.uniqueTags/maxTags*100).toFixed(0)}%;background:#0d9488;height:10px;border-radius:3px;"></div></div></td>
                 </tr>`).join('')}
               </tbody>
             </table>
           </div>
-          <div class="db-info db-info-amber">Cities marked 🔴 have fewer than 4 activities — quotes will have poor sightseeing variety. Add activities to the Sightseeing sheet.</div>
+          <div class="db-info" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534;margin-top:12px;">High unique tags = more variety for different client interests. Low tags means repetitive activity types.</div>
+        </div>
+      </div>
+      <div class="db-row2">
+        <div class="db-card">
+          <h3>📉 Bottom 10 Cities <span class="badge" style="background:#f8d7da;color:#dc2626;">Thin sightseeing</span></h3>
+          <div class="db-tbl-wrap">
+            <table class="db-table">
+              <thead><tr><th>City</th><th class="tr">Activities</th><th class="tr">Tags</th><th>Status</th></tr></thead>
+              <tbody>
+                ${botSights.map(c=>`<tr>
+                  <td>${c.city}</td>
+                  <td class="tr" style="font-weight:800;">${c.count}</td>
+                  <td class="tr" style="color:${(c.uniqueTags||0)>=5?'#16a34a':'#dc2626'};font-weight:700;">${c.uniqueTags||0}</td>
+                  <td>${_ddInvFlag(c.count,8,3)}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="db-card">
+          <h3>🏷️ Bottom 10 — Tag Diversity <span class="badge" style="background:#f8d7da;color:#dc2626;">Least variety</span></h3>
+          <div class="db-tbl-wrap">
+            <table class="db-table">
+              <thead><tr><th>City</th><th class="tr">Activities</th><th class="tr">Unique Tags</th><th>Diversity</th></tr></thead>
+              <tbody>
+                ${[...inv.sights].filter(c=>c.count>0).sort((a,b)=>a.uniqueTags-b.uniqueTags).slice(0,10).map(c=>`<tr>
+                  <td>${c.city}</td>
+                  <td class="tr" style="color:#64748b;">${c.count}</td>
+                  <td class="tr" style="font-weight:800;color:${(c.uniqueTags||0)<=2?'#dc2626':'#d97706'};">${c.uniqueTags||0}</td>
+                  <td><span style="font-size:10px;background:${(c.uniqueTags||0)<=2?'#fee2e2':'#fef3c7'};color:${(c.uniqueTags||0)<=2?'#dc2626':'#92400e'};padding:2px 7px;border-radius:10px;">
+                    ${(c.uniqueTags||0)<=2?'Very Low':'Low'}
+                  </span></td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- FULL INVENTORY TABLE -->
-    <div class="db-row2">
-      <div class="db-card">
-        <h3>All Cities — Hotel Coverage <span class="badge">${hotelCities} cities</span></h3>
-        <div class="db-tbl-wrap">
-          <table class="db-table">
-            <thead><tr><th>#</th><th>City</th><th class="tr">Hotels</th><th>Status</th></tr></thead>
-            <tbody>
-              ${inv.hotels.map((c,i)=>`<tr>
-                <td style="color:#94a3b8;font-size:10px;">${i+1}</td>
-                <td>${c.city}</td>
-                <td class="tr" style="font-weight:700;">${c.count}</td>
-                <td>${invFlag(c.count,5,2)}</td>
-              </tr>`).join('')}
-            </tbody>
-          </table>
+    <!-- TRANSFER + TRAIN COVERAGE -->
+    <div class="db-section">
+      <div class="db-section-title"><span class="dt" style="background:#2563eb"></span>Transfer & Train Coverage</div>
+      <div class="db-row2">
+        <div class="db-card">
+          <h3>🚐 Transfer Coverage <span class="badge">${inv.transfers.length} cities</span></h3>
+          <div class="db-tbl-wrap">
+            <table class="db-table">
+              <thead><tr><th>#</th><th>City</th><th class="tr">Transfer Rows</th><th>Has Hotels?</th></tr></thead>
+              <tbody>
+                ${inv.transfers.length===0?'<tr><td colspan="4" class="db-empty">No transfer data in master sheet.</td></tr>':
+                inv.transfers.slice(0,15).map((c,i)=>{
+                  const hasH = inv.hotels.some(h=>h.city===c.city);
+                  return `<tr>
+                    <td style="color:#94a3b8;font-size:10px;">${i+1}</td>
+                    <td><strong>${c.city}</strong></td>
+                    <td class="tr" style="font-weight:700;">${c.count}</td>
+                    <td>${hasH?'<span class="db-flag-green">✅ Yes</span>':'<span class="db-flag-amber">🟡 No hotels</span>'}</td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+          ${(()=>{
+            const hotelCitySet = new Set(inv.hotels.map(h=>h.city));
+            const missingXfer = inv.hotels.filter(h=>!inv.transfers.some(t=>t.city===h.city)).slice(0,5);
+            return missingXfer.length ? `<div class="db-info db-info-amber" style="margin-top:10px;">Hotels cities missing transfer data: ${missingXfer.map(h=>'<strong>'+h.city+'</strong>').join(', ')} and more.</div>` : '';
+          })()}
+        </div>
+        <div class="db-card">
+          <h3>🚆 Train Route Coverage <span class="badge">${inv.trains.routeCount} routes</span></h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+            <div style="background:#eff6ff;border-radius:10px;padding:14px;text-align:center;">
+              <div style="font-size:24px;font-weight:900;color:#2563eb;">${inv.trains.routeCount}</div>
+              <div style="font-size:10px;color:#64748b;margin-top:2px;">Total routes</div>
+            </div>
+            <div style="background:#f0fdf4;border-radius:10px;padding:14px;text-align:center;">
+              <div style="font-size:24px;font-weight:900;color:#16a34a;">${inv.trains.cityCount}</div>
+              <div style="font-size:10px;color:#64748b;margin-top:2px;">Cities covered</div>
+            </div>
+          </div>
+          <div style="font-size:11px;color:#64748b;font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Cities with train data</div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px;max-height:160px;overflow-y:auto;">
+            ${inv.trains.cities.sort().map(c=>`<span style="background:#eff6ff;color:#1e40af;padding:3px 9px;border-radius:12px;font-size:10px;font-weight:600;">${c}</span>`).join('')}
+          </div>
+          ${(()=>{
+            const trainCitySet = new Set(inv.trains.cities);
+            const missing = inv.hotels.filter(h=>!trainCitySet.has(h.city) && h.count>=5).slice(0,6);
+            return missing.length ? `<div class="db-info db-info-amber" style="margin-top:10px;">Well-stocked hotel cities with no train data: ${missing.map(h=>'<strong>'+h.city+'</strong>').join(', ')}.</div>` : '';
+          })()}
         </div>
       </div>
-      <div class="db-card">
-        <h3>All Cities — Sightseeing Coverage <span class="badge">${sightCities} cities</span></h3>
-        <div class="db-tbl-wrap">
-          <table class="db-table">
-            <thead><tr><th>#</th><th>City</th><th class="tr">Activities</th><th>Status</th></tr></thead>
-            <tbody>
-              ${inv.sights.map((c,i)=>`<tr>
-                <td style="color:#94a3b8;font-size:10px;">${i+1}</td>
-                <td>${c.city}</td>
-                <td class="tr" style="font-weight:700;">${c.count}</td>
-                <td>${invFlag(c.count,8,3)}</td>
-              </tr>`).join('')}
-            </tbody>
-          </table>
+    </div>
+
+    <!-- GAP REPORT + DEMAND GAPS -->
+    <div class="db-section">
+      <div class="db-section-title"><span class="dt" style="background:#dc2626"></span>Coverage Gaps & High Demand</div>
+      <div class="db-row2">
+        <div class="db-card">
+          <h3>🗺️ Incomplete Cities <span class="badge" style="background:#f8d7da;color:#dc2626;">${inv.gapCities.length} gaps</span></h3>
+          <div class="db-tbl-wrap">
+            <table class="db-table">
+              <thead><tr><th>City</th><th class="tr">Hotels</th><th class="tr">Sightseeing</th><th>Missing</th></tr></thead>
+              <tbody>
+                ${inv.gapCities.length===0?'<tr><td colspan="4" class="db-empty">All cities have both hotels and sightseeing. Great coverage!</td></tr>':
+                inv.gapCities.map(c=>`<tr>
+                  <td><strong>${c.city}</strong></td>
+                  <td class="tr" style="font-weight:700;color:${c.hotels>0?'#0f172a':'#dc2626'};">${c.hotels||'—'}</td>
+                  <td class="tr" style="font-weight:700;color:${c.sights>0?'#0f172a':'#dc2626'};">${c.sights||'—'}</td>
+                  <td><span style="font-size:10px;background:${c.gap==='no-sights'?'#fef3c7':'#fee2e2'};color:${c.gap==='no-sights'?'#92400e':'#dc2626'};padding:2px 8px;border-radius:10px;font-weight:700;">
+                    ${c.gap==='no-sights'?'No Sightseeing':'No Hotels'}
+                  </span></td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="db-card">
+          <h3>🔥 High Demand, Thin Data <span class="badge" style="background:#fef3c7;color:#92400e;">From quote log</span></h3>
+          <div class="db-tbl-wrap">
+            <table class="db-table">
+              <thead><tr><th>City</th><th class="tr">Quotes</th><th class="tr">Hotels</th><th class="tr">Sights</th><th>Trains</th><th>Transfers</th></tr></thead>
+              <tbody>
+                ${inv.demandGaps.length===0?'<tr><td colspan="6" class="db-empty">No data yet — quotes will populate this as agents use the tool.</td></tr>':
+                inv.demandGaps.map(c=>`<tr>
+                  <td><strong>${c.city}</strong></td>
+                  <td class="tr" style="font-weight:800;color:#d97706;">${c.quoteCount}</td>
+                  <td class="tr" style="font-weight:700;color:${c.hotels<5?'#dc2626':c.hotels<10?'#d97706':'#16a34a'};">${c.hotels}</td>
+                  <td class="tr" style="font-weight:700;color:${c.sights<5?'#dc2626':c.sights<10?'#d97706':'#16a34a'};">${c.sights}</td>
+                  <td style="text-align:center;">${c.hasTrains?'✅':'❌'}</td>
+                  <td style="text-align:center;">${c.hasTransfer?'✅':'❌'}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div class="db-info db-info-amber" style="margin-top:10px;">These are cities your agents are quoting most but have the weakest data behind them. Prioritise adding data here.</div>
         </div>
       </div>
     </div>`;
