@@ -772,6 +772,125 @@ function appendToLog(ss, sheetName, dataType, row, reason) {
   ]);
 }
 
+// ================================================================
+// SECTION 11b — ARCHIVE + CLEAR INPUT SHEET
+// After each run: PROCESSED and DUPLICATE rows are moved to
+// DONE_[type] and DUPL_[type] archive sheets, then deleted from input.
+// ERROR rows remain in input for the team to fix and re-run.
+// ================================================================
+
+function _archiveAndClear(ss, inputSheet, col, type) {
+  const typePretty = type.charAt(0).toUpperCase() + type.slice(1);
+  const doneSheetName = 'DONE_' + typePretty;
+  const duplSheetName = 'DUPL_' + typePretty;
+
+  let doneSheet = ss.getSheetByName(doneSheetName);
+  let duplSheet = ss.getSheetByName(duplSheetName);
+  if (!doneSheet) doneSheet = ss.insertSheet(doneSheetName);
+  if (!duplSheet) duplSheet = ss.insertSheet(duplSheetName);
+
+  // Copy header row to archive sheets if they are empty
+  const headerRow = inputSheet.getRange(1, 1, 1, col.TOTAL).getValues()[0];
+  if (doneSheet.getLastRow() === 0) {
+    doneSheet.appendRow(headerRow);
+    doneSheet.getRange(1, 1, 1, col.TOTAL).setBackground(CFG.COLOR.HEADER).setFontColor('#FFFFFF').setFontWeight('bold');
+    doneSheet.setFrozenRows(1);
+  }
+  if (duplSheet.getLastRow() === 0) {
+    duplSheet.appendRow(headerRow);
+    duplSheet.getRange(1, 1, 1, col.TOTAL).setBackground(CFG.COLOR.HEADER).setFontColor('#FFFFFF').setFontWeight('bold');
+    duplSheet.setFrozenRows(1);
+  }
+
+  const allData = inputSheet.getDataRange().getValues();
+  const doneRows = [];
+  const duplRows = [];
+  const toDelete = []; // 1-based sheet row indices, deleted bottom-to-top
+
+  // Data starts at row 3 (row 1 = header, row 2 = info banner)
+  for (let i = 2; i < allData.length; i++) {
+    const rowArr = allData[i];
+    if (!rowArr[0]) continue; // skip blank rows
+    const status = (rowArr[col.STATUS - 1] || '').toString().trim().toUpperCase();
+    if (status === CFG.STATUS.PROCESSED) {
+      doneRows.push(rowArr);
+      toDelete.push(i + 1);
+    } else if (status === CFG.STATUS.DUPLICATE) {
+      duplRows.push(rowArr);
+      toDelete.push(i + 1);
+    }
+  }
+
+  if (doneRows.length > 0) {
+    doneSheet.getRange(doneSheet.getLastRow() + 1, 1, doneRows.length, col.TOTAL).setValues(doneRows);
+  }
+  if (duplRows.length > 0) {
+    duplSheet.getRange(duplSheet.getLastRow() + 1, 1, duplRows.length, col.TOTAL).setValues(duplRows);
+  }
+
+  // Delete bottom-to-top so row indices stay valid
+  toDelete.sort((a, b) => b - a).forEach(r => inputSheet.deleteRow(r));
+
+  auditLog(ss, `${type.toUpperCase()}: archived ${doneRows.length} processed + ${duplRows.length} duplicates → input cleared`);
+}
+
+
+// ================================================================
+// SECTION 11c — ONE-TIME MIGRATION
+// Fixes INPUT sheets where old Automation.gs wrote STATUS/ERROR to
+// wrong columns (price columns) before Pipeline.gs took over.
+// Run once in Apps Script: select fixOldStatusData → Run
+// ================================================================
+
+function fixOldStatusData() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // Hotels: old Automation.gs wrote STATUS to col 9, ERROR to col 10
+  // (these land in Jan/Feb price columns after Pipeline.gs added month cols)
+  _fixOldCols(ss, CFG.INPUT.HOTELS, 9, 10, HC.STATUS, HC.ERR, HC.TOTAL);
+
+  // Sightseeing: old Automation.gs wrote STATUS to col 10 (Viator Link), ERROR to col 11 (Attraction Tags)
+  _fixOldCols(ss, CFG.INPUT.SIGHTSEEING, 10, 11, SC.STATUS, SC.ERR, SC.TOTAL);
+
+  Logger.log('✅ Migration complete. Run runMidnightEnrichment() to re-process any rows reset to PENDING.');
+}
+
+function _fixOldCols(ss, sheetName, oldStatusCol, oldErrCol, newStatusCol, newErrCol, totalCols) {
+  const ws = ss.getSheetByName(sheetName);
+  if (!ws) { Logger.log('Sheet not found: ' + sheetName); return; }
+
+  const data = ws.getDataRange().getValues();
+  let fixed = 0;
+  const validStatuses = ['PENDING', 'PROCESSED', 'DUPLICATE', 'ERROR'];
+
+  for (let i = 2; i < data.length; i++) { // skip header + banner
+    const row = data[i];
+    if (!row[0]) continue;
+
+    const newStatus = (row[newStatusCol - 1] || '').toString().trim();
+    const oldStatus = (row[oldStatusCol - 1] || '').toString().trim().toUpperCase();
+
+    // Migrate only if new status column is empty AND old column has a valid status value
+    if (!newStatus && validStatuses.includes(oldStatus)) {
+      const sheetRow = i + 1;
+      ws.getRange(sheetRow, newStatusCol).setValue(oldStatus);
+      ws.getRange(sheetRow, newErrCol).setValue(row[oldErrCol - 1] || '');
+      ws.getRange(sheetRow, oldStatusCol).setValue(''); // clear old
+      ws.getRange(sheetRow, oldErrCol).setValue('');   // clear old
+
+      const colorMap = {
+        'PROCESSED': CFG.COLOR.PROCESSED,
+        'DUPLICATE': CFG.COLOR.DUPLICATE,
+        'ERROR':     CFG.COLOR.ERROR,
+      };
+      ws.getRange(sheetRow, 1, 1, totalCols).setBackground(colorMap[oldStatus] || CFG.COLOR.PENDING);
+      fixed++;
+    }
+  }
+  Logger.log(sheetName + ': fixed ' + fixed + ' rows');
+}
+
+
 function auditLog(ss, message) {
   Logger.log(message);
   try {
