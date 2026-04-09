@@ -2186,7 +2186,7 @@ function applyHotelFilters(routeId, city) {
             <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-1">
                     <div class="text-[11px] font-bold uppercase truncate group-hover:text-blue-600">${h.name}</div>
-                    <div style="font-size:9px;color:#B8860B;font-weight:600;flex-shrink:0;white-space:nowrap;">${h.starRating || ''}</div>
+                    <div style="font-size:9px;color:#c8990a;font-weight:600;flex-shrink:0;white-space:nowrap;">${renderStars(h.starRating)}</div>
                 </div>
                 <div class="flex gap-1 mt-0.5 flex-wrap">
                     <span class="text-[8px] bg-slate-100 text-slate-500 px-1 rounded">${h.category || ''}</span>
