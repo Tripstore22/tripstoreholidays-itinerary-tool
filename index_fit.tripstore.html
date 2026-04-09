@@ -841,7 +841,9 @@ async function saveItinerary() {
         return `${base} x${n}_${firstDate}`;
     }
     const fallback = selectedRoute.length > 0 ? selectedRoute[0].city : 'Draft';
-    const autoName = buildSaveName(rawName || fallback);
+    // Strip any previously auto-appended " x2_09Apr" suffix so it isn't doubled on re-save
+    const cleanBase = rawName.replace(/\s+x\d+_\d{2}[A-Za-z]{3}$/i, '').trim();
+    const autoName = buildSaveName(cleanBase || fallback);
     if (!rawName) document.getElementById('paxNameInput').value = autoName;
 
     const btn = document.getElementById('btnSave');
