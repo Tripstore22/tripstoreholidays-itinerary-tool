@@ -763,9 +763,22 @@ function handleLogout() {
     setTimeout(() => location.reload(), 1000);
 }
 
-function checkAutoLogin() {
+async function checkAutoLogin() {
     const saved = localStorage.getItem("tripstore_session");
-    if (saved) { const s = JSON.parse(saved); isAdmin = s.isAdmin; launchApp(s.modeText); }
+    if (!saved) return;
+    try {
+        const s = JSON.parse(saved);
+        // Old session format (no token) — force re-login
+        if (!s.username || !s.token) { localStorage.removeItem("tripstore_session"); return; }
+        // Verify token with server — do NOT trust isAdmin from localStorage
+        const res  = await fetch(`${API_URL}?action=validateSession&user=${encodeURIComponent(s.username)}&token=${encodeURIComponent(s.token)}`);
+        const role = await res.text();
+        if (role === 'ADMIN' || role === 'USER') {
+            isAdmin = (role === 'ADMIN');
+            launchApp(role === 'ADMIN' ? 'ADMIN MODE' : 'USER MODE');
+        }
+        // If INVALID, stay on login screen — tampered or expired session
+    } catch (e) { /* network error — stay on login screen */ }
 }
 window.addEventListener('DOMContentLoaded', checkAutoLogin);
 
