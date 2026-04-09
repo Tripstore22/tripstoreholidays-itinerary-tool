@@ -201,7 +201,7 @@ if SCOPE == 'pipeline':
         # If inr_price=0, Claude marks invalid and never reaches the calculate path.
         # Fix: only invalid if BOTH inr_price AND all monthly € prices are missing.
         ('enrichTrains',
-         r'ONLY invalid if BOTH inr_price AND all monthly',
+         r'(?i)only invalid if BOTH inr_price AND all monthly',
          'enrichTrains: must allow €-only rows (INR=0 is valid if monthly € prices exist) '
          '— old validation blocked the enrichment path that calculates INR from avg_e'),
 
