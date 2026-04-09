@@ -1,31 +1,32 @@
 # Session Handoff
 
-## Latest Session — 2026-04-09 (full day)
+## Latest Session — 2026-04-09 (evening continuation)
 
-### Completed — 2026-04-09
-- C1/C2/C3 security fixes: SHA-256 password hashing, session token validation, admin role server-verified on auto-login
-- chat_backups/ removed from git history (had exposed GitHub PAT) + added to .gitignore permanently
-- City route list now shows dates: "Rome (09 Apr – 11 Apr, 2N)"
-- CRITICAL budget optimizer bug fixed: first "Generate Quote" was picking cheapest hotel (systemHotelCitiesCount=0 bug)
-- ₹ symbol now tight against price in sightseeing column
-- + Add Train / Ferry / Bus button added to intercity table (with modal form)
-- Hotel name allows 2 lines (rows=2) — full name now visible
-- Category/duration tags bumped 8px → 9px
-- Star rating dark golden (#B8860B) in swap modal
-- Print/PDF/Excel buttons: immediate "⏳ Wait..." feedback so no double-click
-- Second Print/PDF/Excel button set added below Terms & Conditions
-- Save name auto-generates: "PaxName x2_09Apr" or "CityName x2_09Apr" if no name entered
-- Version control: loading a saved itinerary + saving now ALWAYS creates _V1,_V2,_V3 (never overwrites)
-- autoSaveThenDo uses same name format for export auto-saves
-- Pipeline.gs timeout guard added (stops at 5min, resumes next run — prevents duplicate master rows)
-- Automation.gs: setupSheets() and setupTrigger() functions added
-- All 5 GS files now tracked in git (Automation.gs removed from .gitignore)
+### Completed — 2026-04-09 (this session)
+- enrichSightseeing TypeError fixed: guard added to all 4 enrich functions (blocks direct calls from Apps Script editor)
+- INPUT_Hotels wipe incident fixed: `_archiveAndClear` removed from auto-call in `processSheet()` — now manual only
+- `restoreFromDone()` added: copies rows from DONE_*/DUPL_* back to input sheets if data gets wiped
+- `archiveAndClearInput()` added: manual-only archive function after team reviews pipeline results
+- Naming conflicts fixed: 4 duplicate functions in Automation.gs renamed with `_LEGACY` suffix
+- Column pollution fixed: old Automation.gs wrote STATUS to wrong columns across all 4 sheet types
+- `fixOldStatusData()` extended to cover all 12 sheets (INPUT + DONE + DUPL for all 4 types)
+- `_fixOldCols()` updated with hasBanner param — handles both INPUT sheets (header+banner) and archive sheets (header only)
+- `check_pipeline.py` created: static validator run by Claude before any .gs changes
+- Validator scoped by file: pipeline scope = full check, automation = naming+legacy only, code = naming only
+- Pre-commit hook updated: passes correct scope arg based on which .gs file is staged
+- Pre-push hook (Guard 5) wired to `check_pipeline.py`
+- `runCodeCheck()` added to Pipeline.gs: live health check inside Apps Script (reads sheet headers, checks column maps, checks for status pollution)
+- `setupTrigger_LEGACY` in Automation.gs disabled — was deleting ALL project triggers (dangerous)
+- `_buildInputSheet()` fixed: no longer inserts duplicate banner row if `setupSheets()` is run twice
+- `runNow()` alert in Automation.gs corrected: now points to AUDIT_LOG (was incorrectly saying ENRICHMENT_LOG)
+- Pre-push hook URL comment added: explains how to update hardcoded Apps Script deployment URL if redeployed
 
-### Still Pending
-- Run setupSheets() and setupTrigger() once in Apps Script editor (midnight automation)
+### Still Pending — copy updated Pipeline.gs + Automation.gs into Apps Script, then:
+- Run `fixOldStatusData()` once — cleans column pollution across all 12 sheets
+- Run `restoreFromDone()` if INPUT_Hotels is still empty
+- Run `setupSheets()` and `setupTrigger()` once if not already done (midnight automation)
 - Google Sheet Users tab: columns D–H headers still need labels (Created, Agency Name, Person Name, Mobile, Email)
 - Trains and Transfers data quality not yet reviewed
-- Pipeline.gs timeout error when running full enrichment — timeout guard now in place, next run should self-heal
 
 ---
 
