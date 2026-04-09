@@ -2752,8 +2752,8 @@ function triggerExport(type, btnEl) {
     const actionFn = type === 'print' ? () => window.print()
                    : type === 'pdf'   ? downloadPDF
                    : downloadExcel;
-    setTimeout(async () => {
-        try { await autoSaveThenDo(actionFn); } finally { restore(); }
+    setTimeout(() => {
+        try { autoSaveThenDo(actionFn); } finally { restore(); }
     }, 50);
 }
 
