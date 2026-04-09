@@ -2206,7 +2206,7 @@ function applyHotelFilters(routeId, city) {
             curBar.innerHTML = `
                 <div>
                     <div style="font-size:8px;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:1px;">Currently Selected</div>
-                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;">${curHotel.name} <span style="font-size:9px;color:#f59e0b;">${curHotel.starRating||''}</span></div>
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;">${curHotel.name} <span style="font-size:9px;color:#c8990a;">${renderStars(curHotel.starRating)}</span></div>
                 </div>
                 <div style="text-align:right;font-size:11px;font-weight:900;color:#334155;">₹${(currentCost*nights).toLocaleString('en-IN')}<div style="font-size:8px;font-weight:400;color:#94a3b8;">${nights}N total</div></div>`;
         }
