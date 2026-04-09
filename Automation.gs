@@ -669,7 +669,7 @@ function runNow() {
 // Run once manually: Apps Script → Run → setupSheets
 // ============================================================
 
-function setupSheets() {
+function setupSheets_LEGACY() {
   createInputTabs(); // creates INPUT_Hotels, INPUT_Sightseeing, INPUT_Trains, INPUT_Transfers
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
