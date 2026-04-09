@@ -20,3 +20,6 @@ Automation.gs
 # Summary doc
 conversation_summary.html
 .claude/worktrees/
+
+# Claude Code chat backups (contain tokens — never commit)
+chat_backups/
