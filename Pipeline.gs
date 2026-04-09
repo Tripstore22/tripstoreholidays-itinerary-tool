@@ -689,7 +689,9 @@ function callClaudeAPI(prompt, expectedCount) {
         },
         payload: JSON.stringify({
           model: CFG.MODEL,
-          max_tokens: Math.min(4096, Math.max(1024, expectedCount * 300)),
+          // Trains returns 2 rows per input (bidirectional) — double the token budget.
+          // Cap raised to 8192 to prevent truncated JSON on large batches.
+          max_tokens: Math.min(8192, Math.max(1024, expectedCount * 600)),
           messages: [{ role: 'user', content: prompt }],
         }),
         muteHttpExceptions: true,
