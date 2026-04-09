@@ -3077,7 +3077,7 @@ async function loadQuoteDashboard(force = false) {
     const mLabels = Object.keys(mCnt).sort();
     const mMax = Math.max(...Object.values(mCnt),1);
 
-    el.innerHTML = `
+    const _qMain = `
     <!-- KPI ROW 1 -->
     <div class="db-kpi-grid">
       <div class="db-kpi db-kpi-blue"><div class="dk-icon">📋</div><div class="dk-label">Total Quotes</div><div class="dk-value">${total}</div><div class="dk-sub">This week: ${thisWeek} ${vDiff!==0?`<span class="db-trend ${vDiff>0?'db-trend-up':'db-trend-down'}">${vDiff>0?'▲':'▼'}${Math.abs(vDiff)}</span>`:''}</div></div>
