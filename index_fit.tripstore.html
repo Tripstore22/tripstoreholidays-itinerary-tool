@@ -3238,8 +3238,12 @@ function toggleStarRow(idx) {
     if (btn) btn.textContent = open ? '▸' : '▾';
 }
 
-async function loadDataDashboard() {
+async function loadDataDashboard(force = false) {
     const el = document.getElementById('dataDashContent');
+    if (_dataDashCache && !force) {
+        el.innerHTML = _ddRefreshBar('data') + _dataDashCache.mainHtml;
+        return;
+    }
     el.innerHTML = '<div style="text-align:center;padding:60px;color:#94a3b8;"><div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:dashSpin .8s linear infinite;margin:0 auto 12px;"></div>Loading master data...</div>';
 
     let inv = { hotels:[], sights:[], transfers:[], trains:{routeCount:0,cityCount:0,cities:[]}, pipeline:{hotels:{pending:0,error:0,dup:0,processed:0},sightseeing:{pending:0,error:0,dup:0,processed:0},trains:{pending:0,error:0,dup:0,processed:0},transfers:{pending:0,error:0,dup:0,processed:0}}, gapCities:[], demandGaps:[] };
