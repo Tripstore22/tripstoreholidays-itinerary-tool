@@ -660,7 +660,7 @@ function createInputTabs() {
 
 function runNow() {
   runMidnightEnrichment();
-  SpreadsheetApp.getUi().alert('Enrichment complete. Check ENRICHMENT_LOG tab for details.');
+  SpreadsheetApp.getUi().alert('Enrichment complete. Check the AUDIT_LOG tab in the spreadsheet for details.');
 }
 
 
