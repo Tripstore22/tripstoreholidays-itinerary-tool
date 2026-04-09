@@ -7,6 +7,10 @@ Usage: python3 check_pipeline.py
 
 import re, sys, os
 
+# Optional argument: which file triggered this check
+# Values: 'pipeline' | 'automation' | 'code' | 'quote' | (none = full check)
+SCOPE = sys.argv[1].lower() if len(sys.argv) > 1 else 'pipeline'
+
 ROOT = os.path.dirname(os.path.abspath(__file__))
 PIPELINE = os.path.join(ROOT, 'Pipeline.gs')
 AUTOMATION = os.path.join(ROOT, 'Automation.gs')
