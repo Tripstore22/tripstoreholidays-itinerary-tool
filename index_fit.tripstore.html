@@ -834,7 +834,23 @@ async function init() {
 // On save, if the paxName hasn't changed from the loaded name, we save a NEW
 // version (append _V1, _V2 …) instead of overwriting the original.
 // =============================================================
-let _loadedFromName = null;   // set by searchItinerary / loadAndOpen
+let _loadedFromName  = null;   // set by searchItinerary / loadAndOpen
+let _quoteCache     = null;   // { mainHtml, at } — cached Quote Dashboard render
+let _dataDashCache  = null;   // { mainHtml, at } — cached Data Dashboard render
+
+// Build the refresh bar shown at top of each dashboard
+function _ddRefreshBar(which) {
+    const cache     = which === 'quote' ? _quoteCache : _dataDashCache;
+    const refreshFn = which === 'quote' ? 'loadQuoteDashboard(true)' : 'loadDataDashboard(true)';
+    const agoStr    = cache ? (()=>{
+        const m = Math.floor((Date.now() - cache.at) / 60000);
+        return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : Math.floor(m/60) + 'h ago';
+    })() : null;
+    return `<div style="display:flex;justify-content:flex-end;align-items:center;gap:12px;margin-bottom:18px;">
+      ${agoStr ? `<span style="font-size:11px;color:#94a3b8;">Last updated: <strong style="color:#64748b;">${agoStr}</strong></span>` : ''}
+      <button onclick="${refreshFn}" style="background:#0f172a;color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.3px;display:flex;align-items:center;gap:6px;">🔄 Refresh</button>
+    </div>`;
+}
 
 async function saveItinerary() {
     const cfg     = getTravelConfigs();
