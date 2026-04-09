@@ -52,7 +52,7 @@ const BATCH_SIZE = 15;
 // MAIN ENTRY POINT — called by the midnight trigger
 // ============================================================
 
-function runMidnightEnrichment() {
+function runMidnightEnrichment_LEGACY() {
   const ss  = SpreadsheetApp.getActiveSpreadsheet();
   const log = [];
 
