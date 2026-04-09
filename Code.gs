@@ -729,6 +729,16 @@ function getMasterInventory() {
 
 
 // ------------------------------------------------------------
+// HELPER — SHA-256 password hash
+// ------------------------------------------------------------
+
+function hashPass(pass) {
+  const raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, pass);
+  return raw.map(function(b) { return ('0' + (b & 0xFF).toString(16)).slice(-2); }).join('');
+}
+
+
+// ------------------------------------------------------------
 // HELPER — Parse price strings like "₹54,250" or 54250.0
 // ------------------------------------------------------------
 
