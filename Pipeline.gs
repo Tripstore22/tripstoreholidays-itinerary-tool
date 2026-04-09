@@ -260,9 +260,6 @@ function processSheet(ss, type) {
     Utilities.sleep(1500); // rate limit buffer between Claude calls
   }
 
-  // Archive PROCESSED and DUPLICATE rows, then clear them from input sheet
-  _archiveAndClear(ss, inp, cfg.col, type);
-
   return stats;
 }
 
