@@ -1045,6 +1045,67 @@ function handlePaxChange() {
     if (el) el.innerText = `Rooms Required: ${roomsRequired}${isManual ? ' (manual)' : ' (auto)'}`;
     document.getElementById('hotelBudgetLabel').innerText = `Hotel Budget (${totalPax} Pax)`;
     document.getElementById('sightBudgetLabel').innerText = `Land Package Budget (${totalPax} Pax)`;
+    suggestBudgets();
+}
+
+// Budget ranges per room per night (hotel) and per pax per night (land)
+const BUDGET_RANGES = {
+    land: { low: 10000, high: 20000 }  // ₹/pax/night (sightseeing + transfers)
+};
+let _lastBudgetSuggestion = { hotelMid: 0, landMid: 0 };
+
+function suggestBudgets() {
+    const hHint = document.getElementById('hotelBudgetHint');
+    const sHint = document.getElementById('sightBudgetHint');
+    if (!hHint || !sHint) return;
+
+    const totalNights = selectedRoute.reduce((s, r) => s + (r.nights || 0), 0);
+    if (totalNights === 0) {
+        hHint.style.display = 'none';
+        sHint.style.display = 'none';
+        return;
+    }
+    const { roomsRequired, totalPax } = getTravelConfigs();
+
+    // ── HOTEL: derive low/high from actual master data per city ──
+    let hotelLow = 0, hotelHigh = 0;
+    const hotels = (masterData && masterData.hotels) || [];
+    if (hotels.length) {
+        selectedRoute.forEach(r => {
+            const cityHotels = hotels
+                .filter(h => h.city && h.city.toLowerCase() === r.city.toLowerCase() && Number(h.cost) > 0)
+                .map(h => Number(h.cost))
+                .sort((a, b) => a - b);
+            if (!cityHotels.length) return;
+            hotelLow  += cityHotels[0]                          * roomsRequired * r.nights;
+            hotelHigh += cityHotels[cityHotels.length - 1]      * roomsRequired * r.nights;
+        });
+    }
+    if (!hotelLow && !hotelHigh) {
+        hotelLow  = 15000 * roomsRequired * totalNights;
+        hotelHigh = 50000 * roomsRequired * totalNights;
+    }
+    hotelLow  = Math.round(hotelLow  / 1000) * 1000;
+    hotelHigh = Math.round(hotelHigh / 1000) * 1000;
+    const hotelMid = Math.round((hotelLow + hotelHigh) / 2 / 1000) * 1000;
+
+    // ── LAND: fixed range per pax per night ──
+    const landLow  = Math.round(BUDGET_RANGES.land.low  * totalPax * totalNights / 1000) * 1000;
+    const landHigh = Math.round(BUDGET_RANGES.land.high * totalPax * totalNights / 1000) * 1000;
+    const landMid  = Math.round((landLow + landHigh) / 2 / 1000) * 1000;
+
+    _lastBudgetSuggestion = { hotelMid, landMid };
+
+    const fmt = v => '₹' + v.toLocaleString('en-IN');
+    document.getElementById('hotelBudgetRange').innerText = `${fmt(hotelLow)} – ${fmt(hotelHigh)}`;
+    document.getElementById('sightBudgetRange').innerText = `${fmt(landLow)} – ${fmt(landHigh)}`;
+    hHint.style.display = 'block';
+    sHint.style.display = 'block';
+}
+
+function applyBudgetSuggestion(type) {
+    if (type === 'hotel') document.getElementById('hotelBudget').value = _lastBudgetSuggestion.hotelMid;
+    else                  document.getElementById('sightBudget').value = _lastBudgetSuggestion.landMid;
 }
 
 function updatePaxHeader() {
