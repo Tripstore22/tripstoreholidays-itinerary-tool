@@ -1372,14 +1372,23 @@ function runCodeCheck() {
     const statusWords = ['PENDING','PROCESSED','ERROR','DUPLICATE'];
     const data = ws.getDataRange().getValues().slice(2); // skip header + banner
     let polluted = 0;
+    const pollutedCols = {}; // col number → count
     data.forEach(row => {
       for (let c = 0; c < col.STATUS - 2; c++) { // only check columns BEFORE status col
         const v = (row[c] || '').toString().trim().toUpperCase();
-        if (statusWords.includes(v)) polluted++;
+        if (statusWords.includes(v)) {
+          polluted++;
+          const colNum = c + 1;
+          pollutedCols[colNum] = (pollutedCols[colNum] || 0) + 1;
+        }
       }
     });
     if (polluted > 0) {
-      fail(sheetName + ': ' + polluted + ' cell(s) with status words in wrong columns — run fixOldStatusData() first');
+      const colDetail = Object.entries(pollutedCols)
+        .sort((a,b) => Number(a[0]) - Number(b[0]))
+        .map(([c, n]) => `col${c}(${n})`)
+        .join(', ');
+      fail(sheetName + ': ' + polluted + ' cell(s) with status words in wrong columns → ' + colDetail + ' — run fixOldStatusData() first');
     } else {
       ok(sheetName + ': no status pollution in data columns');
     }
