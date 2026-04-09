@@ -233,9 +233,10 @@ function processSheet(ss, type) {
     const batch   = toEnrich.slice(i, i + CFG.BATCH_SIZE);
     const results = cfg.fn(batch);
 
-    results.forEach((res, idx) => {
-      const row = batch[idx];
-      if (!row) return;
+    results.forEach((res) => {
+      // Use res.idx (Claude's position) not forEach index — guards against Claude reordering results
+      const row = batch[res.idx];
+      if (!row) { auditLog(ss, `  WARNING: Claude returned out-of-range idx=${res.idx} — skipping`); return; }
 
       if (!res.valid) {
         markRow(inp, row.rowIndex, CFG.STATUS.ERROR, res.error_reason, cfg.col);
