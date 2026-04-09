@@ -167,33 +167,73 @@ if SCOPE == 'pipeline':
     # be inferred from code structure alone. Each entry is a rule that must hold.
     # Add a new entry whenever a prompt bug is discovered and fixed.
 
+    # Each entry: (function_name, search_pattern, description)
+    # function_name = which enrichXxx() to extract and search within
+    # search_pattern = regex that must match inside that function
+    # description = what the rule enforces and why it exists
     prompt_rules = [
-        # Sightseeing: one price (GYG or Viator) must be enough to enrich.
-        # Bug history: old wording "Both gyg_price and viator_price are 0 or missing"
-        # was ambiguous — Claude AI sometimes rejected rows with only one price.
-        # Fixed wording explicitly allows single-price rows.
-        (
-            r'ONLY gyg_price.*?is VALID',
-            'enrichSightseeing prompt must explicitly allow GYG-only rows as valid '
-            '(old wording was ambiguous — caused single-price rows to error)'
-        ),
-        (
-            r'ONLY viator_price.*?is VALID',
-            'enrichSightseeing prompt must explicitly allow Viator-only rows as valid'
-        ),
+
+        # ── Sightseeing ──────────────────────────────────────────────────────────
+        # Bug: old wording "Both gyg_price and viator_price are 0 or missing" was
+        # ambiguous — Claude AI sometimes rejected rows that had only one price.
+        # Fix: explicit ✅/❌ examples showing one price is enough.
+        ('enrichSightseeing',
+         r'ONLY gyg_price.*?is VALID',
+         'enrichSightseeing: must explicitly allow GYG-only rows as valid '
+         '(old ambiguous wording caused single-price rows to error)'),
+
+        ('enrichSightseeing',
+         r'ONLY viator_price.*?is VALID',
+         'enrichSightseeing: must explicitly allow Viator-only rows as valid'),
+
+        # ── Hotels ───────────────────────────────────────────────────────────────
+        # Bug: "City is not a real European location" blocks hotels outside Europe
+        # (Dubai, Maldives, etc.). Sightseeing was already fixed to "real location".
+        # Fix: remove "European" restriction from Hotels prompt.
+        ('enrichHotels',
+         r'City is not a real location',
+         'enrichHotels: must NOT restrict to European cities only '
+         '(old wording blocked Dubai, Maldives, etc.)'),
+
+        # ── Trains ───────────────────────────────────────────────────────────────
+        # Bug: "inr_price is 0 or missing" as a standalone invalid condition
+        # contradicts the ENRICH section which says "if blank, calculate from avg_e × 110".
+        # If inr_price=0, Claude marks invalid and never reaches the calculate path.
+        # Fix: only invalid if BOTH inr_price AND all monthly € prices are missing.
+        ('enrichTrains',
+         r'ONLY invalid if BOTH inr_price AND all monthly',
+         'enrichTrains: must allow €-only rows (INR=0 is valid if monthly € prices exist) '
+         '— old validation blocked the enrichment path that calculates INR from avg_e'),
+
     ]
 
-    sight_fn = re.search(r'function enrichSightseeing\s*\(.*?^function ', pipe_src, re.MULTILINE | re.DOTALL)
-    sight_src = sight_fn.group(0) if sight_fn else ''
+    # Extract each function body and run its checks
+    fn_cache = {}
+    for fn_name, pattern, description in prompt_rules:
+        if fn_name not in fn_cache:
+            m = re.search(rf'function {fn_name}\s*\(.*?(?=^function )', pipe_src, re.MULTILINE | re.DOTALL)
+            fn_cache[fn_name] = m.group(0) if m else ''
+        fn_src = fn_cache[fn_name]
+        if not fn_src:
+            warn(f'Could not locate {fn_name}() body to check prompt logic')
+            continue
+        if re.search(pattern, fn_src, re.DOTALL):
+            ok(f'Prompt rule OK: {description[:70]}...')
+        else:
+            fail(f'PROMPT RULE MISSING: {description}')
 
-    if not sight_src:
-        warn('Could not locate enrichSightseeing() body to check prompt logic')
-    else:
-        for pattern, description in prompt_rules:
-            if re.search(pattern, sight_src, re.DOTALL):
-                ok(f'Prompt rule present: {description[:60]}...')
-            else:
-                fail(f'PROMPT RULE MISSING: {description}')
+    # ── processSheet: must use res.idx, not forEach index ────────────────────────
+    # Bug: original code used forEach((res, idx) => batch[idx]) — assumes Claude
+    # always returns results in the same order. If Claude reorders, wrong input
+    # row gets marked PROCESSED/ERROR. Fix: use res.idx to look up the correct row.
+    process_fn = re.search(r'function processSheet\s*\(.*?(?=^function )', pipe_src, re.MULTILINE | re.DOTALL)
+    if process_fn:
+        process_src = process_fn.group(0)
+        if 'batch[res.idx]' in process_src:
+            ok('processSheet uses res.idx (not forEach index) to look up batch row — safe against Claude reordering')
+        else:
+            fail('processSheet must use batch[res.idx] not batch[forEach_idx] — '
+                 'if Claude reorders results, wrong input row gets marked PROCESSED/ERROR')
 
 # ── SUMMARY ────────────────────────────────────────────────────────────────────
 
