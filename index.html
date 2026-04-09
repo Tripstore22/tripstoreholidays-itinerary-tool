@@ -2051,6 +2051,9 @@ function openHotelSwap(routeId) {
     const minPrice   = options.length > 0 ? Math.min(...options.map(h => Number(h.cost))) : 0;
     const categories = [...new Set(options.map(h => h.category).filter(Boolean))].sort();
     const stars      = [...new Set(options.map(h => h.starRating).filter(Boolean))].sort();
+    window._currentHotelCost  = Number(item.hotel?.cost) || 0;
+    window._currentHotelName  = (item.hotel?.name || '').toLowerCase();
+    window._currentHotelNights = item.nights || 1;
 
     document.getElementById('modalHeading').innerText = `Select Hotel: ${city}`;
     const mc = document.getElementById('modalContent');
