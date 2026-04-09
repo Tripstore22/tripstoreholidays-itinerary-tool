@@ -425,14 +425,17 @@ ${JSON.stringify(input, null, 2)}
 
 VALIDATE — valid=false if:
 - tour_name is empty or gibberish
-- city is not a real European destination
-- Both gyg_price and viator_price are 0 or missing
+- city is not a real destination
+- gyg_price is 0 or missing AND viator_price is also 0 or missing
+  ✅ A row with ONLY gyg_price (no viator_price) is VALID — enrich it
+  ✅ A row with ONLY viator_price (no gyg_price) is VALID — enrich it
+  ❌ Only invalid if NEITHER price is provided at all
 
 ENRICH (if valid=true):
 - category: confirm or assign from: Museum & Gallery, Historical & Cultural, Food & Culture, Adventure & Outdoor, City Tour, Walking Tour, Day Trip, Cruise, Evening Show, Landmark, Seasonal, Sightseeing, Water Sports
 - rating: if blank, assign realistic ⭐ 4.X rating (most EU tours range 4.4–4.9)
 - duration: standardise format e.g. "2 hrs", "Full Day", "60 min", "3-4 hrs"
-- avg_price: (gyg_price + viator_price) / 2. If only one price exists, use that value
+- avg_price: if both prices exist use (gyg_price + viator_price) / 2; if only one exists use that single price as avg_price
 - tags: generate 3-5 lowercase comma-separated tags if blank
 - Keep all URLs exactly as provided — do not modify
 
