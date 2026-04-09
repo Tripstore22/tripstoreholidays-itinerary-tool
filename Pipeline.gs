@@ -483,8 +483,11 @@ ${JSON.stringify(input, null, 2)}
 
 VALIDATE — valid=false if:
 - from_city or to_city is empty or not a real city
-- inr_price is 0 or missing
 - mode is not Train / Ferry / Bus / Coach
+- inr_price is 0 AND may_e, aug_e, oct_e, dec_e are ALL also 0 or missing
+  ✅ A row with monthly € prices but no INR is VALID — calculate INR from avg_e × 110
+  ✅ A row with INR but no monthly € prices is VALID — derive monthly prices from INR
+  ❌ Only invalid if BOTH inr_price AND all monthly € prices are missing
 
 ENRICH (if valid=true):
 - Standardise city name capitalisation e.g. "amsterdam" → "Amsterdam"
