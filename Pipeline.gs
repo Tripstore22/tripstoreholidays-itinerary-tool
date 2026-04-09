@@ -221,7 +221,15 @@ function processSheet(ss, type) {
   auditLog(ss, `${type.toUpperCase()}: ${dupRows.length} duplicates | ${toEnrich.length} new rows → sending to Claude`);
 
   // Send only new rows to Claude in batches
+  // Timeout guard: stop at 5 min to prevent execution timeout + duplicate master rows
+  const SAFE_TIMEOUT_MS = 5 * 60 * 1000;
+  const _batchStart = Date.now();
+
   for (let i = 0; i < toEnrich.length; i += CFG.BATCH_SIZE) {
+    if (Date.now() - _batchStart > SAFE_TIMEOUT_MS) {
+      auditLog(ss, `TIMEOUT GUARD: stopping ${type.toUpperCase()} at row ${i}. Remaining rows will process next run.`);
+      break;
+    }
     const batch   = toEnrich.slice(i, i + CFG.BATCH_SIZE);
     const results = cfg.fn(batch);
 
