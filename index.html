@@ -3183,6 +3183,8 @@ async function loadQuoteDashboard(force = false) {
         </table>
       </div>
     </div>`;
+    _quoteCache = { mainHtml: _qMain, at: Date.now() };
+    el.innerHTML = _ddRefreshBar('quote') + _qMain;
 }
 
 // ── DATA DASHBOARD ────────────────────────────────────────────
