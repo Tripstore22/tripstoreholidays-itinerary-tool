@@ -1,20 +1,31 @@
 # Session Handoff
 
-## Latest Session — 2026-04-09
+## Latest Session — 2026-04-09 (full day)
 
 ### Completed — 2026-04-09
-- Fixed live site API errors: HTML was pointing to old API URL, updated to correct deployment
-- Fixed getQuoteLog crash: "Invalid time value" caused by bad date in Quote_Log — wrapped in safe try/catch
-- Confirmed all 4 new endpoints working live: getMasterInventory, getQuoteLog, getActiveUsers, getSavedList
-- Restored hotel swap modal: ±20% best match grouping, price DIFFERENCE for X nights (not per night), current hotel bar
-- Restored budget range hints below Hotel Budget + Land Budget fields (Suggested: ₹X–₹Y | Use mid button)
-- Added feature integrity check to pre-push hook — push is BLOCKED if any of 24 critical features are missing
+- C1/C2/C3 security fixes: SHA-256 password hashing, session token validation, admin role server-verified on auto-login
+- chat_backups/ removed from git history (had exposed GitHub PAT) + added to .gitignore permanently
+- City route list now shows dates: "Rome (09 Apr – 11 Apr, 2N)"
+- CRITICAL budget optimizer bug fixed: first "Generate Quote" was picking cheapest hotel (systemHotelCitiesCount=0 bug)
+- ₹ symbol now tight against price in sightseeing column
+- + Add Train / Ferry / Bus button added to intercity table (with modal form)
+- Hotel name allows 2 lines (rows=2) — full name now visible
+- Category/duration tags bumped 8px → 9px
+- Star rating dark golden (#B8860B) in swap modal
+- Print/PDF/Excel buttons: immediate "⏳ Wait..." feedback so no double-click
+- Second Print/PDF/Excel button set added below Terms & Conditions
+- Save name auto-generates: "PaxName x2_09Apr" or "CityName x2_09Apr" if no name entered
+- Version control: loading a saved itinerary + saving now ALWAYS creates _V1,_V2,_V3 (never overwrites)
+- autoSaveThenDo uses same name format for export auto-saves
+- Pipeline.gs timeout guard added (stops at 5min, resumes next run — prevents duplicate master rows)
+- Automation.gs: setupSheets() and setupTrigger() functions added
+- All 5 GS files now tracked in git (Automation.gs removed from .gitignore)
 
 ### Still Pending
-- Trains and Transfers data quality not yet reviewed
-- Code review report issues (code_review_report.md) — C1/C2/C3 critical issues not yet fixed
+- Run setupSheets() and setupTrigger() once in Apps Script editor (midnight automation)
 - Google Sheet Users tab: columns D–H headers still need labels (Created, Agency Name, Person Name, Mobile, Email)
-- setupSheets() + setupTrigger() not yet run in Apps Script for midnight automation
+- Trains and Transfers data quality not yet reviewed
+- Pipeline.gs timeout error when running full enrichment — timeout guard now in place, next run should self-heal
 
 ---
 
