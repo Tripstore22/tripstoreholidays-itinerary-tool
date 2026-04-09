@@ -14,9 +14,6 @@ index_V*.html
 index_Old.html
 index1.html
 
-# Automation file (runs in Google Apps Script, not here)
-Automation.gs
-
 # Summary doc
 conversation_summary.html
 .claude/worktrees/
