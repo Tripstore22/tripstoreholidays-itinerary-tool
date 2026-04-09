@@ -1130,6 +1130,7 @@ function renderRouteInputs() {
             <span><b>${r.city}</b> (${r.nights}N)</span>
             <button onclick="removeRoute(${r.id})" class="text-red-500 font-bold px-2">✕</button>
         </div>`).join('');
+    suggestBudgets();
 }
 
 function removeRoute(id) {
