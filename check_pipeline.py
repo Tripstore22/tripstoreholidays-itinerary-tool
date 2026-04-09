@@ -59,7 +59,9 @@ for filename, fns in all_files.items():
 if not conflict_found:
     ok('No naming conflicts across Pipeline.gs / Automation.gs / Code.gs')
 
-# ── 2. AUTOMATION.GS LEGACY RENAMES ───────────────────────────────────────────
+# ── 2. AUTOMATION.GS LEGACY RENAMES (only when Automation.gs or Pipeline.gs changed) ──────────
+
+if SCOPE in ('pipeline', 'automation'):
 
 auto_src = read(AUTOMATION)
 legacy_must_not_exist = ['runMidnightEnrichment', 'callClaudeAPI', 'setupSheets', 'setupTrigger']
