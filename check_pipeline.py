@@ -33,10 +33,13 @@ pipeline_fns   = get_functions(read(PIPELINE))
 automation_fns = get_functions(read(AUTOMATION))
 codegen_fns    = get_functions(read(CODE_GS)) if os.path.exists(CODE_GS) else []
 
+quote_fns = get_functions(read(QUOTE_GS)) if os.path.exists(QUOTE_GS) else []
+
 all_files = {
-    'Pipeline.gs':   pipeline_fns,
-    'Automation.gs': automation_fns,
-    'Code.gs':       codegen_fns,
+    'Pipeline.gs':          pipeline_fns,
+    'Automation.gs':        automation_fns,
+    'Code.gs':              codegen_fns,
+    'Quote_Intelligence.gs': quote_fns,
 }
 
 seen = {}
