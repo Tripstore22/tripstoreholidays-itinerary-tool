@@ -359,7 +359,7 @@ function handleSignup(username, password, agencyName, personName, mobile, email)
     }
   }
 
-  sheet.appendRow([username.trim(), password.trim(), 'PENDING', new Date(), agencyName.trim(), personName.trim(), mobile.trim(), email.trim()]);
+  sheet.appendRow([username.trim(), hashPass(password.trim()), 'PENDING', new Date(), agencyName.trim(), personName.trim(), mobile.trim(), email.trim()]);
   return ContentService.createTextOutput('Signup Successful');
 }
 
