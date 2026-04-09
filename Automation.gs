@@ -506,7 +506,7 @@ ${JSON.stringify(rows, null, 2)}`;
 // CLAUDE API — RAW HTTP CALL
 // ============================================================
 
-function callClaudeAPI(prompt, log) {
+function callClaudeAPI_LEGACY(prompt, log) {
   const apiKey = PropertiesService.getScriptProperties().getProperty('CLAUDE_API_KEY');
   if (!apiKey) {
     log.push('ERROR: CLAUDE_API_KEY not set in Script Properties');
