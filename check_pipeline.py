@@ -162,6 +162,39 @@ if SCOPE == 'pipeline':
     else:
         warn('Could not parse processSheet body to check for _archiveAndClear call')
 
+    # ── 6. ENRICHMENT PROMPT LOGIC RULES ─────────────────────────────────────
+    # These checks catch business logic inside Claude prompt strings that cannot
+    # be inferred from code structure alone. Each entry is a rule that must hold.
+    # Add a new entry whenever a prompt bug is discovered and fixed.
+
+    prompt_rules = [
+        # Sightseeing: one price (GYG or Viator) must be enough to enrich.
+        # Bug history: old wording "Both gyg_price and viator_price are 0 or missing"
+        # was ambiguous — Claude AI sometimes rejected rows with only one price.
+        # Fixed wording explicitly allows single-price rows.
+        (
+            r'ONLY gyg_price.*?is VALID',
+            'enrichSightseeing prompt must explicitly allow GYG-only rows as valid '
+            '(old wording was ambiguous — caused single-price rows to error)'
+        ),
+        (
+            r'ONLY viator_price.*?is VALID',
+            'enrichSightseeing prompt must explicitly allow Viator-only rows as valid'
+        ),
+    ]
+
+    sight_fn = re.search(r'function enrichSightseeing\s*\(.*?^function ', pipe_src, re.MULTILINE | re.DOTALL)
+    sight_src = sight_fn.group(0) if sight_fn else ''
+
+    if not sight_src:
+        warn('Could not locate enrichSightseeing() body to check prompt logic')
+    else:
+        for pattern, description in prompt_rules:
+            if re.search(pattern, sight_src, re.DOTALL):
+                ok(f'Prompt rule present: {description[:60]}...')
+            else:
+                fail(f'PROMPT RULE MISSING: {description}')
+
 # ── SUMMARY ────────────────────────────────────────────────────────────────────
 
 print()
