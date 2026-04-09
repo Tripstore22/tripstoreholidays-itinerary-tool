@@ -1228,3 +1228,177 @@ function showInputStats() {
   SpreadsheetApp.getUi().alert(msg);
 }
 
+
+// ================================================================
+// CODE CHECK — run this before every enrichment run.
+// Reads everything, writes nothing. Shows a full health report.
+// ================================================================
+
+function runCodeCheck() {
+  const ss  = SpreadsheetApp.getActiveSpreadsheet();
+  const out = [];
+  let   pass = true;
+
+  function ok(msg)   { out.push('✅ ' + msg); }
+  function warn(msg) { out.push('⚠️  ' + msg); }
+  function fail(msg) { out.push('❌ ' + msg); pass = false; }
+
+  out.push('═══ PIPELINE CODE CHECK ═══');
+  out.push('Run at: ' + new Date().toLocaleString());
+  out.push('');
+
+  // 1. API KEY
+  out.push('── 1. Script Properties ──');
+  const apiKey = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY');
+  if (!apiKey)                         fail('ANTHROPIC_API_KEY missing from Script Properties');
+  else if (!apiKey.startsWith('sk-ant-')) warn('ANTHROPIC_API_KEY set but format looks wrong');
+  else                                 ok('ANTHROPIC_API_KEY is set');
+  const email = PropertiesService.getScriptProperties().getProperty('SUMMARY_EMAIL');
+  if (!email) warn('SUMMARY_EMAIL not set — no summary email will be sent');
+  else        ok('SUMMARY_EMAIL = ' + email);
+  out.push('');
+
+  // 2. MASTER SHEETS
+  out.push('── 2. Master Sheets ──');
+  ['Hotels','Sightseeing','Trains','Transfers'].forEach(name => {
+    const ws = ss.getSheetByName(name);
+    if (!ws) fail('Master sheet missing: ' + name);
+    else     ok(name + ' exists (' + (ws.getLastRow()-1) + ' data rows)');
+  });
+  out.push('');
+
+  // 3. INPUT SHEET HEADERS vs COLUMN CONSTANTS
+  out.push('── 3. Column Map vs Actual Sheet Headers ──');
+  const CHECKS = [
+    {
+      sheetName: 'INPUT_Hotels',
+      col: HC,
+      expectedHeaders: ['City','Hotel Name','Star Rating','Hotel Category','Chain / Brand','Room Type',
+        'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec',
+        'Annual Avg (INR)','Added_By','Source_URL','Notes_Input',
+        'Pipeline_Status','Error_Reason','Processed_Date'],
+    },
+    {
+      sheetName: 'INPUT_Sightseeing',
+      col: SC,
+      expectedHeaders: ['City','Tour Name','Category','Rating','Duration',
+        'Avg Price','GYG Price (INR)','GYG Link','Viator Price (INR)','Viator Link','Attraction Tags',
+        'Added_By','Notes_Input','Pipeline_Status','Error_Reason','Processed_Date'],
+    },
+    {
+      sheetName: 'INPUT_Trains',
+      col: TC,
+      expectedHeaders: ['Mode','From City','To City','Stops','Stopover City',
+        'INR Price (₹)','May (€)','Aug (€)','Oct (€)','Dec (€)','Avg (€)',
+        'Added_By','Source_URL','Notes_Input','Pipeline_Status','Error_Reason','Processed_Date'],
+    },
+    {
+      sheetName: 'INPUT_Transfers',
+      col: XC,
+      expectedHeaders: ['City','Country','Airport Code','Airport / Hub Name','Zone','Transfer Type',
+        'Direction','From','To','Economy Sedan (1-way) ₹','Standard Van (1-way) ₹',
+        'Premium Van (1-way) ₹','Executive Sedan (1-way) ₹','Schedule','Notes','Data Status',
+        'Added_By','Source_URL','Pipeline_Status','Error_Reason','Processed_Date'],
+    },
+  ];
+
+  CHECKS.forEach(({ sheetName, col, expectedHeaders }) => {
+    const ws = ss.getSheetByName(sheetName);
+    if (!ws) { fail(sheetName + ': sheet does not exist'); return; }
+
+    const actualRaw    = ws.getRange(1, 1, 1, ws.getLastColumn()).getValues()[0];
+    const actualHeaders = actualRaw.map(h => (h||'').toString().trim());
+
+    // Check total column count
+    const actualCount   = actualHeaders.filter(h => h !== '').length;
+    const expectedCount = expectedHeaders.length;
+    if (actualCount !== expectedCount) {
+      fail(sheetName + ': ' + actualCount + ' columns in sheet, ' + expectedCount + ' in code — mismatch!');
+    } else {
+      ok(sheetName + ': ' + actualCount + ' columns match');
+    }
+
+    // Check STATUS column specifically — this is the most critical
+    const actualStatus = actualHeaders[col.STATUS - 1] || '(empty)';
+    if (actualStatus.toLowerCase().includes('status')) {
+      ok(sheetName + ': STATUS col ' + col.STATUS + ' = "' + actualStatus + '"');
+    } else {
+      fail(sheetName + ': STATUS col ' + col.STATUS + ' = "' + actualStatus + '" — WRONG! Column map is broken.');
+    }
+
+    // Check ERROR column
+    const actualErr = actualHeaders[col.ERR - 1] || '(empty)';
+    if (!actualErr.toLowerCase().includes('error') && !actualErr.toLowerCase().includes('reason')) {
+      fail(sheetName + ': ERROR col ' + col.ERR + ' = "' + actualErr + '" — WRONG!');
+    }
+
+    // Scan for status-word pollution in non-status columns (data columns only)
+    const statusWords = ['PENDING','PROCESSED','ERROR','DUPLICATE'];
+    const data = ws.getDataRange().getValues().slice(2); // skip header + banner
+    let polluted = 0;
+    data.forEach(row => {
+      for (let c = 0; c < col.STATUS - 2; c++) { // only check columns BEFORE status col
+        const v = (row[c] || '').toString().trim().toUpperCase();
+        if (statusWords.includes(v)) polluted++;
+      }
+    });
+    if (polluted > 0) {
+      fail(sheetName + ': ' + polluted + ' cell(s) with status words in wrong columns — run fixOldStatusData() first');
+    } else {
+      ok(sheetName + ': no status pollution in data columns');
+    }
+  });
+  out.push('');
+
+  // 4. ROW COUNTS BY STATUS
+  out.push('── 4. Current Row Counts ──');
+  CHECKS.forEach(({ sheetName, col }) => {
+    const ws = ss.getSheetByName(sheetName);
+    if (!ws) return;
+    const data   = ws.getDataRange().getValues().slice(2);
+    const counts = { PENDING:0, PROCESSED:0, ERROR:0, DUPLICATE:0, BLANK_STATUS:0, OTHER:0 };
+    data.forEach(row => {
+      if (!(row[0]||'').toString().trim()) return; // skip truly blank rows
+      const s = (row[col.STATUS-1]||'').toString().trim().toUpperCase();
+      if      (s === '')           counts.BLANK_STATUS++;
+      else if (counts[s] !== undefined) counts[s]++;
+      else                         counts.OTHER++;
+    });
+    const total = Object.values(counts).reduce((a,b) => a+b, 0);
+    out.push(sheetName + ' (' + total + ' rows):');
+    out.push('  PENDING=' + counts.PENDING + '  PROCESSED=' + counts.PROCESSED +
+             '  ERROR=' + counts.ERROR + '  DUPLICATE=' + counts.DUPLICATE +
+             '  BLANK=' + counts.BLANK_STATUS +
+             (counts.OTHER ? '  UNRECOGNISED=' + counts.OTHER : ''));
+    if (counts.PENDING === 0 && total > 0) warn('  → No PENDING rows — nothing new to enrich');
+    if (counts.BLANK_STATUS > 0)           warn('  → ' + counts.BLANK_STATUS + ' rows with blank status (will be treated as PENDING)');
+    if (counts.OTHER > 0)                  fail('  → ' + counts.OTHER + ' rows with unrecognised status value');
+  });
+  out.push('');
+
+  // 5. ARCHIVE SHEETS (just report, no action)
+  out.push('── 5. Archive Sheets ──');
+  ['Hotels','Sightseeing','Trains','Transfers'].forEach(type => {
+    const done = ss.getSheetByName('DONE_' + type);
+    const dupl = ss.getSheetByName('DUPL_' + type);
+    const doneRows = done ? Math.max(0, done.getLastRow()-1) : 0;
+    const duplRows = dupl ? Math.max(0, dupl.getLastRow()-1) : 0;
+    if (doneRows > 0 || duplRows > 0) {
+      out.push(type + ': DONE_' + type + '=' + doneRows + ' rows, DUPL_' + type + '=' + duplRows + ' rows (run archiveAndClearInput when ready to clear input)');
+    } else {
+      out.push(type + ': no archive rows yet');
+    }
+  });
+  out.push('');
+
+  // 6. FINAL RESULT
+  out.push('═══ RESULT: ' + (pass ? '✅ ALL CHECKS PASSED — safe to run enrichment' : '❌ ISSUES FOUND — fix above BEFORE running enrichment') + ' ═══');
+
+  Logger.log(out.join('\n'));
+  try {
+    SpreadsheetApp.getUi().alert('Code Check', out.join('\n'), SpreadsheetApp.getUi().ButtonSet.OK);
+  } catch(e) {
+    // No UI available (triggered run) — log only
+  }
+}
+
