@@ -169,21 +169,26 @@ internal_calls = {c for c in calls_in_pipeline if c[0].islower() and len(c) > 4
 # Known builtins to ignore
 builtins = {'parseInt','parseFloat','isNaN','String','Array','Object','Math','Date',
             'JSON','Logger','SpreadsheetApp','PropertiesService','UrlFetchApp',
-            'Utilities','ScriptApp','console','slice','split','join','map','filter',
+            'Utilities','ScriptApp','console','GmailApp','MailApp',
+            'slice','split','join','map','filter','catch','switch','while',
             'forEach','reduce','push','indexOf','includes','toLowerCase','toUpperCase',
-            'toString','trim','replace','match','startsWith','endsWith','round',
-            'floor','ceil','max','min','abs','keys','values','entries','fromCharCode',
-            'computeDigest','sleep','fetch','appendRow','getValues','setValues',
-            'setValue','getValue','getRange','getLastRow','getLastColumn','getDataRange',
+            'toString','trim','replace','match','startsWith','endsWith',
+            'round','floor','ceil','max','min','abs','keys','values','entries',
+            'fromCharCode','computeDigest','sleep','fetch','repeat','padEnd','padStart',
+            'appendRow','getValues','setValues','setValue','getValue',
+            'getRange','getLastRow','getLastColumn','getDataRange',
             'setBackground','setFontColor','setFontWeight','setFrozenRows','setWrap',
             'setDataValidation','insertSheet','getSheetByName','newDataValidation',
             'requireValueInList','setAllowInvalid','build','getActiveSpreadsheet',
-            'getScriptProperties','getProperty','setProperty','newTrigger','timeBased',
-            'atHour','everyDays','create','getProjectTriggers','deleteTrigger',
-            'deleteRow','deleteRows','merge','setFontStyle','setFontSize','setFontFamily',
+            'getScriptProperties','getProperty','setProperty',
+            'newTrigger','timeBased','atHour','everyDays','create',
+            'getProjectTriggers','deleteTrigger','deleteRow','deleteRows',
+            'merge','setFontStyle','setFontSize','setFontFamily',
             'setHorizontalAlignment','setVerticalAlignment','setRowHeight','insertRowBefore',
-            'getContentText','getResponseCode','parse','stringify','toISOString',
-            'toLocaleDateString','toLocaleString','getTime','charAt','slice'}
+            'getContentText','getResponseCode','parse','stringify',
+            'toISOString','toLocaleDateString','toLocaleString','toDateString',
+            'getTime','charAt','openById','sendEmail','alert','toast',
+            'ButtonSet','getUi','isArray','available'}
 
 missing_fns = []
 for call in internal_calls:
