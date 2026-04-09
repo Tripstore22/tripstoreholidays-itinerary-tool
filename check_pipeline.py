@@ -11,6 +11,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 PIPELINE = os.path.join(ROOT, 'Pipeline.gs')
 AUTOMATION = os.path.join(ROOT, 'Automation.gs')
 CODE_GS = os.path.join(ROOT, 'Code.gs')
+QUOTE_GS = os.path.join(ROOT, 'Quote_Intelligence.gs')
 
 errors = []
 warnings = []
