@@ -2757,19 +2757,17 @@ function triggerExport(type, btnEl) {
     }, 50);
 }
 
-// AUTO-SAVE before any export action
-async function autoSaveThenDo(action) {
+// AUTO-SAVE before any export action — fire-and-forget, never blocks the export
+function autoSaveThenDo(action) {
     if (currentPlan.length > 0) {
         try {
-            const cfg     = getTravelConfigs();
+            const cfg      = getTravelConfigs();
             const nameRaw  = document.getElementById('paxNameInput').value.trim();
-            const cfg2     = getTravelConfigs();
             const firstCity = selectedRoute.length > 0 ? selectedRoute[0].city : 'Draft';
             const firstDate = selectedRoute.length > 0
                 ? new Date(selectedRoute[0].cin).toLocaleDateString('en-GB', {day:'2-digit', month:'short'}).replace(' ','')
                 : new Date().toLocaleDateString('en-GB', {day:'2-digit', month:'short'}).replace(' ','');
-            const base    = nameRaw || firstCity;
-            const paxName = `${base} x${cfg2.totalPax}_${firstDate}`;
+            const paxName = `${nameRaw || firstCity} x${cfg.totalPax}_${firstDate}`;
             const payload = {
                 adults:      cfg.adults,
                 children:    cfg.children,
@@ -2781,11 +2779,10 @@ async function autoSaveThenDo(action) {
                 vehicleType: document.getElementById('vehicleTypeSelect')?.value || 'auto',
                 selectedRoute, currentPlan, selectedTransfers, selectedIntercity
             };
-            await fetch(API_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'saveItinerary', paxName, payload })
-            });
-        } catch(e) { /* silent — don't block the export */ }
+            // Fire and forget — do NOT await. Export starts immediately.
+            fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'saveItinerary', paxName, payload }) })
+                .catch(() => {/* silent */});
+        } catch(e) { /* silent */ }
     }
     action();
 }
