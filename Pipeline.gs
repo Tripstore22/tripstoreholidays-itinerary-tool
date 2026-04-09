@@ -904,49 +904,74 @@ function _archiveAndClear(ss, inputSheet, col, type) {
 function fixOldStatusData() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  // Hotels: old Automation.gs wrote STATUS to col 9, ERROR to col 10
-  // (these land in Jan/Feb price columns after Pipeline.gs added month cols)
-  _fixOldCols(ss, CFG.INPUT.HOTELS, 9, 10, HC.STATUS, HC.ERR, HC.TOTAL);
+  // Hotels: old Automation.gs wrote STATUS to col 9 (now Jan), ERROR to col 10 (now Apr)
+  // Process INPUT, DONE, and DUPL sheets — all may have pollution
+  _fixOldCols(ss, CFG.INPUT.HOTELS, 9, 10, HC.STATUS, HC.ERR, HC.TOTAL, true);
+  _fixOldCols(ss, 'DONE_Hotels',    9, 10, HC.STATUS, HC.ERR, HC.TOTAL, false);
+  _fixOldCols(ss, 'DUPL_Hotels',    9, 10, HC.STATUS, HC.ERR, HC.TOTAL, false);
 
   // Sightseeing: old Automation.gs wrote STATUS to col 10 (Viator Link), ERROR to col 11 (Attraction Tags)
-  _fixOldCols(ss, CFG.INPUT.SIGHTSEEING, 10, 11, SC.STATUS, SC.ERR, SC.TOTAL);
+  _fixOldCols(ss, CFG.INPUT.SIGHTSEEING, 10, 11, SC.STATUS, SC.ERR, SC.TOTAL, true);
+  _fixOldCols(ss, 'DONE_Sightseeing',    10, 11, SC.STATUS, SC.ERR, SC.TOTAL, false);
+  _fixOldCols(ss, 'DUPL_Sightseeing',    10, 11, SC.STATUS, SC.ERR, SC.TOTAL, false);
 
-  Logger.log('✅ Migration complete. Run runMidnightEnrichment() to re-process any rows reset to PENDING.');
+  Logger.log('✅ fixOldStatusData complete. Run runMidnightEnrichment() to process remaining PENDING rows.');
 }
 
-function _fixOldCols(ss, sheetName, oldStatusCol, oldErrCol, newStatusCol, newErrCol, totalCols) {
+// hasBanner = true for INPUT sheets (row 1=header, row 2=banner, data from row 3)
+//           = false for DONE/DUPL sheets (row 1=header, data from row 2)
+function _fixOldCols(ss, sheetName, oldStatusCol, oldErrCol, newStatusCol, newErrCol, totalCols, hasBanner) {
   const ws = ss.getSheetByName(sheetName);
-  if (!ws) { Logger.log('Sheet not found: ' + sheetName); return; }
+  if (!ws) { Logger.log('Sheet not found: ' + sheetName + ' — skipping'); return; }
 
-  const data = ws.getDataRange().getValues();
-  let fixed = 0;
+  const data      = ws.getDataRange().getValues();
+  const startIdx  = hasBanner ? 2 : 1; // 0-based: skip header(+banner)
   const validStatuses = ['PENDING', 'PROCESSED', 'DUPLICATE', 'ERROR'];
+  let migrated = 0, cleaned = 0;
 
-  for (let i = 2; i < data.length; i++) { // skip header + banner
+  for (let i = startIdx; i < data.length; i++) {
     const row = data[i];
-    if (!row[0]) continue;
+    if (!row[0]) continue; // skip blank rows
 
     const newStatus = (row[newStatusCol - 1] || '').toString().trim();
-    const oldStatus = (row[oldStatusCol - 1] || '').toString().trim().toUpperCase();
+    const oldVal    = (row[oldStatusCol - 1] || '').toString().trim();
+    const oldUpper  = oldVal.toUpperCase();
+    const isStatusWord = validStatuses.includes(oldUpper) ||
+                         oldUpper.startsWith('DUPLICATE:') ||
+                         oldUpper.startsWith('INVALID:') ||
+                         oldUpper.startsWith('MISSING:') ||
+                         oldUpper.startsWith('CLAUDE API') ||
+                         oldUpper.startsWith('ALL MONTHLY') ||
+                         oldUpper.startsWith('BOTH GYG') ||
+                         oldUpper.startsWith('ALREADY EXISTS') ||
+                         oldUpper.startsWith('CITY FIELD') ||
+                         oldUpper.startsWith('ADDED TO MASTER');
 
-    // Migrate only if new status column is empty AND old column has a valid status value
-    if (!newStatus && validStatuses.includes(oldStatus)) {
-      const sheetRow = i + 1;
-      ws.getRange(sheetRow, newStatusCol).setValue(oldStatus);
-      ws.getRange(sheetRow, newErrCol).setValue(row[oldErrCol - 1] || '');
-      ws.getRange(sheetRow, oldStatusCol).setValue(''); // clear old
-      ws.getRange(sheetRow, oldErrCol).setValue('');   // clear old
+    if (!oldVal || !isStatusWord) continue; // nothing to fix
 
-      const colorMap = {
-        'PROCESSED': CFG.COLOR.PROCESSED,
-        'DUPLICATE': CFG.COLOR.DUPLICATE,
-        'ERROR':     CFG.COLOR.ERROR,
-      };
-      ws.getRange(sheetRow, 1, 1, totalCols).setBackground(colorMap[oldStatus] || CFG.COLOR.PENDING);
-      fixed++;
+    const sheetRow = i + 1; // 1-based
+
+    if (!newStatus) {
+      // MIGRATE: new status col is empty — move old status there
+      const canonicalStatus = validStatuses.includes(oldUpper) ? oldUpper : 'ERROR';
+      ws.getRange(sheetRow, newStatusCol).setValue(canonicalStatus);
+      ws.getRange(sheetRow, newErrCol).setValue(row[oldErrCol - 1] || oldVal);
+      ws.getRange(sheetRow, oldStatusCol).clearContent();
+      ws.getRange(sheetRow, oldErrCol).clearContent();
+      const colorMap = { PROCESSED: CFG.COLOR.PROCESSED, DUPLICATE: CFG.COLOR.DUPLICATE, ERROR: CFG.COLOR.ERROR };
+      ws.getRange(sheetRow, 1, 1, totalCols).setBackground(colorMap[canonicalStatus] || CFG.COLOR.PENDING);
+      migrated++;
+    } else {
+      // CLEAN: new status col already set — old col has leftover pollution, just clear it
+      ws.getRange(sheetRow, oldStatusCol).clearContent();
+      const oldErrVal = (row[oldErrCol - 1] || '').toString().trim();
+      if (oldErrVal && (validStatuses.includes(oldErrVal.toUpperCase()) || oldErrVal.toUpperCase().startsWith('DUPLICATE:') || oldErrVal.toUpperCase().startsWith('INVALID:'))) {
+        ws.getRange(sheetRow, oldErrCol).clearContent();
+      }
+      cleaned++;
     }
   }
-  Logger.log(sheetName + ': fixed ' + fixed + ' rows');
+  Logger.log(sheetName + ': migrated=' + migrated + ', cleaned=' + cleaned);
 }
 
 
