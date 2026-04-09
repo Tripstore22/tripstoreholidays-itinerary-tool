@@ -1110,8 +1110,10 @@ function _buildInputSheet(ss, name, headers, statusColIndex, infoText) {
   headerRange.setWrap(true);
   ws.setRowHeight(1, 36);
 
-  // Info banner row
-  ws.insertRowBefore(2);
+  // Info banner row — only insert if row 2 is not already a merged banner
+  const existingRow2 = ws.getRange(2, 1).getValue().toString();
+  const hasBannerAlready = existingRow2.startsWith('ℹ️');
+  if (!hasBannerAlready) ws.insertRowBefore(2);
   const bannerRange = ws.getRange(2, 1, 1, headers.length);
   bannerRange.merge();
   bannerRange.setValue(`ℹ️  ${infoText}`);
