@@ -597,6 +597,7 @@ function repairTrainMonthlyPrices() {
 // ================================================================
 
 function enrichTransfers(pending) {
+  if (!pending || !pending.length) throw new Error('enrichTransfers is an internal function — run runMidnightEnrichment() instead.');
   const input = pending.map((r, idx) => ({
     idx,
     city:        r.data[XC.CITY-1]        || '',
