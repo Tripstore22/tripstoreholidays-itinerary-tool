@@ -2846,7 +2846,7 @@ async function downloadPDF() {
             }
         });
         const { jsPDF } = window.jspdf;
-        const imgData  = canvas.toDataURL('image/jpeg', 0.95);
+        const imgData  = canvas.toDataURL('image/jpeg', 0.90);
         const pdfWidth = 210;
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
         const pdf = new jsPDF('p', 'mm', [pdfWidth, pdfHeight]);
