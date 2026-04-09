@@ -368,7 +368,7 @@ VALIDATE — set valid=false if:
 - hotel_name is empty, test data, or gibberish
 - star_rating is missing or not recognisable as 1-5 stars
 - All monthly prices are 0 (at least 4 months must be provided)
-- City is not a real European location
+- City is not a real location
 
 ENRICH (only if valid=true):
 - Standardise star_rating to emoji format: ⭐ ⭐⭐ ⭐⭐⭐ ⭐⭐⭐⭐ ⭐⭐⭐⭐⭐
