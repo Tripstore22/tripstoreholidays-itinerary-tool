@@ -770,11 +770,73 @@ function appendToLog(ss, sheetName, dataType, row, reason) {
 }
 
 // ================================================================
-// SECTION 11b — ARCHIVE + CLEAR INPUT SHEET
-// After each run: PROCESSED and DUPLICATE rows are moved to
-// DONE_[type] and DUPL_[type] archive sheets, then deleted from input.
-// ERROR rows remain in input for the team to fix and re-run.
+// SECTION 11b — ARCHIVE + CLEAR INPUT SHEET (MANUAL)
+// Run archiveAndClearInput() ONLY after you have reviewed the results
+// and are happy to clear PROCESSED and DUPLICATE rows from input.
+// ERROR rows always stay in input for the team to fix.
 // ================================================================
+
+/**
+ * RESTORE — run this once if data was accidentally cleared from an input sheet.
+ * Copies all rows from DONE_[type] and DUPL_[type] back to the input sheet.
+ * type = 'Hotels' | 'Sightseeing' | 'Trains' | 'Transfers'
+ */
+function restoreFromDone() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const types = [
+    { type: 'Hotels',      inputName: CFG.INPUT.HOTELS,      col: HC },
+    { type: 'Sightseeing', inputName: CFG.INPUT.SIGHTSEEING, col: SC },
+    { type: 'Trains',      inputName: CFG.INPUT.TRAINS,      col: TC },
+    { type: 'Transfers',   inputName: CFG.INPUT.TRANSFERS,   col: XC },
+  ];
+
+  for (const { type, inputName, col } of types) {
+    const inputSheet = ss.getSheetByName(inputName);
+    const doneSheet  = ss.getSheetByName('DONE_' + type);
+    const duplSheet  = ss.getSheetByName('DUPL_' + type);
+
+    if (!inputSheet) { Logger.log('Input sheet not found: ' + inputName); continue; }
+
+    let restored = 0;
+
+    for (const archSheet of [doneSheet, duplSheet]) {
+      if (!archSheet) continue;
+      const data = archSheet.getDataRange().getValues();
+      for (let i = 1; i < data.length; i++) { // skip header row
+        if (!data[i][0]) continue;
+        inputSheet.appendRow(data[i]);
+        restored++;
+      }
+      // Clear archive sheet (keep header)
+      if (archSheet.getLastRow() > 1) {
+        archSheet.deleteRows(2, archSheet.getLastRow() - 1);
+      }
+    }
+
+    Logger.log(type + ': restored ' + restored + ' rows to ' + inputName);
+  }
+
+  Logger.log('✅ Restore complete. Check your input sheets — all rows are back.');
+}
+
+/**
+ * MANUAL ARCHIVE — run this when you are satisfied with the pipeline results
+ * and want to clear PROCESSED and DUPLICATE rows from the input sheet.
+ * PROCESSED → DONE_[type], DUPLICATE → DUPL_[type], ERROR rows stay.
+ */
+function archiveAndClearInput() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const types = [
+    { type: 'hotels',      inputSheet: ss.getSheetByName(CFG.INPUT.HOTELS),      col: HC },
+    { type: 'sightseeing', inputSheet: ss.getSheetByName(CFG.INPUT.SIGHTSEEING), col: SC },
+    { type: 'trains',      inputSheet: ss.getSheetByName(CFG.INPUT.TRAINS),      col: TC },
+    { type: 'transfers',   inputSheet: ss.getSheetByName(CFG.INPUT.TRANSFERS),   col: XC },
+  ];
+  for (const { type, inputSheet, col } of types) {
+    if (inputSheet) _archiveAndClear(ss, inputSheet, col, type);
+  }
+  Logger.log('✅ Archive complete. Check DONE_* and DUPL_* tabs.');
+}
 
 function _archiveAndClear(ss, inputSheet, col, type) {
   const typePretty = type.charAt(0).toUpperCase() + type.slice(1);
