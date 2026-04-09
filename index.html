@@ -393,6 +393,13 @@
                         </div>
                     </div>
 
+                    <!-- Export Buttons (after terms, screen only) -->
+                    <div class="mt-6 no-print flex gap-3 justify-end">
+                        <button onclick="autoSaveThenDo(()=>window.print())" style="background:#334155;color:#fff;padding:8px 20px;border-radius:6px;font-weight:700;font-size:11px;text-transform:uppercase;border:none;cursor:pointer;">🖨 Print</button>
+                        <button onclick="autoSaveThenDo(downloadPDF)" style="background:#ea580c;color:#fff;padding:8px 20px;border-radius:6px;font-weight:700;font-size:11px;text-transform:uppercase;border:none;cursor:pointer;">📄 PDF</button>
+                        <button onclick="autoSaveThenDo(downloadExcel)" style="background:#16a34a;color:#fff;padding:8px 20px;border-radius:6px;font-weight:700;font-size:11px;text-transform:uppercase;border:none;cursor:pointer;">📊 Excel</button>
+                    </div>
+
                     <!-- Internal Profitability (screen only) -->
                     <div class="mt-12 pt-6 border-t border-dashed no-print">
                         <h3 class="text-[9px] font-bold text-slate-400 uppercase mb-3 tracking-widest">Profitability Analysis (Internal)</h3>
@@ -1140,11 +1147,14 @@ function addCityToRoute() {
 }
 
 function renderRouteInputs() {
-    document.getElementById('routeList').innerHTML = selectedRoute.map(r => `
-        <div class="flex justify-between items-center bg-white p-2 rounded text-[10px] border">
-            <span><b>${r.city}</b> (${r.nights}N)</span>
-            <button onclick="removeRoute(${r.id})" class="text-red-500 font-bold px-2">✕</button>
-        </div>`).join('');
+    document.getElementById('routeList').innerHTML = selectedRoute.map(r => {
+        const fmt = d => d ? new Date(d).toLocaleDateString('en-GB', {day:'2-digit', month:'short'}) : '';
+        const dates = (r.cin && r.cout) ? fmt(r.cin) + ' – ' + fmt(r.cout) + ', ' : '';
+        return '<div class="flex justify-between items-center bg-white p-2 rounded text-[10px] border">' +
+            '<span><b>' + r.city + '</b> (' + dates + r.nights + 'N)</span>' +
+            '<button onclick="removeRoute(' + r.id + ')" class="text-red-500 font-bold px-2">✕</button>' +
+            '</div>';
+    }).join('');
     suggestBudgets();
 }
 
