@@ -914,10 +914,10 @@ function fixOldStatusData() {
   _fixOldCols(ss, 'DONE_Sightseeing',    10, 11, SC.STATUS, SC.ERR, SC.TOTAL, false);
   _fixOldCols(ss, 'DUPL_Sightseeing',    10, 11, SC.STATUS, SC.ERR, SC.TOTAL, false);
 
-  // Trains: old Automation.gs wrote STATUS to col 7 (now May €), ERROR to col 8 (now Aug €)
-  _fixOldCols(ss, CFG.INPUT.TRAINS, 7, 8, TC.STATUS, TC.ERR, TC.TOTAL, true);
-  _fixOldCols(ss, 'DONE_Trains',    7, 8, TC.STATUS, TC.ERR, TC.TOTAL, false);
-  _fixOldCols(ss, 'DUPL_Trains',    7, 8, TC.STATUS, TC.ERR, TC.TOTAL, false);
+  // Trains: old Automation.gs wrote STATUS to col 8 (now Aug €), ERROR to col 9 (now Oct €)
+  _fixOldCols(ss, CFG.INPUT.TRAINS, 8, 9, TC.STATUS, TC.ERR, TC.TOTAL, true);
+  _fixOldCols(ss, 'DONE_Trains',    8, 9, TC.STATUS, TC.ERR, TC.TOTAL, false);
+  _fixOldCols(ss, 'DUPL_Trains',    8, 9, TC.STATUS, TC.ERR, TC.TOTAL, false);
 
   // Transfers: old Automation.gs wrote STATUS to col 13 (now Executive Sedan), ERROR to col 14 (now Schedule)
   _fixOldCols(ss, CFG.INPUT.TRANSFERS, 13, 14, XC.STATUS, XC.ERR, XC.TOTAL, true);
