@@ -555,6 +555,14 @@ let selectedIntercity  = [];
 // =============================================================
 // VEHICLE HELPERS
 // =============================================================
+// Convert ⭐ emoji rating string to solid ★ characters that respect CSS colour
+function renderStars(ratingStr) {
+    if (!ratingStr) return '';
+    const count = (ratingStr.match(/⭐/g) || []).length;
+    if (!count) return ratingStr; // pass through if no emoji found
+    return '★'.repeat(count);
+}
+
 function getVehicleCount(paxCount) {
     // Sedan fits up to 3 | Van fits up to 7
     // Auto logic: <4 pax → sedan(s), ≥4 pax → van(s)
