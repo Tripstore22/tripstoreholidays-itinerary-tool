@@ -455,7 +455,7 @@ Return ONLY a valid JSON array. No explanation, no markdown, no extra text. Keep
 Input:
 ${JSON.stringify(rows, null, 2)}`;
 
-  const response = callClaudeAPI(prompt, log);
+  const response = callClaudeAPI_LEGACY(prompt, log);
   if (!response) return null;
 
   try {
@@ -488,7 +488,7 @@ Return ONLY a valid JSON array. No explanation, no markdown, no extra text. Keep
 Input:
 ${JSON.stringify(rows, null, 2)}`;
 
-  const response = callClaudeAPI(prompt, log);
+  const response = callClaudeAPI_LEGACY(prompt, log);
   if (!response) return null;
 
   try {
