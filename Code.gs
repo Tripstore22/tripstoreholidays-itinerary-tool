@@ -263,17 +263,60 @@ function checkLogin(user, pass) {
   const sheet = ss.getSheetByName('Users');
   if (!sheet) return ContentService.createTextOutput('INVALID');
 
-  const data = sheet.getDataRange().getValues();
+  const data       = sheet.getDataRange().getValues();
+  const hashedPass = hashPass(pass.trim());
 
   for (let i = 1; i < data.length; i++) {
     const dbUser = String(data[i][0]).trim().toLowerCase();
     const dbPass = String(data[i][1]).trim();
     const dbRole = String(data[i][2]).trim().toUpperCase();
 
-    if (dbUser === user.trim().toLowerCase() && dbPass === pass.trim()) {
+    // Accept hashed match OR plain-text match (migration path for existing users)
+    const passMatch = (dbPass === hashedPass) || (dbPass === pass.trim());
+
+    if (dbUser === user.trim().toLowerCase() && passMatch) {
       if (dbRole === 'PENDING') return ContentService.createTextOutput('PENDING_APPROVAL');
-      // Record last login timestamp in column I (index 8)
+
+      // Migrate plain-text password to hashed on first login after update
+      if (dbPass === pass.trim()) {
+        sheet.getRange(i + 1, 2).setValue(hashedPass);
+      }
+
+      // Record last login (col I = index 8) and generate session token (col J = index 9)
+      const token = Utilities.getUuid();
       sheet.getRange(i + 1, 9).setValue(new Date());
+      sheet.getRange(i + 1, 10).setValue(token);
+
+      if (dbRole === 'ADMIN') return ContentService.createTextOutput('ADMIN:' + token);
+      return ContentService.createTextOutput('USER:' + token);
+    }
+  }
+
+  return ContentService.createTextOutput('INVALID');
+}
+
+
+// ------------------------------------------------------------
+// AUTH — Validate session token (used by auto-login)
+// Returns role (ADMIN / USER) if token is valid, else INVALID
+// ------------------------------------------------------------
+
+function validateSession(user, token) {
+  if (!user || !token) return ContentService.createTextOutput('INVALID');
+
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('Users');
+  if (!sheet) return ContentService.createTextOutput('INVALID');
+
+  const data = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < data.length; i++) {
+    const dbUser  = String(data[i][0]).trim().toLowerCase();
+    const dbRole  = String(data[i][2]).trim().toUpperCase();
+    const dbToken = String(data[i][9] || '').trim(); // Column J
+
+    if (dbUser === user.trim().toLowerCase() && dbToken && dbToken === token) {
+      if (dbRole === 'PENDING') return ContentService.createTextOutput('INVALID');
       if (dbRole === 'ADMIN')   return ContentService.createTextOutput('ADMIN');
       return ContentService.createTextOutput('USER');
     }
