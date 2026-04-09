@@ -3280,7 +3280,7 @@ async function loadDataDashboard(force = false) {
     const topTags = [...inv.sights].sort((a,b)=>b.uniqueTags-a.uniqueTags).slice(0,10);
     const maxTags = topTags[0]?.uniqueTags || 1;
 
-    el.innerHTML = `
+    const _ddMain = `
     <!-- KPIs -->
     <div class="db-kpi-grid">
       <div class="db-kpi db-kpi-blue"><div class="dk-icon">🏨</div><div class="dk-label">Total Hotels Listed</div><div class="dk-value">${totalHotels}</div><div class="dk-sub">Across ${hotelCities} cities</div></div>
