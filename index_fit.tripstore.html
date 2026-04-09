@@ -2798,7 +2798,7 @@ async function downloadPDF() {
     showToast("Generating PDF...");
     try {
         const canvas = await html2canvas(element, {
-            scale: 2, useCORS: true, allowTaint: true, backgroundColor: "#ffffff",
+            scale: 1.5, useCORS: true, allowTaint: true, backgroundColor: "#ffffff",
             ignoreElements: (el) => el.id === 'toast-container' || el.id === 'undo-bar' || el.classList.contains('toast'),
             onclone: (clonedDoc) => {
                 // Hide toast in clone
