@@ -2999,8 +2999,12 @@ function switchAdminTab(tab) {
 }
 
 // ── QUOTE DASHBOARD ──────────────────────────────────────────
-async function loadQuoteDashboard() {
+async function loadQuoteDashboard(force = false) {
     const el = document.getElementById('quoteDashContent');
+    if (_quoteCache && !force) {
+        el.innerHTML = _ddRefreshBar('quote') + _quoteCache.mainHtml;
+        return;
+    }
     el.innerHTML = '<div style="text-align:center;padding:60px;color:#94a3b8;"><div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:dashSpin .8s linear infinite;margin:0 auto 12px;"></div>Loading quotes...</div>';
 
     let Q = [];
