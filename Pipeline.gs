@@ -992,6 +992,11 @@ function setupSheets() {
   _buildLogSheet(ss, CFG.LOG.DUPLICATES, 'e67e22', ['Logged_At','Data_Type','City / Route','Name','Duplicate_Reason','Row_Data']);
   _buildLogSheet(ss, CFG.LOG.AUDIT,      '2c3e50', ['Timestamp','Event']);
 
+  // Archive sheets — DONE = processed rows, DUPL = duplicate rows (created on first run if not exists)
+  // These are created automatically by _archiveAndClear() on first run, so no action needed here.
+  // Listed for reference: DONE_Hotels, DONE_Sightseeing, DONE_Trains, DONE_Transfers
+  //                       DUPL_Hotels, DUPL_Sightseeing, DUPL_Trains, DUPL_Transfers
+
   Logger.log('✅ Setup complete! All INPUT and LOG tabs have been prepared. Next: run setupTrigger() to activate the midnight automation.');
 }
 
