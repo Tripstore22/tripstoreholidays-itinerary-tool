@@ -31,15 +31,43 @@ function logQuote(paxName, data) {
   const logSheet = ss.getSheetByName('Quote_Log');
 
   if (!logSheet) {
-    // Auto-create if missing
     setupQuoteLog();
-    return logQuote(paxName, data); // retry
+    return logQuote(paxName, data); // retry after creating sheet
   }
 
   try {
     if (!data || !paxName) return;
     const row = buildQuoteLogRow(paxName, data);
     if (!row || !row.length) return;
+
+    // ── SMART DEDUP ──────────────────────────────────────────────────
+    // Prevents duplicate entries on repeated save / print / PDF of the
+    // same itinerary, but still logs a new entry when a hotel, sight or
+    // transfer swap meaningfully changes the cost (variant tracking).
+    //
+    // Rule: skip if the new Grand Total is within 2% AND within ₹1,000
+    //       of the last logged entry for this paxName.
+    //       Log whenever the cost moves beyond either threshold.
+    const newGrandTotal = row[19]; // index 19 = Grand Total
+    const allRows = logSheet.getDataRange().getValues();
+    if (allRows.length > 1) {
+      const paxLower = paxName.trim().toLowerCase();
+      let lastGrandTotal = null;
+      for (let i = 1; i < allRows.length; i++) {
+        // col C (index 2) = Pax Name in the current schema
+        if (String(allRows[i][2] || '').trim().toLowerCase() === paxLower) {
+          lastGrandTotal = Number(allRows[i][19]) || 0;
+          // Keep iterating — want the LAST (most recent) match
+        }
+      }
+      if (lastGrandTotal !== null) {
+        const diff    = Math.abs(newGrandTotal - lastGrandTotal);
+        const pctDiff = lastGrandTotal > 0 ? (diff / lastGrandTotal * 100) : 100;
+        if (pctDiff < 2 && diff < 1000) return; // No meaningful change — skip
+      }
+    }
+    // ── END SMART DEDUP ──────────────────────────────────────────────
+
     logSheet.appendRow(row);
     colorLogRow(logSheet, logSheet.getLastRow(), row);
   } catch (e) {
@@ -124,14 +152,16 @@ function buildQuoteLogRow(paxName, d) {
   if (d.gstMode === '18svc') gstPct = 18;
   else if (d.gstMode === '5pkg') gstPct = 5;
   else if (typeof d.gst === 'number') gstPct = d.gst; // legacy fallback
-  const gstAmt       = Math.round(markupAmt * gstPct / 100);
+  // GST base: 5pkg applies to full package; 18svc applies to markup only (matches frontend)
+  const gstBase      = d.gstMode === '5pkg' ? (subTotal + markupAmt) : markupAmt;
+  const gstAmt       = Math.round(gstBase * gstPct / 100);
   const grandTotal   = subTotal + markupAmt + gstAmt;
 
   // ── BUDGET & UTILISATION ──
   // Budget entered by agent = net component budgets (before markup/GST)
   // Compare against subTotal (net cost) so markup/GST don't inflate utilisation
   const budgetEntered = (Number(d.totalBudget) || 0)
-    || (Number(d.hotelBudget || 0) + Number(d.sightBudget || 0) + Number(d.transferBudget || 0))
+    || (Number(d.hotelBudget || 0) + Number(d.sightBudget || 0))
     || 0;
   const utilPct = budgetEntered > 0
     ? Math.round((subTotal / budgetEntered) * 100 * 10) / 10
@@ -288,6 +318,62 @@ function setupQuoteLog() {
 }
 
 
+// ── FIX HEADERS: run once to patch header row without clearing data ──
+// Use this instead of setupQuoteLog() when you want to keep existing rows.
+
+function fixQuoteLogHeaders() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ws = ss.getSheetByName('Quote_Log');
+  if (!ws) { Logger.log('Quote_Log not found — run setupQuoteLog() first'); return; }
+
+  const headers = [
+    'Quote ID',              // A
+    'Agent Name',            // B
+    'Pax Name',              // C
+    'Logged At',             // D
+    'Travel Month',          // E
+    'Adults',                // F
+    'Children',              // G
+    'Total PAX',             // H
+    'Cities',                // I
+    'Total Nights',          // J
+    'No. of Cities',         // K
+    'Hotel Net (₹)',         // L
+    'Sightseeing Net (₹)',   // M
+    'Transfers Net (₹)',     // N
+    'Trains Net (₹)',        // O
+    'Sub Total (₹)',         // P
+    'Markup %',              // Q
+    'Markup Amount (₹)',     // R
+    'GST Amount (₹)',        // S
+    'Grand Total (₹)',       // T
+    'Budget Entered (₹)',    // U
+    'Utilisation %',         // V
+    'Budget Flag',           // W
+    'Hotel Manual Overrides',// X
+    'Sightseeing Manual',    // Y
+    'Intercity Manual',      // Z
+    'Dominant Hotel Category',// AA
+    'Vehicle Type',          // AB
+    'Outcome',               // AC
+    'Notes',                 // AD
+  ];
+
+  const headerRange = ws.getRange(1, 1, 1, headers.length);
+  headerRange.setValues([headers]);
+  headerRange.setBackground('#1a3c5e');
+  headerRange.setFontColor('#ffffff');
+  headerRange.setFontWeight('bold');
+  headerRange.setFontSize(10);
+  headerRange.setFontFamily('Arial');
+  headerRange.setHorizontalAlignment('center');
+  headerRange.setVerticalAlignment('middle');
+  ws.setRowHeight(1, 36);
+
+  Logger.log('✅ Quote_Log headers updated. Run fixQuoteLogFormats() next to repair data formatting.');
+}
+
+
 // ── FIX FORMATS: run once to repair column formats on existing data ──
 
 function fixQuoteLogFormats() {
@@ -324,6 +410,76 @@ function fixQuoteLogFormats() {
   });
 
   Logger.log('✅ fixQuoteLogFormats complete. ' + dataRows + ' rows reformatted.');
+}
+
+
+// ── DEDUPLICATE: remove duplicate rows from existing Quote_Log data ──
+// Run ONCE after deployment to clean up rows created by the old bug
+// (logQuote was called on every save/update, not just the first save).
+//
+// Keeps: first entry + any entry where Grand Total changed by ≥2% OR ≥₹1,000
+//        vs the previous kept entry for the same Pax Name.
+// Deletes: all rows where Grand Total is within 2% AND ₹1,000 of the prior entry.
+//
+// Run order: deduplicateQuoteLog → fixQuoteLogHeaders → fixQuoteLogFormats
+
+function deduplicateQuoteLog() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ws = ss.getSheetByName('Quote_Log');
+  if (!ws) { Logger.log('Quote_Log not found'); return; }
+
+  const all = ws.getDataRange().getValues();
+  if (all.length <= 1) { Logger.log('No data rows found'); return; }
+
+  // Build a lightweight row map (skip header row at index 0)
+  // Schema: col C (index 2) = Pax Name, col D (index 3) = Logged At, col T (index 19) = Grand Total
+  const rows = all.slice(1).map((r, i) => ({
+    sheetRow:   i + 2,                                   // 1-based, +2 because header is row 1
+    paxKey:     String(r[2] || '').trim().toLowerCase(), // Pax Name, normalised
+    loggedAt:   r[3] instanceof Date ? r[3] : new Date(r[3] || 0),
+    grandTotal: Number(r[19]) || 0,
+  }));
+
+  // Group by paxName
+  const groups = {};
+  rows.forEach(r => {
+    if (!groups[r.paxKey]) groups[r.paxKey] = [];
+    groups[r.paxKey].push(r);
+  });
+
+  const toDelete = new Set();
+
+  Object.values(groups).forEach(group => {
+    // Sort chronologically (oldest first) so we keep earliest meaningful entries
+    group.sort((a, b) => a.loggedAt - b.loggedAt);
+
+    let lastKept = null;
+    group.forEach(r => {
+      if (lastKept === null) {
+        lastKept = r.grandTotal; // always keep the first entry
+        return;
+      }
+      const diff    = Math.abs(r.grandTotal - lastKept);
+      const pctDiff = lastKept > 0 ? (diff / lastKept * 100) : 100;
+      if (pctDiff < 2 && diff < 1000) {
+        toDelete.add(r.sheetRow); // duplicate — same cost, no meaningful variant
+      } else {
+        lastKept = r.grandTotal;  // meaningful variant — keep and update baseline
+      }
+    });
+  });
+
+  if (toDelete.size === 0) {
+    Logger.log('✅ Quote_Log is already clean — no duplicates found');
+    return;
+  }
+
+  // Delete rows from bottom to top so row indices stay valid
+  const sorted = [...toDelete].sort((a, b) => b - a);
+  sorted.forEach(rowNum => ws.deleteRow(rowNum));
+  SpreadsheetApp.flush();
+
+  Logger.log(`✅ Deduplication done — ${toDelete.size} duplicate rows removed. ${rows.length - toDelete.size} rows kept.`);
 }
 
 

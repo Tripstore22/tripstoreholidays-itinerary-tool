@@ -6,6 +6,10 @@
         "hooks": [
           {
             "type": "command",
+            "command": "cd \"/Users/Sumit/Desktop/Itinerary-Create\" && if echo \"$CLAUDE_TOOL_INPUT\" | grep -qE '\\.gs\"'; then echo '--- Running .gs code review ---' && python3 check_pipeline.py 2>&1 || true; fi"
+          },
+          {
+            "type": "command",
             "command": "cd \"/Users/Sumit/Desktop/Itinerary-Create\" && cp index_fit.tripstore.html index.html && git add -A && git commit -m \"Auto: Claude edit $(date '+%Y-%m-%d %H:%M')\" && git push origin v2"
           }
         ]

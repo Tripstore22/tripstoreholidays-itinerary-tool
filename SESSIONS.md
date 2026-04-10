@@ -1,5 +1,37 @@
 # Session Handoff
 
+## Latest Session — 2026-04-10
+
+### Completed — this session
+- Quote_Log bug fixes in Code.gs: `getQuoteLog()` column mappings fixed (all off by 1 after agentName was added)
+- `getMasterInventory()` cities column fixed: index 7 → 8
+- `saveItinerary()` — logQuote now called from both update + new-save paths (smart dedup handles it)
+- Quote_Intelligence.gs: smart dedup in `logQuote()` — skips if grand total within 2% AND ₹1,000 of last entry
+- Quote_Intelligence.gs: GST base fixed for `5pkg` mode — now uses `subTotal + markupAmt` (matches frontend)
+- Quote_Intelligence.gs: `transferBudget` removed from `budgetEntered` sum (was never in save payload)
+- New `fixQuoteLogHeaders()` function — patches header row without clearing data
+- New `deduplicateQuoteLog()` function — removes existing duplicate rows post-deployment
+- Post-deployment cleanup order documented: deduplicateQuoteLog → fixQuoteLogHeaders → fixQuoteLogFormats
+- Code review hook added to `.claude/settings.json` — auto-runs `check_pipeline.py` after every .gs edit
+- Node.js v24 installed via nvm
+- Sequential Thinking MCP server installed and configured in `~/.claude/settings.json`
+- Superpowers and Context7 plugins installed
+
+### Still Pending
+- **Restart Claude Code** to activate Sequential Thinking MCP, Superpowers, Context7 plugins
+- Copy updated **Code.gs** into Apps Script and redeploy
+- Copy updated **Quote_Intelligence.gs** into Apps Script
+- Run in Apps Script after deploy: `deduplicateQuoteLog()` → `fixQuoteLogHeaders()` → `fixQuoteLogFormats()`
+- Copy updated **Pipeline.gs** into Apps Script (prompt fixes + res.idx fix + 8192 token cap)
+- Trains master: manually delete rows 638, 639, 640, 642 (bad transfer/invalid route data)
+- Trains master rows 620-621: fix London-Liverpool INR (₹27,630 → ~₹4,400), clear monthly € cols, run `repairTrainMonthlyPrices()`
+- INPUT_Trains: delete rows with blank From City or blank To City
+- INPUT_Transfers: delete rows containing itinerary text (wrong data in wrong sheet)
+- After cleanup: run `resetErrorRows()` → `runMidnightEnrichment()` → `setupTrigger()` (once)
+- Run `archiveAndClearInput()` after reviewing enrichment results
+
+---
+
 ## Latest Session — 2026-04-09 (evening, continued)
 
 ### Completed — this session

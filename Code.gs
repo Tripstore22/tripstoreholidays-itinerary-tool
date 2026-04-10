@@ -429,7 +429,7 @@ function saveItinerary(paxName, payload) {
     if (String(data[i][0]).trim().toLowerCase() === paxName.trim().toLowerCase()) {
       sheet.getRange(i + 1, 2).setValue(payloadStr);
       sheet.getRange(i + 1, 3).setValue(now);
-      logQuote(paxName, payload);
+      logQuote(paxName, payload); // Smart dedup inside — only logs if financials changed meaningfully
       return ContentService.createTextOutput('Updated Successfully');
     }
   }
@@ -457,35 +457,36 @@ function getQuoteLog() {
   const result  = rows.slice(1)
     .filter(r => r[0]) // skip blank rows
     .map(r => ({
-      quoteId:      r[0]  || '',
-      paxName:      r[1]  || '',
-      loggedAt:     (function(v){ try { var d=new Date(v); return (!v||isNaN(d.getTime())) ? '' : d.toISOString().slice(0,10); } catch(e){ return ''; } })(r[2]),
-      travelMonth:  r[3]  || '',
-      adults:       r[4]  || 0,
-      children:     r[5]  || 0,
-      totalPax:     r[6]  || 0,
-      cities:       r[7]  || '',
-      totalNights:  r[8]  || 0,
-      numCities:    r[9]  || 0,
-      hotelNet:     r[10] || 0,
-      sightNet:     r[11] || 0,
-      transferNet:  r[12] || 0,
-      trainsNet:    r[13] || 0,
-      subTotal:     r[14] || 0,
-      markupPct:    r[15] || 0,
-      markupAmt:    r[16] || 0,
-      gstAmt:       r[17] || 0,
-      grandTotal:   r[18] || 0,
-      budgetEntered:r[19] || 0,
-      utilPct:      r[20] || '',
-      budgetFlag:   r[21] || '',
-      hotelsManual: r[22] || 0,
-      sightsManual: r[23] || 0,
-      intercityManual: r[24] || 0,
-      category:     r[25] || '',
-      vehicle:      r[26] || '',
-      outcome:      r[27] || 'Pending',
-      notes:        r[28] || '',
+      quoteId:        r[0]  || '',
+      agentName:      r[1]  || '',
+      paxName:        r[2]  || '',
+      loggedAt:       (function(v){ try { var d=new Date(v); return (!v||isNaN(d.getTime())) ? '' : d.toISOString().slice(0,10); } catch(e){ return ''; } })(r[3]),
+      travelMonth:    r[4]  || '',
+      adults:         r[5]  || 0,
+      children:       r[6]  || 0,
+      totalPax:       r[7]  || 0,
+      cities:         r[8]  || '',
+      totalNights:    r[9]  || 0,
+      numCities:      r[10] || 0,
+      hotelNet:       r[11] || 0,
+      sightNet:       r[12] || 0,
+      transferNet:    r[13] || 0,
+      trainsNet:      r[14] || 0,
+      subTotal:       r[15] || 0,
+      markupPct:      r[16] || 0,
+      markupAmt:      r[17] || 0,
+      gstAmt:         r[18] || 0,
+      grandTotal:     r[19] || 0,
+      budgetEntered:  r[20] || 0,
+      utilPct:        r[21] || '',
+      budgetFlag:     r[22] || '',
+      hotelsManual:   r[23] || 0,
+      sightsManual:   r[24] || 0,
+      intercityManual:r[25] || 0,
+      category:       r[26] || '',
+      vehicle:        r[27] || '',
+      outcome:        r[28] || 'Pending',
+      notes:          r[29] || '',
     }));
 
   return ContentService
@@ -797,7 +798,7 @@ function getMasterInventory() {
     var qrows = qSheet.getDataRange().getValues();
     for (var q = 1; q < qrows.length; q++) {
       if (!qrows[q][0]) continue;
-      var citiesStr = String(qrows[q][7] || '').trim();
+      var citiesStr = String(qrows[q][8] || '').trim(); // col I (index 8) = Cities
       if (!citiesStr) continue;
       citiesStr.split(',').forEach(function(c) {
         var cc = c.trim();
