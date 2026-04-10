@@ -622,3 +622,59 @@ function _mostCommon(arr) {
   arr.forEach(v => freq[v] = (freq[v] || 0) + 1);
   return Object.keys(freq).sort((a, b) => freq[b] - freq[a])[0];
 }
+
+
+// ── PRICING FACTOR: mirrors frontend getTravelConfigs() exactly ────
+// h.cost is stored per-room-per-night by the frontend.
+// Multiplying by pricingFactor gives the same hotel total shown in the PDF.
+
+function _calcPricingFactor(adults, children, manualRooms) {
+  adults   = Math.max(1, Number(adults)   || 1);
+  children = Math.max(0, Number(children) || 0);
+  const totalPeople  = adults + children;
+  const autoRooms    = Math.max(1, Math.ceil(adults / 3), Math.ceil(totalPeople / 4));
+  const roomsRequired = (manualRooms > 0) ? manualRooms : autoRooms;
+
+  const adultsPerRoom = [];
+  const base = Math.floor(adults / roomsRequired);
+  for (let i = 0; i < roomsRequired; i++) adultsPerRoom.push(base);
+  for (let i = 0; i < adults % roomsRequired; i++) adultsPerRoom[i]++;
+
+  let adultPF = 0, childPF = 0, remKids = children;
+
+  for (let r = 0; r < roomsRequired; r++) {
+    const A        = adultsPerRoom[r];
+    const baseRate = 1.0 + Math.max(0, A - 2) * 0.5;
+    const freeSlots = Math.max(0, 2 - A);
+    const childFree = Math.min(freeSlots, remKids);
+    remKids -= childFree;
+    const sharingBase = A + childFree;
+    const spp = sharingBase > 0 ? baseRate / sharingBase : baseRate;
+    adultPF += A * spp;
+    childPF += childFree * spp;
+    let occ = A + childFree;
+    if (remKids > 0 && occ < 4) { remKids--; occ++; childPF += 0.3; }
+    if (remKids > 0 && occ < 4) { remKids--; occ++; childPF += 0.5; }
+  }
+  while (remKids > 0) {
+    childPF += 0.3; remKids--;
+    if (remKids > 0) { childPF += 0.5; remKids--; }
+  }
+
+  return adultPF + childPF;
+}
+
+
+// ── FORMAT NEW ROW: explicitly set column formats after appendRow ──
+// Prevents new rows inheriting stale column formats from earlier sheet edits.
+
+function formatLogRow(sheet, rowNum) {
+  const inrFmt = '₹#,##0';
+  sheet.getRange(rowNum,  4, 1,  1).setNumberFormat('dd/mm/yyyy hh:mm'); // D: Logged At
+  sheet.getRange(rowNum,  6, 1,  3).setNumberFormat('0');                 // F-H: Adults, Children, PAX
+  sheet.getRange(rowNum, 10, 1,  2).setNumberFormat('0');                 // J-K: Nights, No. of Cities
+  sheet.getRange(rowNum, 12, 1,  5).setNumberFormat(inrFmt);             // L-P: Hotel Net → Sub Total
+  sheet.getRange(rowNum, 17, 1,  1).setNumberFormat('0');                 // Q: Markup %
+  sheet.getRange(rowNum, 18, 1,  4).setNumberFormat(inrFmt);             // R-U: Markup Amt → Budget Entered
+  sheet.getRange(rowNum, 22, 1,  1).setNumberFormat('0.0"%"');           // V: Utilisation %
+}
