@@ -1,6 +1,6 @@
 # Session Handoff
 
-## Latest Session — 2026-04-10 (continued)
+## Latest Session — 2026-04-10 (final)
 
 ### Completed — this session
 - `FIX_QUOTELOG` function (Temp.gs) — fixed all Quote_Log display issues in one shot:
@@ -11,17 +11,20 @@
   - Budget flag + row colour: recalculated (OVER / ✅ TARGET / NEAR / UNDER / No Budget)
 - Budget Entered root cause fixed in `index_fit.tripstore.html`: removed "Fix 1" block in `loadAndOpen` that was overwriting `hotelBudget` input with actual hotel cost on load
 - Quote_Intelligence.gs: Travel Month format changed to `mmm-yy` (e.g. "Apr-26")
+- Quote_Intelligence.gs full audit: fixed hotel net (missing pricingFactor), sightseeing net + train net (missing paxCount), formatLogRow for column format inheritance, Notes column width
+- index_fit.tripstore.html: added `roomsRequired` and `agentName` to save payload; restored `roomCountInput` on load
+- Utilisation % changed from Sub Total vs Budget → Grand Total vs Budget in both `buildQuoteLogRow` and `fixQuoteLogComplete` (Quote_Intelligence.gs)
+- Backup taken: all 4 key files copied to `/backups/` with timestamp 2026-04-10_1856
 
-### Still Pending
-- Copy updated **Code.gs** into Apps Script and redeploy
-- Copy updated **Quote_Intelligence.gs** into Apps Script and redeploy
-- Copy updated **Pipeline.gs** into Apps Script (prompt fixes + res.idx fix + 8192 token cap)
+### Still Pending (manual — no code changes needed)
+- Copy updated **Code.gs**, **Quote_Intelligence.gs**, **Pipeline.gs** into Apps Script and redeploy
+- Run `fixQuoteLogComplete()` to recompute all historical Util% rows with Grand Total formula
+- Re-save Nitika itinerary to log a fresh correct row
 - Trains master: manually delete rows 638, 639, 640, 642 (bad transfer/invalid route data)
 - Trains master rows 620-621: fix London-Liverpool INR (₹27,630 → ~₹4,400), clear monthly € cols, run `repairTrainMonthlyPrices()`
 - INPUT_Trains: delete rows with blank From City or blank To City
 - INPUT_Transfers: delete rows containing itinerary text (wrong data in wrong sheet)
 - After cleanup: run `resetErrorRows()` → `runMidnightEnrichment()` → `setupTrigger()` (once)
-- Run `archiveAndClearInput()` after reviewing enrichment results
 
 ---
 
