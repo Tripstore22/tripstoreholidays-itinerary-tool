@@ -71,6 +71,12 @@ function logQuote(paxName, data) {
     logSheet.appendRow(row);
     const newRowNum = logSheet.getLastRow();
     formatLogRow(logSheet, newRowNum);
+    // Fix Travel Month: Sheets auto-converts "May-26" → date serial on appendRow
+    const tmCell = logSheet.getRange(newRowNum, 5);
+    if (tmCell.getValue() instanceof Date) {
+      tmCell.setNumberFormat('@');
+      tmCell.setValue(row[4]); // row[4] = travelMonth string (E)
+    }
     colorLogRow(logSheet, newRowNum, row);
   } catch (e) {
     Logger.log('Quote log error (non-fatal): ' + e.message);
