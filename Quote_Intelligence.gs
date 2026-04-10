@@ -470,7 +470,7 @@ function fixQuoteLogComplete() {
   const bgColors = [];
 
   data.forEach(row => {
-    const subTotal      = Number(row[15]) || 0; // col P (0-based index 15)
+    const grandTotal    = Number(row[19]) || 0; // col T (0-based index 19)
     const budgetEntered = Number(row[20]) || 0; // col U (0-based index 20)
 
     let utilPct = '';
@@ -478,8 +478,8 @@ function fixQuoteLogComplete() {
     let bg      = '#ffffff';
 
     if (budgetEntered > 0) {
-      utilPct = Math.round((subTotal / budgetEntered) * 100 * 10) / 10;
-      if      (subTotal > budgetEntered) flag = 'OVER';
+      utilPct = Math.round((grandTotal / budgetEntered) * 100 * 10) / 10;
+      if      (grandTotal > budgetEntered) flag = 'OVER';
       else if (utilPct >= 95)            flag = '✅ TARGET';
       else if (utilPct >= 90)            flag = 'NEAR';
       else                               flag = 'UNDER';
