@@ -175,16 +175,15 @@ function buildQuoteLogRow(paxName, d) {
   const grandTotal   = subTotal + markupAmt + gstAmt;
 
   // ── BUDGET & UTILISATION ──
-  // Budget entered by agent = net component budgets (before markup/GST)
-  // Compare against subTotal (net cost) so markup/GST don't inflate utilisation
+  // Compare grandTotal (what client pays incl. markup/GST) vs entered budget
   const budgetEntered = (Number(d.totalBudget) || 0)
     || (Number(d.hotelBudget || 0) + Number(d.sightBudget || 0))
     || 0;
   const utilPct = budgetEntered > 0
-    ? Math.round((subTotal / budgetEntered) * 100 * 10) / 10
+    ? Math.round((grandTotal / budgetEntered) * 100 * 10) / 10
     : '';
   const overUnderFlag = budgetEntered > 0
-    ? (subTotal > budgetEntered ? 'OVER' : (utilPct >= 95 ? '✅ TARGET' : (utilPct >= 90 ? 'NEAR' : 'UNDER')))
+    ? (grandTotal > budgetEntered ? 'OVER' : (utilPct >= 95 ? '✅ TARGET' : (utilPct >= 90 ? 'NEAR' : 'UNDER')))
     : 'No Budget';
 
   // ── COMPOSITION ──
