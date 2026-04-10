@@ -299,7 +299,7 @@ function setupQuoteLog() {
     16:80, 17:120, 18:100, 19:120,
     20:120, 21:100, 22:110,
     23:150, 24:130, 25:110,
-    26:160, 27:120, 28:100, 29:150
+    26:160, 27:120, 28:100, 29:150, 30:200
   };
   Object.entries(widths).forEach(([col, w]) => {
     ws.setColumnWidth(parseInt(col), w);
