@@ -69,7 +69,9 @@ function logQuote(paxName, data) {
     // ── END SMART DEDUP ──────────────────────────────────────────────
 
     logSheet.appendRow(row);
-    colorLogRow(logSheet, logSheet.getLastRow(), row);
+    const newRowNum = logSheet.getLastRow();
+    formatLogRow(logSheet, newRowNum);
+    colorLogRow(logSheet, newRowNum, row);
   } catch (e) {
     Logger.log('Quote log error (non-fatal): ' + e.message);
     // Never let logging break the save operation
