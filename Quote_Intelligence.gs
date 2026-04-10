@@ -189,36 +189,36 @@ function buildQuoteLogRow(paxName, d) {
   const quoteId = 'Q-' + new Date().getTime().toString().slice(-8);
 
   return [
-    quoteId,                    // A: Quote ID
-    agentName,                  // B: Agent Name
-    paxName,                    // C: Pax Name
-    new Date(),                 // D: Logged At
-    travelMonth,                // E: Travel Month
-    adults,                     // F: Adults
-    children,                   // G: Children
-    paxCount,                   // H: Total PAX
-    cityStr,                    // H: Cities
-    totalNights,                // I: Total Nights
-    numCities,                  // J: No. of Cities
-    hotelNet,                   // K: Hotel Net (₹)
-    sightNet,                   // L: Sightseeing Net (₹)
-    transferNet,                // M: Transfers Net (₹)
-    intercityNet,               // N: Trains/Intercity Net (₹)
-    subTotal,                   // O: Sub Total (₹)
-    markupPct,                  // P: Markup %
-    markupAmt,                  // Q: Markup Amount (₹)
-    gstAmt,                     // R: GST Amount (₹)
-    grandTotal,                 // S: Grand Total (₹)
-    budgetEntered,              // T: Budget Entered (₹)
-    utilPct,                    // U: Utilisation %
-    overUnderFlag,              // V: Budget Flag
-    hotelsManual,               // W: Hotel Manual Overrides
-    sightsManual,               // X: Sightseeing Manual Adds
-    intercityManual,            // Y: Intercity Manual
-    avgCategory,                // Z: Dominant Hotel Category
-    vehicleMix,                 // AA: Dominant Vehicle Type
-    'Pending',                  // AB: Outcome (agent updates manually)
-    '',                         // AC: Notes (agent fills manually)
+    quoteId,                    //  A (index  0): Quote ID
+    agentName,                  //  B (index  1): Agent Name
+    paxName,                    //  C (index  2): Pax Name
+    new Date(),                 //  D (index  3): Logged At
+    travelMonth,                //  E (index  4): Travel Month
+    adults,                     //  F (index  5): Adults
+    children,                   //  G (index  6): Children
+    paxCount,                   //  H (index  7): Total PAX
+    cityStr,                    //  I (index  8): Cities
+    totalNights,                //  J (index  9): Total Nights
+    numCities,                  //  K (index 10): No. of Cities
+    hotelNet,                   //  L (index 11): Hotel Net (₹)
+    sightNet,                   //  M (index 12): Sightseeing Net (₹)
+    transferNet,                //  N (index 13): Transfers Net (₹)
+    intercityNet,               //  O (index 14): Trains/Intercity Net (₹)
+    subTotal,                   //  P (index 15): Sub Total (₹)
+    markupPct,                  //  Q (index 16): Markup %
+    markupAmt,                  //  R (index 17): Markup Amount (₹)
+    gstAmt,                     //  S (index 18): GST Amount (₹)
+    grandTotal,                 //  T (index 19): Grand Total (₹)
+    budgetEntered,              //  U (index 20): Budget Entered (₹)
+    utilPct,                    //  V (index 21): Utilisation %
+    overUnderFlag,              //  W (index 22): Budget Flag
+    hotelsManual,               //  X (index 23): Hotel Manual Overrides
+    sightsManual,               //  Y (index 24): Sightseeing Manual Adds
+    intercityManual,            //  Z (index 25): Intercity Manual
+    avgCategory,                // AA (index 26): Dominant Hotel Category
+    vehicleMix,                 // AB (index 27): Dominant Vehicle Type
+    'Pending',                  // AC (index 28): Outcome (agent updates manually)
+    '',                         // AD (index 29): Notes (agent fills manually)
   ];
 }
 
