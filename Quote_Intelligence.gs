@@ -684,6 +684,7 @@ function _calcPricingFactor(adults, children, manualRooms) {
 function formatLogRow(sheet, rowNum) {
   const inrFmt = '₹#,##0';
   sheet.getRange(rowNum,  4, 1,  1).setNumberFormat('dd/mm/yyyy hh:mm'); // D: Logged At
+  sheet.getRange(rowNum,  5, 1,  1).setNumberFormat('@');                 // E: Travel Month — force TEXT, prevents "May-26" → serial
   sheet.getRange(rowNum,  6, 1,  3).setNumberFormat('0');                 // F-H: Adults, Children, PAX
   sheet.getRange(rowNum, 10, 1,  2).setNumberFormat('0');                 // J-K: Nights, No. of Cities
   sheet.getRange(rowNum, 12, 1,  5).setNumberFormat(inrFmt);             // L-P: Hotel Net → Sub Total
