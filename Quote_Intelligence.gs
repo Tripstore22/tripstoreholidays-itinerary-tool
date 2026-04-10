@@ -598,7 +598,9 @@ function backfillQuoteLog() {
       const d = JSON.parse(jsonStr);
       const logRow = buildQuoteLogRow(paxName, d);
       logSheet.appendRow(logRow);
-      colorLogRow(logSheet, logSheet.getLastRow(), logRow);
+      const newRow = logSheet.getLastRow();
+      formatLogRow(logSheet, newRow);
+      colorLogRow(logSheet, newRow, logRow);
       imported++;
     } catch (e) {
       Logger.log('Backfill skip ' + paxName + ': ' + e.message);
