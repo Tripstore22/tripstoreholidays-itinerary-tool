@@ -375,42 +375,121 @@ function fixQuoteLogHeaders() {
 }
 
 
-// ── FIX FORMATS: run once to repair column formats on existing data ──
+// ── FIX FORMATS: kept for compatibility — calls fixQuoteLogComplete ──
 
 function fixQuoteLogFormats() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet()
-          || SpreadsheetApp.openById('1U3f6PhTpvbEO7JG937t2z9EW9dfB0gcIOUVA_GATIHM');
-  const ws = ss.getSheetByName('Quote_Log');
-  if (!ws) { Logger.log('Quote_Log not found'); return; }
+  fixQuoteLogComplete();
+}
 
-  const lastRow = Math.max(ws.getLastRow(), 2);
+
+// ── COMPLETE FIX: fixes headers, formats, utilisation and row colors ──
+// Run this ONCE after deployment. Replaces deduplicateQuoteLog +
+// fixQuoteLogHeaders + fixQuoteLogFormats — does everything in one shot.
+
+function fixQuoteLogComplete() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ws = ss.getSheetByName('Quote_Log');
+  if (!ws) { Logger.log('Quote_Log not found — run setupQuoteLog() first'); return; }
+
+  // ── STEP 1: Fix header row ──────────────────────────────────────
+  const headers = [
+    'Quote ID', 'Agent Name', 'Pax Name', 'Logged At', 'Travel Month',
+    'Adults', 'Children', 'Total PAX', 'Cities', 'Total Nights', 'No. of Cities',
+    'Hotel Net (₹)', 'Sightseeing Net (₹)', 'Transfers Net (₹)', 'Trains Net (₹)', 'Sub Total (₹)',
+    'Markup %', 'Markup Amount (₹)', 'GST Amount (₹)', 'Grand Total (₹)',
+    'Budget Entered (₹)', 'Utilisation %', 'Budget Flag',
+    'Hotel Manual Overrides', 'Sightseeing Manual', 'Intercity Manual',
+    'Dominant Hotel Category', 'Vehicle Type', 'Outcome', 'Notes'
+  ];
+  const hr = ws.getRange(1, 1, 1, 30);
+  hr.setValues([headers]);
+  hr.setBackground('#1a3c5e');
+  hr.setFontColor('#ffffff');
+  hr.setFontWeight('bold');
+  hr.setFontSize(10);
+  hr.setFontFamily('Arial');
+  hr.setHorizontalAlignment('center');
+  hr.setVerticalAlignment('middle');
+  ws.setRowHeight(1, 36);
+  ws.setFrozenRows(1);
+  ws.setFrozenColumns(3);
+
+  const lastRow = ws.getLastRow();
+  if (lastRow < 2) { Logger.log('No data rows to fix'); return; }
   const dataRows = lastRow - 1;
 
-  // 1. Clear all number formats on data range (rows 2 onwards)
-  ws.getRange(2, 1, dataRows, 30).setNumberFormat('@'); // reset to plain text first
+  // ── STEP 2: Reset ALL cell formats to plain ─────────────────────
   ws.getRange(2, 1, dataRows, 30).setNumberFormat('General');
 
-  // 2. Apply correct formats
+  // ── STEP 3: Apply correct formats column by column ──────────────
   const inrFmt = '₹#,##0';
-  ws.getRange('L2:P' + lastRow).setNumberFormat(inrFmt);
-  ws.getRange('R2:U' + lastRow).setNumberFormat(inrFmt);
-  ws.getRange('Q2:Q' + lastRow).setNumberFormat('0');
-  ws.getRange('V2:V' + lastRow).setNumberFormat('0.0"%"');
-  ws.getRange('D2:D' + lastRow).setNumberFormat('dd/mm/yyyy hh:mm');
+  ws.getRange(2,  4, dataRows,  1).setNumberFormat('dd/mm/yyyy hh:mm'); // D: Logged At
+  ws.getRange(2,  6, dataRows,  3).setNumberFormat('0');                 // F-H: Adults, Children, PAX
+  ws.getRange(2, 10, dataRows,  2).setNumberFormat('0');                 // J-K: Total Nights, No. of Cities
+  ws.getRange(2, 12, dataRows,  5).setNumberFormat(inrFmt);             // L-P: Hotel Net → Sub Total
+  ws.getRange(2, 17, dataRows,  1).setNumberFormat('0');                 // Q: Markup %
+  ws.getRange(2, 18, dataRows,  4).setNumberFormat(inrFmt);             // R-U: Markup Amt → Budget Entered
+  ws.getRange(2, 22, dataRows,  1).setNumberFormat('0.0"%"');           // V: Utilisation %
 
-  // 3. Re-apply row colors based on Budget Flag (column W = col index 23, 0-based index 22)
+  // ── STEP 4: Fix Travel Month — rewrite "Month YYYY" → "mmm-yy" ──
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const travelMonthCol = ws.getRange(2, 5, dataRows, 1).getValues(); // Col E
+  const fixedMonths = travelMonthCol.map(([val]) => {
+    const s = String(val || '').trim();
+    // Already in mmm-yy format — leave it
+    if (/^[A-Z][a-z]{2}-\d{2}$/.test(s)) return [s];
+    // Convert "April 2026" or "Apr 2026" → "Apr-26"
+    const m = s.match(/^([A-Za-z]+)\s+(\d{4})$/);
+    if (m) {
+      const mIdx = new Date(s + ' 1').getMonth();
+      if (!isNaN(mIdx)) return [months[mIdx] + '-' + String(m[2]).slice(-2)];
+    }
+    return [s]; // leave unrecognised values as-is
+  });
+  ws.getRange(2, 5, dataRows, 1).setValues(fixedMonths);
+
+  // ── STEP 5: Recalculate Utilisation % + Budget Flag ─────────────
   const data = ws.getRange(2, 1, dataRows, 30).getValues();
-  data.forEach((row, i) => {
-    const flag = row[22]; // Budget Flag at 0-based index 22 = column W
-    let bg = '#ffffff';
-    if      (flag === '✅ TARGET') bg = '#d4edda';
-    else if (flag === 'OVER')      bg = '#f8d7da';
-    else if (flag === 'NEAR')      bg = '#fff3cd';
-    else if (flag === 'UNDER')     bg = '#e8f4fd';
+  const utilVals = [];
+  const flagVals = [];
+  const bgColors = [];
+
+  data.forEach(row => {
+    const subTotal      = Number(row[15]) || 0; // col P (0-based index 15)
+    const budgetEntered = Number(row[20]) || 0; // col U (0-based index 20)
+
+    let utilPct = '';
+    let flag    = 'No Budget';
+    let bg      = '#ffffff';
+
+    if (budgetEntered > 0) {
+      utilPct = Math.round((subTotal / budgetEntered) * 100 * 10) / 10;
+      if      (subTotal > budgetEntered) flag = 'OVER';
+      else if (utilPct >= 95)            flag = '✅ TARGET';
+      else if (utilPct >= 90)            flag = 'NEAR';
+      else                               flag = 'UNDER';
+
+      if      (flag === '✅ TARGET') bg = '#d4edda';
+      else if (flag === 'OVER')      bg = '#f8d7da';
+      else if (flag === 'NEAR')      bg = '#fff3cd';
+      else if (flag === 'UNDER')     bg = '#e8f4fd';
+    }
+
+    utilVals.push([utilPct]);
+    flagVals.push([flag]);
+    bgColors.push(bg);
+  });
+
+  ws.getRange(2, 22, dataRows, 1).setValues(utilVals); // V: Utilisation %
+  ws.getRange(2, 23, dataRows, 1).setValues(flagVals); // W: Budget Flag
+
+  // ── STEP 6: Row background colors ──────────────────────────────
+  bgColors.forEach((bg, i) => {
     ws.getRange(i + 2, 1, 1, 30).setBackground(bg);
   });
 
-  Logger.log('✅ fixQuoteLogFormats complete. ' + dataRows + ' rows reformatted.');
+  SpreadsheetApp.flush();
+  Logger.log('✅ fixQuoteLogComplete done — ' + dataRows + ' rows fully fixed.');
 }
 
 
