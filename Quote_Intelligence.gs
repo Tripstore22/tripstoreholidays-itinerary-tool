@@ -606,6 +606,11 @@ function backfillQuoteLog() {
       logSheet.appendRow(logRow);
       const newRow = logSheet.getLastRow();
       formatLogRow(logSheet, newRow);
+      const btmCell = logSheet.getRange(newRow, 5);
+      if (btmCell.getValue() instanceof Date) {
+        btmCell.setNumberFormat('@');
+        btmCell.setValue(logRow[4]);
+      }
       colorLogRow(logSheet, newRow, logRow);
       imported++;
     } catch (e) {
