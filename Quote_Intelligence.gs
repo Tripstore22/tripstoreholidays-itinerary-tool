@@ -102,7 +102,8 @@ function buildQuoteLogRow(paxName, d) {
   if (plan.length > 0 && plan[0].cin) {
     try {
       const dt = new Date(plan[0].cin);
-      travelMonth = dt.toLocaleString('default', { month: 'long', year: 'numeric' });
+      const _months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      travelMonth = String(dt.getDate()).padStart(2,'0') + '-' + _months[dt.getMonth()] + '-' + String(dt.getFullYear()).slice(-2);
     } catch(e) {}
   }
 
