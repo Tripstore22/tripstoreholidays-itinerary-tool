@@ -1,27 +1,20 @@
 # Session Handoff
 
-## Latest Session — 2026-04-10
+## Latest Session — 2026-04-10 (continued)
 
 ### Completed — this session
-- Quote_Log bug fixes in Code.gs: `getQuoteLog()` column mappings fixed (all off by 1 after agentName was added)
-- `getMasterInventory()` cities column fixed: index 7 → 8
-- `saveItinerary()` — logQuote now called from both update + new-save paths (smart dedup handles it)
-- Quote_Intelligence.gs: smart dedup in `logQuote()` — skips if grand total within 2% AND ₹1,000 of last entry
-- Quote_Intelligence.gs: GST base fixed for `5pkg` mode — now uses `subTotal + markupAmt` (matches frontend)
-- Quote_Intelligence.gs: `transferBudget` removed from `budgetEntered` sum (was never in save payload)
-- New `fixQuoteLogHeaders()` function — patches header row without clearing data
-- New `deduplicateQuoteLog()` function — removes existing duplicate rows post-deployment
-- Post-deployment cleanup order documented: deduplicateQuoteLog → fixQuoteLogHeaders → fixQuoteLogFormats
-- Code review hook added to `.claude/settings.json` — auto-runs `check_pipeline.py` after every .gs edit
-- Node.js v24 installed via nvm
-- Sequential Thinking MCP server installed and configured in `~/.claude/settings.json`
-- Superpowers and Context7 plugins installed
+- `FIX_QUOTELOG` function (Temp.gs) — fixed all Quote_Log display issues in one shot:
+  - Travel Month: set cell format to TEXT before writing string to prevent Sheets auto-converting "Mar-26" → serial
+  - No. of Cities + Markup %: values stored as text with ₹ prefix — rewritten as plain numbers via `num()` helper
+  - Sub Total + Budget Entered: same ₹-text issue — rewritten as plain numbers
+  - Utilisation %: recalculated from clean numeric values, now shows correctly
+  - Budget flag + row colour: recalculated (OVER / ✅ TARGET / NEAR / UNDER / No Budget)
+- Budget Entered root cause fixed in `index_fit.tripstore.html`: removed "Fix 1" block in `loadAndOpen` that was overwriting `hotelBudget` input with actual hotel cost on load
+- Quote_Intelligence.gs: Travel Month format changed to `mmm-yy` (e.g. "Apr-26")
 
 ### Still Pending
-- **Restart Claude Code** to activate Sequential Thinking MCP, Superpowers, Context7 plugins
 - Copy updated **Code.gs** into Apps Script and redeploy
-- Copy updated **Quote_Intelligence.gs** into Apps Script
-- Run in Apps Script after deploy: `deduplicateQuoteLog()` → `fixQuoteLogHeaders()` → `fixQuoteLogFormats()`
+- Copy updated **Quote_Intelligence.gs** into Apps Script and redeploy
 - Copy updated **Pipeline.gs** into Apps Script (prompt fixes + res.idx fix + 8192 token cap)
 - Trains master: manually delete rows 638, 639, 640, 642 (bad transfer/invalid route data)
 - Trains master rows 620-621: fix London-Liverpool INR (₹27,630 → ~₹4,400), clear monthly € cols, run `repairTrainMonthlyPrices()`
