@@ -107,6 +107,11 @@ function buildQuoteLogRow(paxName, d) {
     } catch(e) {}
   }
 
+  // ── PRICING FACTOR (mirrors frontend getTravelConfigs + calculateHotelPrice) ──
+  // h.cost is stored per-room-per-night; multiply by pricingFactor to get total hotel cost.
+  // s.price and ic.price are stored per-pax; multiply by paxCount to get group total.
+  const pricingFactor = _calcPricingFactor(adults, children, Number(d.roomsRequired) || 0);
+
   // ── FINANCIAL COMPONENTS ──
   let hotelNet = 0, sightNet = 0, transferNet = 0, intercityNet = 0;
   let hotelsManual = 0, sightsManual = 0, intercityManual = 0;
@@ -115,13 +120,15 @@ function buildQuoteLogRow(paxName, d) {
 
   plan.forEach(p => {
     const h = p.hotel || {};
-    const cost = (h.cost || 0) * (p.nights || 0);
+    // Match frontend calculateHotelPrice: cost * nights * pricingFactor
+    const cost = Math.round((h.cost || 0) * (p.nights || 0) * pricingFactor);
     hotelNet += cost;
     if (p.isHotelManual) hotelsManual++;
     if (h.category) hotelCategories.push(h.category);
 
     (p.sights || []).forEach(s => {
-      sightNet += (s.price || 0);
+      // s.price is per-pax — multiply by paxCount to match frontend sNet = s.price * totalPax
+      sightNet += (s.price || 0) * paxCount;
       if (s.isManual) sightsManual++;
     });
   });
@@ -141,7 +148,8 @@ function buildQuoteLogRow(paxName, d) {
   });
 
   intercity.forEach(ic => {
-    intercityNet += (ic.price || 0);
+    // ic.price is per-pax — multiply by paxCount to match frontend icNet = ic.price * totalPax
+    intercityNet += (ic.price || 0) * paxCount;
     if (ic.isManual) intercityManual++;
   });
 
