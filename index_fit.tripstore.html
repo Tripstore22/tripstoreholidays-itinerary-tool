@@ -898,9 +898,10 @@ async function saveItinerary() {
         action: "saveItinerary",
         paxName: saveName,
         payload: {
-            adults:      cfg.adults,
-            children:    cfg.children,
-            paxCount:    cfg.totalPax,
+            adults:        cfg.adults,
+            children:      cfg.children,
+            paxCount:      cfg.totalPax,
+            roomsRequired: cfg.roomsRequired,
             hotelBudget: document.getElementById('hotelBudget').value,
             sightBudget: document.getElementById('sightBudget').value,
             markup:      document.getElementById('markupInput').value,
