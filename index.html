@@ -894,10 +894,14 @@ async function saveItinerary() {
         } catch(e) { /* fall through, save with auto name */ }
     }
 
+    let _agentName = '';
+    try { _agentName = JSON.parse(localStorage.getItem('tripstore_session') || '{}').username || ''; } catch(e) {}
+
     const data = {
         action: "saveItinerary",
         paxName: saveName,
         payload: {
+            agentName:     _agentName,
             adults:        cfg.adults,
             children:      cfg.children,
             paxCount:      cfg.totalPax,
