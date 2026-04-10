@@ -945,6 +945,12 @@ async function searchItinerary(query) {
         if (data.vehicleType && document.getElementById('vehicleTypeSelect')) {
             document.getElementById('vehicleTypeSelect').value = data.vehicleType;
         }
+        // Restore manual room override if it was saved and differs from auto-calculation
+        const _rAdults   = Number(data.adults || data.paxCount || 2);
+        const _rChildren = Number(data.children || 0);
+        const _rAuto     = Math.max(1, Math.ceil(_rAdults / 3), Math.ceil((_rAdults + _rChildren) / 4));
+        const _rInput    = document.getElementById('roomCountInput');
+        if (_rInput) _rInput.value = (data.roomsRequired && data.roomsRequired !== _rAuto) ? data.roomsRequired : '';
         selectedRoute     = data.selectedRoute    || [];
         currentPlan       = data.currentPlan      || [];
         selectedTransfers = data.selectedTransfers || [];
@@ -952,7 +958,7 @@ async function searchItinerary(query) {
         updatePaxHeader();
         const _cfg = getTravelConfigs();
         const _el  = document.getElementById('roomDisplay');
-        if (_el) _el.innerText = `Rooms Required: ${_cfg.roomsRequired} (auto)`;
+        if (_el) _el.innerText = `Rooms Required: ${_cfg.roomsRequired}${_rInput?.value ? ' (manual)' : ' (auto)'}`;
         document.getElementById('hotelBudgetLabel').innerText = `Hotel Budget (${_cfg.totalPax} Pax)`;
         document.getElementById('sightBudgetLabel').innerText = `Land Package Budget (${_cfg.totalPax} Pax)`;
 
