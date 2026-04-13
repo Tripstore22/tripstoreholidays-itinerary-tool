@@ -12,6 +12,9 @@ Open terminal, then type:
     cd /Users/Sumit/Desktop/Itinerary-Create
     claude
 
+cd /Users/Sumit/Desktop/tripstore-itinerary-archive
+claude
+
 First message to Claude every time:
     read SESSIONS.md and tell me where we left off
 
