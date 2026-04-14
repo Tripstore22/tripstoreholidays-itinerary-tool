@@ -984,6 +984,7 @@ async function searchItinerary(query) {
 
         renderRouteInputs();
         renderTables();
+        splitClientBudget();       // recalculate breakdown from loaded client budget
         _loadedFromName = query;   // ← mark as "opened from saved"
         showToast(`Loaded: ${query}`);
     } catch (e) { showToast("Error loading itinerary", "error"); }
