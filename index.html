@@ -1233,6 +1233,7 @@ function suggestBudgets() {
 function applyBudgetSuggestion(type) {
     if (type === 'hotel') document.getElementById('hotelBudget').value = _lastBudgetSuggestion.hotelMid;
     else                  document.getElementById('sightBudget').value = _lastBudgetSuggestion.landMid;
+    updateClientBudgetTotal();
 }
 
 function updateClientBudgetTotal() {
