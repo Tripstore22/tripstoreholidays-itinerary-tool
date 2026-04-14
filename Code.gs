@@ -807,6 +807,35 @@ function getMasterInventory() {
     }
   }
 
+  // ── 6b. INPUT SHEET PENDING — per city breakdown ─────────────
+  var inputHotelsByCity = {};
+  var ihSheet = ss.getSheetByName('INPUT_Hotels');
+  if (ihSheet) {
+    var ihRows = ihSheet.getDataRange().getValues();
+    for (var ih = 2; ih < ihRows.length; ih++) {
+      if (!ihRows[ih][0]) continue;
+      var ihCity = String(ihRows[ih][0]).trim();
+      var ihStat = String(ihRows[ih][22] || '').trim().toUpperCase(); // col 23 = Pipeline_Status
+      if (ihStat === '' || ihStat === 'PENDING') {
+        inputHotelsByCity[ihCity] = (inputHotelsByCity[ihCity] || 0) + 1;
+      }
+    }
+  }
+
+  var inputSightsByCity = {};
+  var isSheet = ss.getSheetByName('INPUT_Sightseeing');
+  if (isSheet) {
+    var isRows = isSheet.getDataRange().getValues();
+    for (var is = 2; is < isRows.length; is++) {
+      if (!isRows[is][0]) continue;
+      var isCity = String(isRows[is][0]).trim();
+      var isStat = String(isRows[is][13] || '').trim().toUpperCase(); // col 14 = Pipeline_Status
+      if (isStat === '' || isStat === 'PENDING') {
+        inputSightsByCity[isCity] = (inputSightsByCity[isCity] || 0) + 1;
+      }
+    }
+  }
+
   // ── 7. BUILD OUTPUT ──────────────────────────────────────────
   var hotels = Object.keys(hotelMap).map(function(city) {
     var v = hotelMap[city];
