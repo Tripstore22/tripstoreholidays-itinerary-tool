@@ -1210,13 +1210,15 @@ function suggestBudgets() {
         hotelLow  = 15000 * roomsRequired * totalNights;
         hotelHigh = 50000 * roomsRequired * totalNights;
     }
-    hotelLow  = Math.round(hotelLow  / 1000) * 1000;
-    hotelHigh = Math.round(hotelHigh / 1000) * 1000;
+    // Convert net suggestions to gross (client-facing) by adding markup
+    const markupMult = 1 + (Number(document.getElementById('markupInput').value) || 0) / 100;
+    hotelLow  = Math.round(hotelLow  * markupMult / 1000) * 1000;
+    hotelHigh = Math.round(hotelHigh * markupMult / 1000) * 1000;
     const hotelMid = Math.round((hotelLow + hotelHigh) / 2 / 1000) * 1000;
 
-    // ── LAND: fixed range per pax per night ──
-    const landLow  = Math.round(BUDGET_RANGES.land.low  * totalPax * totalNights / 1000) * 1000;
-    const landHigh = Math.round(BUDGET_RANGES.land.high * totalPax * totalNights / 1000) * 1000;
+    // ── LAND: fixed range per pax per night (also gross) ──
+    const landLow  = Math.round(BUDGET_RANGES.land.low  * totalPax * totalNights * markupMult / 1000) * 1000;
+    const landHigh = Math.round(BUDGET_RANGES.land.high * totalPax * totalNights * markupMult / 1000) * 1000;
     const landMid  = Math.round((landLow + landHigh) / 2 / 1000) * 1000;
 
     _lastBudgetSuggestion = { hotelMid, landMid };
