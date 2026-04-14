@@ -177,23 +177,19 @@
             <!-- Pricing Controls -->
             <div class="glass p-3 space-y-2">
                 <h2 class="font-bold border-b pb-1 text-xs uppercase text-slate-600">Pricing Controls</h2>
-                <div>
-                    <label class="text-[8px] font-bold text-gray-500 uppercase">Client Budget (Total)</label>
-                    <input type="number" id="clientBudgetInput" oninput="splitClientBudget()" class="w-full p-1.5 border-2 border-blue-300 rounded text-xs font-bold bg-blue-50" placeholder="Client's total budget">
-                    <div id="clientBudgetBreakdown" style="display:none;font-size:9px;color:#475569;margin-top:3px;padding:4px 6px;background:#f0f9ff;border-radius:4px;border:1px solid #bae6fd;"></div>
-                </div>
                 <div class="grid grid-cols-2 gap-2">
                     <div>
-                        <label id="hotelBudgetLabel" class="text-[8px] font-bold text-gray-500 uppercase">Hotel Budget</label>
-                        <input type="number" id="hotelBudget" class="w-full p-1.5 border rounded text-xs font-bold" placeholder="Auto from client budget">
+                        <label id="hotelBudgetLabel" class="text-[8px] font-bold text-gray-500 uppercase">Hotel Budget (Client)</label>
+                        <input type="number" id="hotelBudget" oninput="updateClientBudgetTotal()" class="w-full p-1.5 border rounded text-xs font-bold" placeholder="Client's hotel budget">
                         <div id="hotelBudgetHint" style="display:none;font-size:9px;color:#94a3b8;margin-top:2px;">Suggested: <span id="hotelBudgetRange" style="font-weight:600;color:#64748b;"></span> <button onclick="applyBudgetSuggestion('hotel')" class="no-print" style="margin-left:4px;font-size:8px;color:#3b82f6;text-decoration:underline;background:none;border:none;cursor:pointer;">Use mid</button></div>
                     </div>
                     <div>
-                        <label id="sightBudgetLabel" class="text-[8px] font-bold text-gray-500 uppercase">Land Package Budget</label>
-                        <input type="number" id="sightBudget" class="w-full p-1.5 border rounded text-xs font-bold" placeholder="Auto from client budget">
+                        <label id="sightBudgetLabel" class="text-[8px] font-bold text-gray-500 uppercase">Land Package (Client)</label>
+                        <input type="number" id="sightBudget" oninput="updateClientBudgetTotal()" class="w-full p-1.5 border rounded text-xs font-bold" placeholder="Client's land budget">
                         <div id="sightBudgetHint" style="display:none;font-size:9px;color:#94a3b8;margin-top:2px;">Suggested: <span id="sightBudgetRange" style="font-weight:600;color:#64748b;"></span> <button onclick="applyBudgetSuggestion('land')" class="no-print" style="margin-left:4px;font-size:8px;color:#3b82f6;text-decoration:underline;background:none;border:none;cursor:pointer;">Use mid</button></div>
                     </div>
                 </div>
+                <div id="clientBudgetBreakdown" style="display:none;font-size:9px;color:#475569;padding:5px 8px;background:#f0f9ff;border-radius:4px;border:1px solid #bae6fd;"></div>
                 <button onclick="runOptimizer(true, true)"
                     class="no-print w-full py-2 rounded text-xs font-bold text-white flex items-center justify-center gap-1.5"
                     id="generateQuoteBtn"
