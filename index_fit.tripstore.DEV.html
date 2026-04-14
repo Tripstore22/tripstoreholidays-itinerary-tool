@@ -201,15 +201,24 @@
                 <h2 class="font-bold border-b pb-1 text-xs uppercase text-slate-600">Pricing Controls</h2>
                 <div class="grid grid-cols-2 gap-2">
                     <div>
-                        <label id="hotelBudgetLabel" class="text-[8px] font-bold text-gray-500 uppercase">Hotel Budget</label>
-                        <input type="number" id="hotelBudget" class="w-full p-1.5 border rounded text-xs font-bold" placeholder="Enter budget">
+                        <label id="hotelBudgetLabel" class="text-[8px] font-bold text-gray-500 uppercase">Hotel Budget (Client)</label>
+                        <input type="number" id="hotelBudget" class="w-full p-1.5 border rounded text-xs font-bold" placeholder="Client pays for hotels">
                         <div id="hotelBudgetHint" style="display:none;font-size:9px;color:#94a3b8;margin-top:2px;">Suggested: <span id="hotelBudgetRange" style="font-weight:600;color:#64748b;"></span> <button onclick="applyBudgetSuggestion('hotel')" class="no-print" style="margin-left:4px;font-size:8px;color:#3b82f6;text-decoration:underline;background:none;border:none;cursor:pointer;">Use mid</button></div>
                     </div>
                     <div>
-                        <label id="sightBudgetLabel" class="text-[8px] font-bold text-gray-500 uppercase">Land Package Budget</label>
-                        <input type="number" id="sightBudget" class="w-full p-1.5 border rounded text-xs font-bold" placeholder="Enter budget">
+                        <label id="sightBudgetLabel" class="text-[8px] font-bold text-gray-500 uppercase">Land Package (Client)</label>
+                        <input type="number" id="sightBudget" class="w-full p-1.5 border rounded text-xs font-bold" placeholder="Client pays for land">
                         <div id="sightBudgetHint" style="display:none;font-size:9px;color:#94a3b8;margin-top:2px;">Suggested: <span id="sightBudgetRange" style="font-weight:600;color:#64748b;"></span> <button onclick="applyBudgetSuggestion('land')" class="no-print" style="margin-left:4px;font-size:8px;color:#3b82f6;text-decoration:underline;background:none;border:none;cursor:pointer;">Use mid</button></div>
                     </div>
+                </div>
+                <!-- Blue Budget Breakdown Bar -->
+                <div id="budgetBreakdownBar" class="no-print hidden" style="background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:8px;padding:8px 10px;color:#fff;font-size:9px;line-height:1.6;">
+                    <div style="font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;font-size:8px;opacity:.7;">Budget Breakdown</div>
+                    <div id="breakdownHotelLine"></div>
+                    <div id="breakdownLandLine"></div>
+                    <div style="border-top:1px solid rgba(255,255,255,.25);margin:4px 0;"></div>
+                    <div id="breakdownTotalLine" style="font-weight:800;"></div>
+                    <div id="breakdownUtilLine" style="margin-top:2px;font-weight:700;"></div>
                 </div>
                 <button onclick="runOptimizer(true, true)"
                     class="no-print w-full py-2 rounded text-xs font-bold text-white flex items-center justify-center gap-1.5"
@@ -438,6 +447,7 @@
                             <div class="bg-blue-50 p-2 rounded border border-blue-100"><p class="text-[8px] font-bold uppercase text-blue-400">Transfers Net</p><p id="netT" class="font-bold">₹0</p></div>
                             <div class="bg-slate-50 p-2 rounded border border-slate-200"><p class="text-[8px] font-bold uppercase text-slate-400">Markup</p><p id="valM" class="font-bold">₹0</p></div>
                             <div class="bg-slate-50 p-2 rounded border border-slate-200"><p class="text-[8px] font-bold uppercase text-slate-400">GST</p><p id="valG" class="font-bold">₹0</p></div>
+                            <div class="bg-green-50 p-2 rounded border border-green-200"><p class="text-[8px] font-bold uppercase text-green-500">Utilisation</p><p id="valUtil" class="font-bold">0%</p></div>
                         </div>
                     </div>
 
@@ -1151,8 +1161,8 @@ function handlePaxChange() {
     const el = document.getElementById('roomDisplay');
     const isManual = Number(document.getElementById('roomCountInput')?.value) > 0;
     if (el) el.innerText = `Rooms Required: ${roomsRequired}${isManual ? ' (manual)' : ' (auto)'}`;
-    document.getElementById('hotelBudgetLabel').innerText = `Hotel Budget (${totalPax} Pax)`;
-    document.getElementById('sightBudgetLabel').innerText = `Land Package Budget (${totalPax} Pax)`;
+    document.getElementById('hotelBudgetLabel').innerText = `Hotel Budget - Client (${totalPax} Pax)`;
+    document.getElementById('sightBudgetLabel').innerText = `Land Package - Client (${totalPax} Pax)`;
     suggestBudgets();
 }
 
@@ -1204,9 +1214,19 @@ function suggestBudgets() {
 
     _lastBudgetSuggestion = { hotelMid, landMid };
 
+    // Suggestions in gross (client) terms — add markup so agent enters what client pays
+    const mPct = Number(document.getElementById('markupInput').value) || 0;
+    const grossUp = 1 + (mPct / 100);
+    const hotelLowGross  = Math.round(hotelLow  * grossUp / 1000) * 1000;
+    const hotelHighGross = Math.round(hotelHigh * grossUp / 1000) * 1000;
+    const landLowGross   = Math.round(landLow   * grossUp / 1000) * 1000;
+    const landHighGross  = Math.round(landHigh  * grossUp / 1000) * 1000;
+    _lastBudgetSuggestion.hotelMid = Math.round((hotelLowGross + hotelHighGross) / 2 / 1000) * 1000;
+    _lastBudgetSuggestion.landMid  = Math.round((landLowGross  + landHighGross)  / 2 / 1000) * 1000;
+
     const fmt = v => '₹' + v.toLocaleString('en-IN');
-    document.getElementById('hotelBudgetRange').innerText = `${fmt(hotelLow)} – ${fmt(hotelHigh)}`;
-    document.getElementById('sightBudgetRange').innerText = `${fmt(landLow)} – ${fmt(landHigh)}`;
+    document.getElementById('hotelBudgetRange').innerText = `${fmt(hotelLowGross)} – ${fmt(hotelHighGross)}`;
+    document.getElementById('sightBudgetRange').innerText = `${fmt(landLowGross)} – ${fmt(landHighGross)}`;
     hHint.style.display = 'block';
     sHint.style.display = 'block';
 }
@@ -1534,13 +1554,19 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
     }
     const config   = getTravelConfigs();
     const paxCount = config.totalPax;
-    const hBudgetTotal    = Number(document.getElementById('hotelBudget').value) || 0;
-    const landBudgetTotal = Number(document.getElementById('sightBudget').value) || 0;
+    const hBudgetClient    = Number(document.getElementById('hotelBudget').value) || 0;
+    const landBudgetClient = Number(document.getElementById('sightBudget').value) || 0;
+    const mPct             = Number(document.getElementById('markupInput').value) || 0;
+    const markupDivisor    = 1 + (mPct / 100);   // e.g. 1.15 for 15%
 
-    // Land Package Budget: deduct transfer + intercity costs first, remainder = sightseeing allowance
-    const transferCost  = selectedTransfers.reduce((s, t) => s + (Number(t.vehiclePrice || t.avgPrice) || 0), 0);
+    // Deduct markup from client budgets to get NET caps for selection
+    const hBudgetTotal    = Math.round(hBudgetClient / markupDivisor);
+    const landBudgetNet   = Math.round(landBudgetClient / markupDivisor);
+
+    // Land Package Net: deduct trains (intercity) first → then transfers → remainder = sightseeing
     const intercityCost = selectedIntercity.reduce((s, ic) => s + Math.round(Number(ic.price || 0) * paxCount), 0);
-    const sBudgetTotal  = Math.max(0, landBudgetTotal - transferCost - intercityCost);
+    const transferCost  = selectedTransfers.reduce((s, t) => s + (Number(t.vehiclePrice || t.avgPrice) || 0), 0);
+    const sBudgetTotal  = Math.max(0, landBudgetNet - intercityCost - transferCost);
 
     let spentHotelBudget = 0, systemHotelCitiesCount = 0, spentSightBudget = 0;
     currentPlan.forEach(route => {
@@ -2233,6 +2259,33 @@ function calculateBudgetInvestment() {
     document.getElementById('netT').innerText = fmt(tNet + icNet);
     document.getElementById('valM').innerText = fmt(markupVal);
     document.getElementById('valG').innerText = fmt(gstVal);
+
+    // ── Blue Budget Breakdown Bar ──
+    const hBudgetClient    = Number(document.getElementById('hotelBudget').value) || 0;
+    const landBudgetClient = Number(document.getElementById('sightBudget').value) || 0;
+    const clientTotal      = hBudgetClient + landBudgetClient;
+    const bar              = document.getElementById('budgetBreakdownBar');
+    if (bar && clientTotal > 0) {
+        const markupDivisor = 1 + (mPct / 100);
+        const hNet_budget   = Math.round(hBudgetClient / markupDivisor);
+        const landNet       = Math.round(landBudgetClient / markupDivisor);
+        const utilPct       = ((grandTotal / clientTotal) * 100).toFixed(1);
+        document.getElementById('breakdownHotelLine').innerHTML =
+            `Hotel: <b>${fmt(hBudgetClient)}</b> (client) ÷ ${markupDivisor.toFixed(2)} = <b>${fmt(hNet_budget)}</b> net`;
+        document.getElementById('breakdownLandLine').innerHTML =
+            `Land: <b>${fmt(landBudgetClient)}</b> (client) ÷ ${markupDivisor.toFixed(2)} = <b>${fmt(landNet)}</b> net → Trains ${fmt(icNet)} → Transfers ${fmt(tNet)} → Sights ${fmt(Math.max(0, landNet - icNet - tNet))} remaining`;
+        document.getElementById('breakdownTotalLine').innerHTML =
+            `Client Budget: ${fmt(clientTotal)} | Grand Total: ${fmt(grandTotal)}`;
+        document.getElementById('breakdownUtilLine').innerHTML =
+            `Utilisation: <span style="font-size:11px;${Number(utilPct) > 100 ? 'color:#fca5a5;' : 'color:#86efac;'}">${utilPct}%</span>`;
+        bar.classList.remove('hidden');
+        const utilEl = document.getElementById('valUtil');
+        if (utilEl) utilEl.innerText = utilPct + '%';
+    } else if (bar) {
+        bar.classList.add('hidden');
+        const utilEl = document.getElementById('valUtil');
+        if (utilEl) utilEl.innerText = '—';
+    }
 }
 
 // =============================================================
