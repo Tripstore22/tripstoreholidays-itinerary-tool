@@ -1315,13 +1315,16 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
     }
     const config   = getTravelConfigs();
     const paxCount = config.totalPax;
-    const hBudgetTotal    = Number(document.getElementById('hotelBudget').value) || 0;
-    const landBudgetTotal = Number(document.getElementById('sightBudget').value) || 0;
+    // Budget fields are CLIENT amounts (gross, incl. markup). Deduct markup to get net caps.
+    const markupPct       = Number(document.getElementById('markupInput').value) || 0;
+    const markupDivisor   = 1 + markupPct / 100;
+    const hBudgetTotal    = Math.round((Number(document.getElementById('hotelBudget').value) || 0) / markupDivisor);
+    const landBudgetNet   = Math.round((Number(document.getElementById('sightBudget').value) || 0) / markupDivisor);
 
-    // Land Package Budget: deduct transfer + intercity costs first, remainder = sightseeing allowance
-    const transferCost  = selectedTransfers.reduce((s, t) => s + (Number(t.vehiclePrice || t.avgPrice) || 0), 0);
+    // Land Package net: deduct trains first, then transfers, remainder = sightseeing allowance
     const intercityCost = selectedIntercity.reduce((s, ic) => s + Math.round(Number(ic.price || 0) * paxCount), 0);
-    const sBudgetTotal  = Math.max(0, landBudgetTotal - transferCost - intercityCost);
+    const transferCost  = selectedTransfers.reduce((s, t) => s + (Number(t.vehiclePrice || t.avgPrice) || 0), 0);
+    const sBudgetTotal  = Math.max(0, landBudgetNet - intercityCost - transferCost);
 
     let spentHotelBudget = 0, systemHotelCitiesCount = 0, spentSightBudget = 0;
     currentPlan.forEach(route => {
