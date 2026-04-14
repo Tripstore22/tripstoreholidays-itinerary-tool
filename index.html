@@ -1014,9 +1014,12 @@ function startNewQuote() {
     document.getElementById('searchInput').value     = '';
     document.getElementById('adultCountInput').value = '2';
     document.getElementById('childCountInput').value = '0';
+    document.getElementById('clientBudgetInput').value = '';
     document.getElementById('hotelBudget').value     = '';
     document.getElementById('sightBudget').value     = '';
     document.getElementById('markupInput').value     = '15';
+    const cbBreak = document.getElementById('clientBudgetBreakdown');
+    if (cbBreak) cbBreak.style.display = 'none';
     document.getElementById('cityInput').value       = '';
     document.getElementById('checkinInput').value    = '';
     document.getElementById('checkoutInput').value   = '';
