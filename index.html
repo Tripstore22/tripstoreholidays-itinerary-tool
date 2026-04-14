@@ -190,12 +190,20 @@
                     </div>
                 </div>
                 <div id="clientBudgetBreakdown" style="display:none;font-size:9px;color:#475569;padding:5px 8px;background:#f0f9ff;border-radius:4px;border:1px solid #bae6fd;"></div>
-                <button onclick="runOptimizer(true, true)"
-                    class="no-print w-full py-2 rounded text-xs font-bold text-white flex items-center justify-center gap-1.5"
-                    id="generateQuoteBtn"
-                    style="background:#1a3c5e;">
-                    ▶ Generate Quote
-                </button>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="runOptimizer(true, true)"
+                        class="no-print py-2 rounded text-xs font-bold text-white flex items-center justify-center gap-1.5"
+                        id="generateQuoteBtn"
+                        style="background:#1a3c5e;">
+                        ▶ Generate Quote
+                    </button>
+                    <button onclick="autoBuild()"
+                        class="no-print py-2 rounded text-xs font-bold text-white flex items-center justify-center gap-1.5"
+                        id="autoBuildBtn"
+                        style="background:#7c3aed;">
+                        ⚡ Auto-Build
+                    </button>
+                </div>
                 <div>
                     <label class="text-[8px] font-bold text-gray-500 uppercase">Vehicle Type</label>
                     <select id="vehicleTypeSelect" onchange="runOptimizer(false, false)" class="w-full p-1.5 border rounded text-xs font-bold outline-none mt-0.5">
