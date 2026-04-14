@@ -878,15 +878,30 @@ function getMasterInventory() {
     return d.hotels < 10 || d.sights < 8 || !d.hasTrains || !d.hasTransfer;
   }).sort(function(a,b){ return b.quoteCount - a.quoteCount; }).slice(0, 10);
 
+  var inputHotelsByCityArr = Object.keys(inputHotelsByCity).map(function(city) {
+    return { city: city, pending: inputHotelsByCity[city], masterCount: hotelMap[city] ? hotelMap[city].count : 0 };
+  }).sort(function(a,b) {
+    // Sort: urgency first (low master count = higher priority), then city name
+    return (a.masterCount - b.masterCount) || (b.pending - a.pending);
+  });
+
+  var inputSightsByCityArr = Object.keys(inputSightsByCity).map(function(city) {
+    return { city: city, pending: inputSightsByCity[city], masterCount: sightMap[city] ? sightMap[city].count : 0 };
+  }).sort(function(a,b) {
+    return (a.masterCount - b.masterCount) || (b.pending - a.pending);
+  });
+
   return ContentService
     .createTextOutput(JSON.stringify({
-      hotels:      hotels,
-      sights:      sights,
-      transfers:   transfers,
-      trains:      { routeCount: trainRouteCount, cityCount: trainCities.length, cities: trainCities },
-      pipeline:    pipeline,
-      gapCities:   gapCities.slice(0, 20),
-      demandGaps:  demandGaps,
+      hotels:             hotels,
+      sights:             sights,
+      transfers:          transfers,
+      trains:             { routeCount: trainRouteCount, cityCount: trainCities.length, cities: trainCities },
+      pipeline:           pipeline,
+      gapCities:          gapCities.slice(0, 20),
+      demandGaps:         demandGaps,
+      inputHotelsByCity:  inputHotelsByCityArr,
+      inputSightsByCity:  inputSightsByCityArr,
     }))
     .setMimeType(ContentService.MimeType.JSON);
 }
