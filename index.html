@@ -1236,41 +1236,34 @@ function applyBudgetSuggestion(type) {
     else                  document.getElementById('sightBudget').value = _lastBudgetSuggestion.landMid;
 }
 
-function splitClientBudget() {
-    const clientBudget = Number(document.getElementById('clientBudgetInput').value) || 0;
-    const breakdownEl  = document.getElementById('clientBudgetBreakdown');
-    if (!clientBudget) {
+function updateClientBudgetTotal() {
+    const hGross = Number(document.getElementById('hotelBudget').value) || 0;
+    const lGross = Number(document.getElementById('sightBudget').value) || 0;
+    const breakdownEl = document.getElementById('clientBudgetBreakdown');
+    if (!hGross && !lGross) {
         if (breakdownEl) breakdownEl.style.display = 'none';
         return;
     }
 
     const markupPct = Number(document.getElementById('markupInput').value) || 0;
-    const netBudget = Math.round(clientBudget / (1 + markupPct / 100));
+    const hNet = Math.round(hGross / (1 + markupPct / 100));
+    const lNet = Math.round(lGross / (1 + markupPct / 100));
+    const clientTotal = hGross + lGross;
 
-    // Split net into Hotel Budget + Land Package Budget (land = trains + transfers + sightseeing)
-    // Use suggested ratio if available, else default 60% hotel : 40% land
-    let hotelShare = 0.60, landShare = 0.40;
-    if (_lastBudgetSuggestion && _lastBudgetSuggestion.hotelMid && _lastBudgetSuggestion.landMid) {
-        const total = _lastBudgetSuggestion.hotelMid + _lastBudgetSuggestion.landMid;
-        if (total > 0) {
-            hotelShare = _lastBudgetSuggestion.hotelMid / total;
-            landShare  = _lastBudgetSuggestion.landMid / total;
-        }
-    }
+    const { totalPax } = getTravelConfigs();
+    const trainCost    = selectedIntercity.reduce((s, ic) => s + Math.round(Number(ic.price || 0) * totalPax), 0);
+    const transferCost = selectedTransfers.reduce((s, t) => s + (Number(t.vehiclePrice || t.avgPrice) || 0), 0);
+    const sightBalance = Math.max(0, lNet - trainCost - transferCost);
 
-    const hotelBudget = Math.round(netBudget * hotelShare / 1000) * 1000;
-    const landBudget  = Math.round(netBudget * landShare  / 1000) * 1000;
-
-    document.getElementById('hotelBudget').value = hotelBudget;
-    document.getElementById('sightBudget').value = landBudget;
-
-    // Show breakdown
     const fmt = n => '₹' + Math.round(n).toLocaleString('en-IN');
     if (breakdownEl) {
         breakdownEl.innerHTML =
-            `<b>Net after ${markupPct}% markup:</b> ${fmt(netBudget)}` +
-            ` → Hotels ${fmt(hotelBudget)} + Land Package ${fmt(landBudget)}` +
-            `<br><span style="color:#64748b;font-size:8px;">Land Package covers trains + transfers + sightseeing. Optimizer deducts trains & transfers first, rest goes to sightseeing.</span>`;
+            `<b>Client Total:</b> ${fmt(clientTotal)}` +
+            ` · <b>Hotel net:</b> ${fmt(hNet)}` +
+            ` · <b>Land net:</b> ${fmt(lNet)}` +
+            (trainCost > 0 ? ` − Trains ${fmt(trainCost)}` : '') +
+            (transferCost > 0 ? ` − Transfers ${fmt(transferCost)}` : '') +
+            ` → <b>Sightseeing:</b> ${fmt(sightBalance)}`;
         breakdownEl.style.display = 'block';
     }
 }
