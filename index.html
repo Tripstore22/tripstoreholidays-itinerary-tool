@@ -989,6 +989,50 @@ async function loadAndOpen(name) {
     await searchItinerary(name);
 }
 
+// Resets the builder to a blank slate for a fresh quote
+function startNewQuote() {
+    if (selectedRoute.length > 0 || document.getElementById('paxNameInput').value.trim()) {
+        if (!confirm('Start a fresh quote? Any unsaved changes will be lost.')) return;
+    }
+    // Clear all state
+    selectedRoute      = [];
+    currentPlan        = [];
+    selectedTransfers  = [];
+    selectedIntercity  = [];
+    _loadedFromName    = null;
+    window._currentHotelCost = 0;
+
+    // Reset form fields
+    document.getElementById('paxNameInput').value    = '';
+    document.getElementById('searchInput').value     = '';
+    document.getElementById('adultCountInput').value = '2';
+    document.getElementById('childCountInput').value = '0';
+    document.getElementById('hotelBudget').value     = '';
+    document.getElementById('sightBudget').value     = '';
+    document.getElementById('markupInput').value     = '15';
+    document.getElementById('cityInput').value       = '';
+    document.getElementById('checkinInput').value    = '';
+    document.getElementById('checkoutInput').value   = '';
+    const gstDefault = document.querySelector('input[name="gstMode"][value="none"]');
+    if (gstDefault) gstDefault.checked = true;
+    const vehicleSel = document.getElementById('vehicleTypeSelect');
+    if (vehicleSel) vehicleSel.value = 'auto';
+    const roomInput = document.getElementById('roomCountInput');
+    if (roomInput) roomInput.value = '';
+
+    // Re-render everything blank
+    updatePaxHeader();
+    renderRouteInputs();
+    renderTables();
+    // Clear budget hints
+    const hHint = document.getElementById('hotelBudgetHint');
+    const sHint = document.getElementById('sightBudgetHint');
+    if (hHint) hHint.innerHTML = '';
+    if (sHint) sHint.innerHTML = '';
+
+    showToast('Ready for a new quote');
+}
+
 // ── MY ITINERARIES TAB ──────────────────────────────────────
 async function loadSavedList() {
     const el = document.getElementById('savedListContent');
