@@ -158,7 +158,18 @@
                     </div>
                     <hr class="border-slate-100">
                     <label class="text-[9px] font-bold text-gray-400 uppercase">Route Details</label>
-                    <input type="text" list="cityList" id="cityInput" class="w-full p-1.5 border rounded text-xs" placeholder="Enter City">
+                    <div class="relative" id="cityInputWrapper">
+                      <input type="text" id="cityInput" autocomplete="off"
+                             class="w-full p-1.5 border rounded text-xs"
+                             placeholder="Enter City"
+                             oninput="filterCityDropdown()"
+                             onkeydown="cityInputKeydown(event)"
+                             onfocus="filterCityDropdown()"
+                             onblur="setTimeout(()=>closeCityDropdown(),150)">
+                      <div id="cityDropdown"
+                           class="absolute left-0 right-0 top-full mt-0.5 bg-white border border-slate-200 rounded shadow-lg z-[500] max-h-48 overflow-y-auto hidden text-xs">
+                      </div>
+                    </div>
                     <div class="grid grid-cols-2 gap-2">
                         <div>
                             <label class="text-[8px] font-bold">Check-in</label>
@@ -171,6 +182,17 @@
                     </div>
                     <button onclick="addCityToRoute()" class="w-full bg-slate-800 text-white py-1.5 rounded font-bold text-xs hover:bg-black transition-colors">+ Add Stop</button>
                     <div id="routeList" class="space-y-1 mt-1"></div>
+                    <!-- Swiss Pass card — appears automatically when ≥2 Swiss cities added -->
+                    <div id="swissPassCard" class="hidden mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-[10px]">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-bold text-amber-800">🚂 Swiss Travel Pass</span>
+                            <label class="flex items-center gap-1 cursor-pointer">
+                                <input type="checkbox" id="swissPassToggle" onchange="toggleSwissPass(this.checked)">
+                                <span class="font-bold text-[9px] text-amber-700">Enable</span>
+                            </label>
+                        </div>
+                        <div id="swissPassDetails" class="text-slate-600 space-y-0.5"></div>
+                    </div>
                 </div>
             </div>
 
@@ -394,14 +416,21 @@
                     </div>
 
                     <!-- Export Buttons (after terms, screen only) -->
-                    <div class="mt-6 no-print flex gap-3 justify-end">
+                    <div class="mt-6 no-print">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-[9px] font-bold text-slate-400 uppercase">PDF Mode:</span>
+                            <button id="btnPdfAgent"  onclick="setPdfMode('agent')"  class="text-[9px] px-2 py-1 rounded font-bold bg-slate-800 text-white">Agent</button>
+                            <button id="btnPdfClient" onclick="setPdfMode('client')" class="text-[9px] px-2 py-1 rounded font-bold bg-white border border-slate-300 text-slate-500">Client</button>
+                        </div>
+                    </div>
+                    <div class="no-print flex gap-3 justify-end">
                         <button onclick="triggerExport('print', this)" style="background:#334155;color:#fff;padding:8px 20px;border-radius:6px;font-weight:700;font-size:11px;text-transform:uppercase;border:none;cursor:pointer;">🖨 Print</button>
                         <button onclick="triggerExport('pdf', this)" style="background:#ea580c;color:#fff;padding:8px 20px;border-radius:6px;font-weight:700;font-size:11px;text-transform:uppercase;border:none;cursor:pointer;">📄 PDF</button>
                         <button onclick="triggerExport('excel', this)" style="background:#16a34a;color:#fff;padding:8px 20px;border-radius:6px;font-weight:700;font-size:11px;text-transform:uppercase;border:none;cursor:pointer;">📊 Excel</button>
                     </div>
 
                     <!-- Internal Profitability (screen only) -->
-                    <div class="mt-12 pt-6 border-t border-dashed no-print">
+                    <div id="profitability-section" class="mt-12 pt-6 border-t border-dashed no-print">
                         <h3 class="text-[9px] font-bold text-slate-400 uppercase mb-3 tracking-widest">Profitability Analysis (Internal)</h3>
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                             <div class="bg-blue-50 p-2 rounded border border-blue-100"><p class="text-[8px] font-bold uppercase text-blue-400">Hotel Net</p><p id="netH" class="font-bold">₹0</p></div>
@@ -430,7 +459,7 @@
             </div>
         </div>
     </div>
-    <datalist id="cityList"></datalist>
+    <!-- cityList datalist removed — replaced with custom instant dropdown -->
 </div><!-- /tab-itinerary -->
 
 <!-- TAB: MY ITINERARIES -->
@@ -539,18 +568,22 @@
 // =============================================================
 // CONFIGURATION
 // =============================================================
-const API_URL = "https://script.google.com/macros/s/AKfycbzAbIgzRoN_MNs377jm3u-1r1E8D8gkSvxD84stvDwlvDC2Oe1rYf5qVqlHDE4X5jmsCQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzjz5S7bHhvY-Az-XpUQpyZ4iLcNVFnOL8FIAwFksSXa_B9Oz2BPhnw_tLPTAleBSVI0Q/exec"; // DEV — swap to production URL on go-live
 
 // =============================================================
 // GLOBAL STATE
 // =============================================================
 let masterData      = { hotels: [], sights: [], transfers: [], intercity: [] };
+let masterCities    = [];
 let selectedRoute   = [];
 let currentPlan     = [];
 let isAdmin         = false;
 let authMode        = 'login';
 let selectedTransfers  = [];
 let selectedIntercity  = [];
+let cityIntelligenceCache = {};   // city_lower → intelligence data from City_Intelligence tab
+let swissPassEnabled      = false; // whether Swiss Pass toggle is on
+let pdfMode               = 'agent'; // 'agent' (full) or 'client' (no profitability section)
 
 // =============================================================
 // VEHICLE HELPERS
@@ -821,8 +854,7 @@ async function init() {
     try {
         const res  = await fetch(API_URL);
         masterData = await res.json();
-        const cities = [...new Set(masterData.hotels.map(h => h.city))];
-        document.getElementById('cityList').innerHTML = cities.map(c => `<option value="${c}">`).join('');
+        masterCities = [...new Set(masterData.hotels.map(h => h.city))].sort();
         document.getElementById('currentDate').innerText = `DATE: ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()}`;
         handlePaxChange();
     } catch (e) { showToast("Data Load Failed", "error"); }
@@ -1188,15 +1220,83 @@ function updatePaxHeader() {
     document.getElementById('resPaxName').innerText = document.getElementById('paxNameInput').value || "---";
 }
 
+// =============================================================
+// CITY AUTOCOMPLETE — instant, exact-match only
+// =============================================================
+let _ddHighlight = -1;
+
+function filterCityDropdown() {
+    const input = document.getElementById('cityInput');
+    const dd    = document.getElementById('cityDropdown');
+    const q     = input.value.trim().toLowerCase();
+    _ddHighlight = -1;
+
+    if (!q) { dd.classList.add('hidden'); dd.innerHTML = ''; return; }
+
+    const matches = masterCities.filter(c => c.toLowerCase().startsWith(q));
+    if (!matches.length) { dd.classList.add('hidden'); dd.innerHTML = ''; return; }
+
+    dd.innerHTML = matches.slice(0, 30).map((c, i) =>
+        `<div class="px-2 py-1 cursor-pointer hover:bg-blue-50" onmousedown="selectCityFromDropdown('${c.replace(/'/g,"\\'")}')">` + c + `</div>`
+    ).join('');
+    dd.classList.remove('hidden');
+}
+
+function selectCityFromDropdown(city) {
+    document.getElementById('cityInput').value = city;
+    closeCityDropdown();
+}
+
+function closeCityDropdown() {
+    const dd = document.getElementById('cityDropdown');
+    if (dd) { dd.classList.add('hidden'); dd.innerHTML = ''; }
+    _ddHighlight = -1;
+}
+
+function cityInputKeydown(e) {
+    const dd    = document.getElementById('cityDropdown');
+    const items = dd ? [...dd.querySelectorAll('div')] : [];
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        _ddHighlight = Math.min(_ddHighlight + 1, items.length - 1);
+        items.forEach((el, i) => el.classList.toggle('bg-blue-100', i === _ddHighlight));
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        _ddHighlight = Math.max(_ddHighlight - 1, 0);
+        items.forEach((el, i) => el.classList.toggle('bg-blue-100', i === _ddHighlight));
+    } else if (e.key === 'Enter') {
+        if (_ddHighlight >= 0 && items[_ddHighlight]) {
+            document.getElementById('cityInput').value = items[_ddHighlight].textContent.trim();
+            closeCityDropdown();
+        } else {
+            addCityToRoute();
+        }
+    } else if (e.key === 'Escape') {
+        closeCityDropdown();
+    }
+}
+
 function addCityToRoute() {
-    const city    = document.getElementById('cityInput').value.trim();
-    const checkin = document.getElementById('checkinInput').value;
+    const rawCity  = document.getElementById('cityInput').value.trim();
+    const checkin  = document.getElementById('checkinInput').value;
     const checkout = document.getElementById('checkoutInput').value;
-    if (!city || !checkin || !checkout) return;
+    if (!rawCity || !checkin || !checkout) return;
+
+    // Exact-match validation — case-insensitive lookup against master city list
+    const matched = masterCities.find(c => c.toLowerCase() === rawCity.toLowerCase());
+    if (!matched) {
+        showToast(`"${rawCity}" not found — please select a city from the list`, 'error');
+        return;
+    }
+    const city = matched; // use canonical casing from master
+
     const nights = Math.ceil((new Date(checkout) - new Date(checkin)) / 86400000);
     if (nights <= 0) return;
     selectedRoute.push({ id: Date.now(), city, cin: checkin, cout: checkout, nights });
     selectedRoute.sort((a, b) => new Date(a.cin) - new Date(b.cin));
+    document.getElementById('cityInput').value = '';
+    closeCityDropdown();
+    fetchCityIntelligence(city);
     renderRouteInputs();
 }
 
@@ -1204,12 +1304,30 @@ function renderRouteInputs() {
     document.getElementById('routeList').innerHTML = selectedRoute.map(r => {
         const fmt = d => d ? new Date(d).toLocaleDateString('en-GB', {day:'2-digit', month:'short'}) : '';
         const dates = (r.cin && r.cout) ? fmt(r.cin) + ' – ' + fmt(r.cout) + ', ' : '';
-        return '<div class="flex justify-between items-center bg-white p-2 rounded text-[10px] border">' +
-            '<span><b>' + r.city + '</b> (' + dates + r.nights + 'N)</span>' +
-            '<button onclick="removeRoute(' + r.id + ')" class="text-red-500 font-bold px-2">✕</button>' +
-            '</div>';
+        const intel = cityIntelligenceCache[r.city.toLowerCase()];
+        const _iq  = parseInt(intel.quoteCount) || 0;
+        const _fmtQ = _iq >= 100 ? (Math.ceil(_iq/50)*50)+'+'
+                    : _iq >= 10  ? (Math.ceil(_iq/10)*10)+'+'
+                    : _iq + '+';
+        const _fmtN = Math.round(parseFloat(intel.avgNights) || 0);
+        const _bkfRaw = parseFloat(intel.avgBreakfastPct);
+        const _fmtB = _bkfRaw ? (Math.round(_bkfRaw < 1 ? _bkfRaw * 100 : _bkfRaw) + '% incl. breakfast') : '';
+        const banner = (intel && intel.found)
+            ? `<div class="mt-1 px-2 py-1 bg-blue-50 border border-blue-100 rounded text-[9px] text-slate-500">
+                 📊 Based on <b>${_fmtQ}</b> quotes &nbsp;·&nbsp; avg <b>${_fmtN} nights</b> &nbsp;·&nbsp; Avg Hotel rate: <b>${intel.avgHotelCostPerNight}/room/night</b> &nbsp;·&nbsp; <b>${_fmtB}</b> &nbsp;·&nbsp; Sightseeing avg <b>${intel.avgSightseeingPerDay}/day</b>
+                 ${intel.nextCity ? ' &nbsp;·&nbsp; often paired with: <b>' + intel.nextCity + '</b>' : ''}
+               </div>`
+            : (intel && !intel.found ? `<div class="mt-1 px-2 py-1 bg-slate-50 border border-slate-100 rounded text-[9px] text-slate-400">No archive data for ${r.city}</div>` : '');
+        return `<div class="bg-white p-2 rounded text-[10px] border">
+            <div class="flex justify-between items-center">
+                <span><b>${r.city}</b> (${dates}${r.nights}N)</span>
+                <button onclick="removeRoute(${r.id})" class="text-red-500 font-bold px-2">✕</button>
+            </div>
+            ${banner}
+        </div>`;
     }).join('');
     suggestBudgets();
+    checkSwissPass();
 }
 
 function removeRoute(id) {
@@ -1219,6 +1337,188 @@ function removeRoute(id) {
     renderTables();
     const btn = document.getElementById('generateQuoteBtn');
     if (btn) btn.innerHTML = '▶ Generate Quote';
+}
+
+// =============================================================
+// CITY INTELLIGENCE
+// =============================================================
+async function fetchCityIntelligence(city) {
+    const key = city.toLowerCase();
+    if (cityIntelligenceCache[key] !== undefined) { renderRouteInputs(); return; }
+    cityIntelligenceCache[key] = null; // mark as loading
+    try {
+        const res  = await fetch(`${API_URL}?action=getIntelligenceForRoute&cities=${encodeURIComponent(city)}`);
+        const data = await res.json();
+        if (data && data[0]) cityIntelligenceCache[key] = data[0];
+    } catch(e) { cityIntelligenceCache[key] = { found: false }; }
+    renderRouteInputs();
+}
+
+// =============================================================
+// SWISS PASS
+// =============================================================
+const SWISS_CITIES_SET = new Set([
+    'zurich','geneva','interlaken','lucerne','zermatt','grindelwald',
+    'montreux','basel','bern','st. moritz','lausanne','wengen','engelberg'
+]);
+
+// Swiss Pass activity marker — sights master already has entries like
+// "Explore Mount Titlis with Swiss Pass" at the discounted rate
+const SWISS_PASS_MARKER = 'with swiss pass';
+
+function checkSwissPass() {
+    const card = document.getElementById('swissPassCard');
+    if (!card) return;
+    const swissCities = selectedRoute.filter(r => SWISS_CITIES_SET.has(r.city.toLowerCase()));
+    if (swissCities.length < 2) {
+        card.classList.add('hidden');
+        swissPassEnabled = false;
+        const toggle = document.getElementById('swissPassToggle');
+        if (toggle) toggle.checked = false;
+        return;
+    }
+    card.classList.remove('hidden');
+    if (swissPassEnabled) fetchSwissPassOptions();
+}
+
+async function fetchSwissPassOptions() {
+    const swissCities  = selectedRoute.filter(r => SWISS_CITIES_SET.has(r.city.toLowerCase()));
+    const swissNights  = swissCities.reduce((s, r) => s + (r.nights || 0), 0);
+    const allCities    = selectedRoute.map(r => r.city).join(',');
+    const detailsEl    = document.getElementById('swissPassDetails');
+    if (!detailsEl) return;
+    detailsEl.innerHTML = '<span class="text-slate-400">Loading...</span>';
+    try {
+        const res  = await fetch(`${API_URL}?action=getSwissPassOptions&cities=${encodeURIComponent(allCities)}&nights=${swissNights}`);
+        const data = await res.json();
+        if (!data.eligible) { detailsEl.innerHTML = `<span class="text-red-500">${data.reason}</span>`; return; }
+
+        const fmtInr = v => v != null ? '₹' + Number(v).toLocaleString('en-IN') : '—';
+        const saving2 = data.saving2ndClass;
+
+        // ── Activity savings — find "with Swiss Pass" alternatives in master ──
+        // masterData.sights already has entries like "Explore Mount Titlis with Swiss Pass"
+        // at their actual discounted price. For each activity in the current plan, look for
+        // a matching pass-version and calculate the real saving.
+        const passActivities = [];
+        let activitySavingTotal = 0;
+        const paxCount = getTravelConfigs().totalPax || 1;
+
+        // Build lookup: base-name (lowercased, "with swiss pass" stripped) → pass sight entry
+        const passAlternatives = {};
+        (masterData.sights || []).forEach(s => {
+            const nameLower = (s.info || '').toLowerCase();
+            if (nameLower.includes(SWISS_PASS_MARKER)) {
+                const baseName = nameLower.replace(SWISS_PASS_MARKER, '').replace(/[-–,]+$/, '').trim();
+                passAlternatives[baseName] = s;
+            }
+        });
+
+        (currentPlan || []).forEach(p => {
+            if (!SWISS_CITIES_SET.has((p.city || '').toLowerCase())) return;
+            (p.sights || []).forEach(s => {
+                const nameLower = (s.info || '').toLowerCase();
+                // Skip if already the pass version
+                if (nameLower.includes(SWISS_PASS_MARKER)) return;
+                // Try to find a matching pass alternative
+                const matchKey = Object.keys(passAlternatives).find(base => nameLower.includes(base) || base.includes(nameLower));
+                if (!matchKey) return;
+                const passAlt     = passAlternatives[matchKey];
+                const regularPrice = Math.round(Number(s.price || 0));
+                const passPrice    = Math.round(Number(passAlt.price || 0));
+                if (passPrice >= regularPrice) return; // no saving
+                const savingPerPerson = regularPrice - passPrice;
+                passActivities.push({
+                    name:        s.info,
+                    passName:    passAlt.info,
+                    regular:     regularPrice,
+                    withPass:    passPrice,
+                    saving:      savingPerPerson,
+                });
+                activitySavingTotal += savingPerPerson;
+            });
+        });
+
+        const trainSaving2 = saving2 != null ? saving2 : 0;
+        const totalSaving  = trainSaving2 + activitySavingTotal; // per person (train saving) + per person (activity saving)
+
+        let savingLabel;
+        if (saving2 == null && activitySavingTotal === 0) {
+            savingLabel = '<span class="text-slate-400">Add missing train legs to Trains master for complete saving calc</span>';
+        } else if (totalSaving > 0) {
+            savingLabel = `<span class="text-green-700 font-bold">Estimated saving: ${fmtInr(totalSaving)}/person vs individual${saving2 == null ? ' (trains partial)' : ''}</span>`;
+        } else {
+            savingLabel = `<span class="text-red-600 font-bold">Costs ${fmtInr(Math.abs(totalSaving))} more than individual tickets${activitySavingTotal > 0 ? ' (after activity discounts)' : ''}</span>`;
+        }
+
+        const legs = (data.legs || []).map(l =>
+            `<span>${l.from} → ${l.to}: ${l.inr ? fmtInr(l.inr) : '<i>not in master</i>'}</span>`
+        ).join('<br>');
+
+        const activityRows = passActivities.length
+            ? `<div class="mt-1 border-t border-amber-200 pt-1">
+                 <span class="font-bold text-amber-800">Activity savings (pass rate vs regular):</span><br>
+                 ${passActivities.map(a =>
+                     `<span>${a.name}: <s class="text-slate-400">${fmtInr(a.regular)}</s> → ${fmtInr(a.withPass)} &nbsp;saves <b>${fmtInr(a.saving)}/person</b></span>`
+                 ).join('<br>')}
+               </div>`
+            : `<div class="mt-1 text-[9px] text-slate-400 italic">No matching pass-rate activities in current plan. Add activities like "Explore Mount Titlis with Swiss Pass" to see savings.</div>`;
+
+        // ── Children's policy — child pass is ₹0 when adults hold pass ─────
+        const cfg = getTravelConfigs();
+        const adultCount = cfg.adults || 0;
+        const childCount = cfg.children || 0;
+        const childPassNote = adultCount > 0 && childCount > 0
+            ? `· <b>Children 6–15 (${childCount})</b>: Swiss Pass cost = <b class="text-green-700">₹0</b> — travel free with Swiss Family Card (parent holds Swiss Pass)<br>`
+            : adultCount > 0
+            ? `· Children 6–15 travel free with Swiss Family Card when accompanied by a Swiss Pass–holding parent<br>`
+            : '';
+
+        const childPolicy = `
+            <div class="mt-1 border-t border-amber-200 pt-1 text-[9px] text-slate-600">
+                <span class="font-bold text-amber-800">👨‍👩‍👧 Children's travel:</span><br>
+                · <b>Under 6</b>: Travel free (no card needed)<br>
+                ${childPassNote}
+            </div>`;
+
+        detailsEl.innerHTML = `
+            <div class="font-bold text-amber-800">${data.recommendedPass}</div>
+            <div>2nd class: <b>${fmtInr(data.price2ndClass)}/person</b> &nbsp;·&nbsp; 1st class: <b>${fmtInr(data.price1stClass)}/person</b></div>
+            <div class="mt-1 text-[9px] text-slate-500 border-t border-amber-100 pt-1">
+              <span class="font-bold text-amber-800">Train legs (individual prices):</span><br>${legs}
+            </div>
+            ${activityRows}
+            <div class="mt-1">${savingLabel}</div>
+            ${data.mountainFlags && data.mountainFlags.length ? `<div class="text-orange-600 font-bold mt-1">⚠️ Mountain railways in route: ${data.mountainFlags.join(', ')}</div>` : ''}
+            ${data.missingLegs && data.missingLegs.length ? `<div class="text-slate-400 mt-1">Missing from Trains master: ${data.missingLegs.join(', ')}</div>` : ''}
+            ${childPolicy}
+        `;
+    } catch(e) { detailsEl.innerHTML = '<span class="text-red-500">Error loading pass data</span>'; }
+}
+
+function toggleSwissPass(enabled) {
+    swissPassEnabled = enabled;
+    const detailsEl = document.getElementById('swissPassDetails');
+    if (!enabled) {
+        if (detailsEl) detailsEl.innerHTML = '';
+        renderTables(); // restore original train prices
+        return;
+    }
+    fetchSwissPassOptions();
+    renderTables(); // zero out Swiss train legs immediately
+}
+
+// =============================================================
+// PDF MODE TOGGLE
+// =============================================================
+function setPdfMode(mode) {
+    pdfMode = mode;
+    document.getElementById('btnPdfAgent').className  = mode === 'agent'
+        ? 'text-[9px] px-2 py-1 rounded font-bold bg-slate-800 text-white'
+        : 'text-[9px] px-2 py-1 rounded font-bold bg-white border border-slate-300 text-slate-500';
+    document.getElementById('btnPdfClient').className = mode === 'client'
+        ? 'text-[9px] px-2 py-1 rounded font-bold bg-slate-800 text-white'
+        : 'text-[9px] px-2 py-1 rounded font-bold bg-white border border-slate-300 text-slate-500';
 }
 
 // =============================================================
@@ -1813,10 +2113,37 @@ function renderTables() {
     // Intercity (per-person pricing)
     const icBody = document.getElementById('ferryBusTableBody');
     if (icBody) {
-        icBody.innerHTML = selectedIntercity.map((ic, idx) => {
-            const icTotal = Math.round(ic.price * config.totalPax);
+        // Determine which legs are Swiss-to-Swiss (covered by pass when enabled)
+        // fromTo format: "Zurich to Interlaken" — both ends must be Swiss cities
+        const isSwissLeg = (ic) => {
+            if (!swissPassEnabled) return false;
+            const parts = (ic.fromTo || '').toLowerCase().split(' to ');
+            if (parts.length < 2) return false;
+            const fromCity = parts[0].trim();
+            const toCity   = parts.slice(1).join(' to ').trim();
+            return [...SWISS_CITIES_SET].some(sc => fromCity.includes(sc))
+                && [...SWISS_CITIES_SET].some(sc => toCity.includes(sc));
+        };
+
+        const swissPassBanner = swissPassEnabled
+            ? `<tr><td colspan="6" class="px-2 py-1.5 bg-amber-50 border border-amber-200 text-[9px] text-amber-800 font-semibold">
+                 🚂 All trains, metros &amp; buses are included for Swiss Travel Pass holders for the pass duration. Prices shown as ₹0.
+               </td></tr>`
+            : '';
+
+        icBody.innerHTML = swissPassBanner + selectedIntercity.map((ic, idx) => {
+            const covered = isSwissLeg(ic);
+            const icTotal = covered ? 0 : Math.round(ic.price * config.totalPax);
+            const priceDisplay = covered
+                ? `<span class="text-green-700 font-bold text-[9px]">₹0 <span class="font-normal">(Pass)</span></span>`
+                : `<div class="flex items-center justify-end whitespace-nowrap">
+                     <span class="mr-1 text-[11px]">₹</span>
+                     <input type="number" value="${icTotal}"
+                         onchange="editIntercity(${idx}, 'price', this.value)"
+                         class="pdf-input w-20 text-right bg-transparent outline-none font-bold">
+                   </div>`;
             return `
-            <tr class="${ic.isManual ? 'bg-blue-50/30' : ''}">
+            <tr class="${ic.isManual ? 'bg-blue-50/30' : ''}${covered ? ' bg-green-50/30' : ''}">
                 <td class="p-2 border text-[10px] font-bold">${formatDate(ic.date)}</td>
                 <td class="p-2 border">
                     <input type="text" value="${ic.mode}" onchange="editIntercity(${idx}, 'mode', this.value)"
@@ -1831,12 +2158,7 @@ function renderTables() {
                         class="pdf-input w-full bg-transparent outline-none italic text-slate-500 text-[10px]">
                 </td>
                 <td class="price-col p-2 border w-32 font-bold text-blue-800">
-                    <div class="flex items-center justify-end whitespace-nowrap">
-                        <span class="mr-1 text-[11px]">₹</span>
-                        <input type="number" value="${icTotal}"
-                            onchange="editIntercity(${idx}, 'price', this.value)"
-                            class="pdf-input w-20 text-right bg-transparent outline-none font-bold">
-                    </div>
+                    ${priceDisplay}
                 </td>
                 <td class="p-2 border text-center no-print w-20">
                     <button onclick="selectedIntercity.splice(${idx},1); renderTables();" class="text-red-500 font-bold mr-2">✕</button>
@@ -2863,6 +3185,11 @@ async function downloadPDF() {
                     input.parentElement.appendChild(span);
                 });
                 clonedDoc.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
+                // Client PDF: also hide internal profitability section
+                if (pdfMode === 'client') {
+                    const prof = clonedDoc.getElementById('profitability-section');
+                    if (prof) prof.style.display = 'none';
+                }
             }
         });
         const { jsPDF } = window.jspdf;
@@ -3102,7 +3429,7 @@ async function loadQuoteDashboard(force = false) {
       <div class="db-dest-grid">
         ${top5.map(([city,cnt],i)=>{
           const n=avgNC[city];const avgN=n?Math.round(n.reduce((a,b)=>a+b,0)/n.length):0;
-          return `<div class="db-dest-card"><div class="dc-rank">${medals[i]}</div><div class="dc-city">${city}</div><div class="dc-num">${cnt}</div><div class="dc-label">quotes</div>${avgN?`<div class="dc-sub">~${avgN} nights avg</div>`:''}</div>`;
+          return `<div class="db-dest-card"><div class="dc-rank">${medals[i]}</div><div class="dc-city">${city}</div><div class="dc-num">${cnt}</div><div class="dc-label">quotes</div>${avgN?`<div class="dc-sub">~${avgN} nights avg</div>`:''}`;
         }).join('')}
       </div>
     </div>
