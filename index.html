@@ -3465,6 +3465,63 @@ async function loadDataDashboard(force = false) {
       </div>
     </div>
 
+    <!-- INPUT SHEET PRIORITISATION -->
+    <div class="db-section">
+      <div class="db-section-title"><span class="dt" style="background:#0891b2"></span>Input Sheet Prioritisation — What to focus on</div>
+      <div class="db-info" style="background:#f0f9ff;border-color:#bae6fd;color:#0c4a6e;margin-bottom:14px;">
+        Cities <strong>already well-stocked</strong> in master (15+ options) should be held back — focus your effort on cities with 3–9 options first.
+        The tables below show every city that has rows waiting in your INPUT sheets, ranked by how urgently the master needs more data.
+      </div>
+      <div class="db-row2">
+        <div class="db-card">
+          <h3>🏨 Hotels Input — By Priority <span class="badge">${(inv.inputHotelsByCity||[]).length} cities pending</span></h3>
+          ${(inv.inputHotelsByCity||[]).length===0?'<div class="db-empty">No pending hotel rows in INPUT sheet.</div>':`
+          <div class="db-tbl-wrap">
+            <table class="db-table">
+              <thead><tr><th>City</th><th class="tr">Master</th><th class="tr">Pending</th><th>Action</th></tr></thead>
+              <tbody>
+                ${(inv.inputHotelsByCity||[]).map(r=>{
+                  const tier = r.masterCount>=15?{lbl:'Hold — well stocked',bg:'#f1f5f9',col:'#64748b'}
+                              :r.masterCount>=10?{lbl:'Low priority',bg:'#eff6ff',col:'#2563eb'}
+                              :r.masterCount>=3 ?{lbl:'Work on this ✓',bg:'#fef3c7',col:'#92400e'}
+                              :                  {lbl:'Urgent — add now',bg:'#fee2e2',col:'#dc2626'};
+                  return `<tr>
+                    <td><strong>${r.city}</strong></td>
+                    <td class="tr" style="font-weight:800;font-size:13px;">${r.masterCount}</td>
+                    <td class="tr" style="font-weight:700;color:#0891b2;">${r.pending}</td>
+                    <td><span style="font-size:10px;background:${tier.bg};color:${tier.col};padding:2px 9px;border-radius:10px;font-weight:700;">${tier.lbl}</span></td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>`}
+        </div>
+        <div class="db-card">
+          <h3>🎭 Sightseeing Input — By Priority <span class="badge">${(inv.inputSightsByCity||[]).length} cities pending</span></h3>
+          ${(inv.inputSightsByCity||[]).length===0?'<div class="db-empty">No pending sightseeing rows in INPUT sheet.</div>':`
+          <div class="db-tbl-wrap">
+            <table class="db-table">
+              <thead><tr><th>City</th><th class="tr">Master</th><th class="tr">Pending</th><th>Action</th></tr></thead>
+              <tbody>
+                ${(inv.inputSightsByCity||[]).map(r=>{
+                  const tier = r.masterCount>=15?{lbl:'Hold — well stocked',bg:'#f1f5f9',col:'#64748b'}
+                              :r.masterCount>=10?{lbl:'Low priority',bg:'#eff6ff',col:'#2563eb'}
+                              :r.masterCount>=3 ?{lbl:'Work on this ✓',bg:'#fef3c7',col:'#92400e'}
+                              :                  {lbl:'Urgent — add now',bg:'#fee2e2',col:'#dc2626'};
+                  return `<tr>
+                    <td><strong>${r.city}</strong></td>
+                    <td class="tr" style="font-weight:800;font-size:13px;">${r.masterCount}</td>
+                    <td class="tr" style="font-weight:700;color:#0891b2;">${r.pending}</td>
+                    <td><span style="font-size:10px;background:${tier.bg};color:${tier.col};padding:2px 9px;border-radius:10px;font-weight:700;">${tier.lbl}</span></td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>`}
+        </div>
+      </div>
+    </div>
+
     <!-- TRANSFER + TRAIN COVERAGE -->
     <div class="db-section">
       <div class="db-section-title"><span class="dt" style="background:#2563eb"></span>Transfer & Train Coverage</div>
