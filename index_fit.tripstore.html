@@ -1234,6 +1234,53 @@ function applyBudgetSuggestion(type) {
     else                  document.getElementById('sightBudget').value = _lastBudgetSuggestion.landMid;
 }
 
+function splitClientBudget() {
+    const clientBudget = Number(document.getElementById('clientBudgetInput').value) || 0;
+    const breakdownEl  = document.getElementById('clientBudgetBreakdown');
+    if (!clientBudget) {
+        if (breakdownEl) breakdownEl.style.display = 'none';
+        return;
+    }
+
+    const markupPct = Number(document.getElementById('markupInput').value) || 0;
+    const netBudget = Math.round(clientBudget / (1 + markupPct / 100));
+
+    const { totalPax } = getTravelConfigs();
+    const transferCost  = selectedTransfers.reduce((s, t) => s + (Number(t.vehiclePrice || t.avgPrice) || 0), 0);
+    const intercityCost = selectedIntercity.reduce((s, ic) => s + Math.round(Number(ic.price || 0) * totalPax), 0);
+    const fixedCosts    = transferCost + intercityCost;
+    const remaining     = Math.max(0, netBudget - fixedCosts);
+
+    // Split remaining between hotels and sightseeing
+    // Use existing suggested ratio if available, else default 60:40 hotel:sightseeing
+    const totalNights = selectedRoute.reduce((s, r) => s + (r.nights || 0), 0);
+    let hotelShare = 0.60, sightShare = 0.40;
+    if (_lastBudgetSuggestion && _lastBudgetSuggestion.hotelMid && _lastBudgetSuggestion.landMid) {
+        const total = _lastBudgetSuggestion.hotelMid + _lastBudgetSuggestion.landMid;
+        if (total > 0) {
+            hotelShare = _lastBudgetSuggestion.hotelMid / total;
+            sightShare = _lastBudgetSuggestion.landMid / total;
+        }
+    }
+
+    const hotelBudget = Math.round(remaining * hotelShare / 1000) * 1000;
+    const sightBudget = Math.round(remaining * sightShare / 1000) * 1000;
+
+    document.getElementById('hotelBudget').value = hotelBudget;
+    document.getElementById('sightBudget').value = sightBudget;
+
+    // Show breakdown
+    const fmt = n => '₹' + Math.round(n).toLocaleString('en-IN');
+    if (breakdownEl) {
+        breakdownEl.innerHTML =
+            `<b>Net after ${markupPct}% markup:</b> ${fmt(netBudget)}` +
+            (fixedCosts > 0 ? ` · <b>Trains+Transfers:</b> ${fmt(fixedCosts)}` : '') +
+            ` · <b>Remaining:</b> ${fmt(remaining)}` +
+            ` → Hotels ${fmt(hotelBudget)} + Sightseeing ${fmt(sightBudget)}`;
+        breakdownEl.style.display = 'block';
+    }
+}
+
 function updatePaxHeader() {
     document.getElementById('resPaxName').innerText = document.getElementById('paxNameInput').value || "---";
 }
