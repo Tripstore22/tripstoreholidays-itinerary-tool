@@ -942,7 +942,6 @@ async function searchItinerary(query) {
         document.getElementById('paxNameInput').value        = query;
         document.getElementById('adultCountInput').value     = data.adults   || data.paxCount || 2;
         document.getElementById('childCountInput').value     = data.children || 0;
-        document.getElementById('clientBudgetInput').value    = data.totalBudget || '';
         document.getElementById('hotelBudget').value         = data.hotelBudget;
         document.getElementById('sightBudget').value         = data.sightBudget;
         document.getElementById('markupInput').value         = data.markup;
