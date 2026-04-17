@@ -2208,7 +2208,7 @@ function renderTables() {
                         <span style="font-size:10px;flex-shrink:0;">₹</span>
                         <input type="number" value="${sTotal}"
                             onchange="currentPlan[${planIdx}].sights[${sIdx}].price = Number(this.value)/${config.totalPax}; calculateBudgetInvestment();"
-                            class="pdf-input w-14 text-right bg-transparent outline-none font-medium">
+                            class="pdf-input text-right bg-transparent outline-none font-medium" style="width:42px;">
                     </div>
                     <button onclick="deleteSightFromDay(${planIdx},'${s.instanceId}')"
                         class="no-print text-red-400 hover:text-red-600 font-bold text-sm ml-1 flex-shrink-0" title="Remove tour">✕</button>
