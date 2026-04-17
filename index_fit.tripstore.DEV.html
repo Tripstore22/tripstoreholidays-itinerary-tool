@@ -1236,6 +1236,14 @@ async function loadSavedList() {
               <td style="padding:11px 14px;text-align:right;font-size:12px;font-weight:600;">${hBudget}</td>
               <td style="padding:11px 14px;text-align:right;font-size:12px;font-weight:600;">${sBudget}</td>
               <td style="padding:11px 14px;text-align:center;font-size:10px;color:#64748b;white-space:nowrap;">${savedDate}</td>
+              <td style="padding:8px 14px;text-align:center;">
+                <select onchange="setItineraryStatus(this,'${r.paxName.replace(/'/g,"\\'")}',this.value)"
+                  style="background:${statusBg};color:#fff;border:none;border-radius:6px;padding:4px 8px;font-size:10px;font-weight:700;cursor:pointer;outline:none;appearance:none;text-align:center;">
+                  <option value="pending" ${itinStatus==='pending'?'selected':''}>Pending</option>
+                  <option value="won"     ${itinStatus==='won'?'selected':''}>Won</option>
+                  <option value="lost"    ${itinStatus==='lost'?'selected':''}>Lost</option>
+                </select>
+              </td>
               <td style="padding:11px 14px;text-align:center;white-space:nowrap;">
                 <button onclick="loadAndOpen('${r.paxName.replace(/'/g,"\\'")}')"
                   style="background:#0f172a;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;margin:0 2px;">✏️ Open</button>
