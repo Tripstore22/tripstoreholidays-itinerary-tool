@@ -3706,7 +3706,7 @@ async function loadQuoteDashboard(force = false) {
       <div class="db-dest-grid">
         ${top5.map(([city,cnt],i)=>{
           const n=avgNC[city];const avgN=n?Math.round(n.reduce((a,b)=>a+b,0)/n.length):0;
-          return `<div class="db-dest-card"><div class="dc-rank">${medals[i]}</div><div class="dc-city">${city}</div><div class="dc-num">${cnt}</div><div class="dc-label">quotes</div>${avgN?`<div class="dc-sub">~${avgN} nights avg</div>`:''}`;
+          return `<div class="db-dest-card"><div class="dc-rank">${medals[i]}</div><div class="dc-city">${city}</div><div class="dc-num">${cnt}</div><div class="dc-label">quotes</div>${avgN?`<div class="dc-sub">~${avgN} nights avg</div>`:''}</div>`;
         }).join('')}
       </div>
     </div>
