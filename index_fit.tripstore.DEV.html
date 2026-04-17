@@ -1161,6 +1161,12 @@ async function loadAndOpen(name) {
     await searchItinerary(name);
 }
 
+function setItineraryStatus(sel, name, val) {
+    localStorage.setItem('itin_status_' + name, val);
+    const cols = {pending:'#f59e0b', won:'#16a34a', lost:'#dc2626'};
+    sel.style.background = cols[val] || '#f59e0b';
+}
+
 // ── MY ITINERARIES TAB ──────────────────────────────────────
 async function loadSavedList() {
     const el = document.getElementById('savedListContent');
