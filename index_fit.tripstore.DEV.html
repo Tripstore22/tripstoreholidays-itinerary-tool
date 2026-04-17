@@ -1221,6 +1221,9 @@ async function loadSavedList() {
             const savedDate = r.savedAt ? new Date(r.savedAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—';
             const hBudget   = r.hotelBudget ? '₹'+Number(r.hotelBudget).toLocaleString('en-IN') : '—';
             const sBudget   = r.sightBudget ? '₹'+Number(r.sightBudget).toLocaleString('en-IN') : '—';
+            const itinStatus = localStorage.getItem('itin_status_' + r.paxName) || 'pending';
+            const statusColors = {pending:'#f59e0b',won:'#16a34a',lost:'#dc2626'};
+            const statusBg = statusColors[itinStatus] || '#f59e0b';
             return `<tr data-name="${r.paxName.toLowerCase()}" data-cities="${r.cities.toLowerCase()}"
               style="border-bottom:1px solid #f1f5f9;${idx%2===0?'background:#fff;':'background:#fafafa;'}transition:background .15s;"
               onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='${idx%2===0?'#fff':'#fafafa'}'">
