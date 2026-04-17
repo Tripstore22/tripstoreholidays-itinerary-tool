@@ -1,3 +1,11 @@
+<!--
+  ============================================================
+  DEV FILE — index_fit.tripstore.DEV.html
+  DO NOT OVERWRITE WITH LIVE FILE. This has features live doesn't.
+  DEV Sheet: 1cdI1Gz652pTyqX5gVIJ6AHssMZiHD0VLr_KJXt0hETE
+  DEV API: AKfycbwI0EKmAEJlHVDZQcBTrRscEE0G0y6A5lXRa1VIQBMPwOQRsqnIOWJEeelWNtUguVb2_g
+  ============================================================
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -118,7 +126,18 @@
   <button id="navBtn-saved" onclick="switchAdminTab('saved')" class="admin-nav-btn" style="color:rgba(255,255,255,.6);font-size:11px;font-weight:700;padding:14px 18px;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;letter-spacing:.5px;transition:all .2s;">📂 My Itineraries</button>
   <button id="navBtn-quote" onclick="switchAdminTab('quote')" class="admin-nav-btn admin-only-tab" style="display:none;color:rgba(255,255,255,.6);font-size:11px;font-weight:700;padding:14px 18px;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;letter-spacing:.5px;transition:all .2s;">📊 Quote Dashboard</button>
   <button id="navBtn-data" onclick="switchAdminTab('data')" class="admin-nav-btn admin-only-tab" style="display:none;color:rgba(255,255,255,.6);font-size:11px;font-weight:700;padding:14px 18px;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;letter-spacing:.5px;transition:all .2s;">🗂️ Data Dashboard</button>
-  <div style="margin-left:auto;color:rgba(255,255,255,.4);font-size:10px;" id="navUserLabel"></div>
+  <button id="navBtn-wallet" onclick="switchAdminTab('wallet')" class="admin-nav-btn admin-only-tab" style="display:none;color:rgba(255,255,255,.6);font-size:11px;font-weight:700;padding:14px 18px;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;letter-spacing:.5px;transition:all .2s;">💳 Wallet Admin</button>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:12px;">
+    <div id="walletBadge" onclick="toggleWalletDropdown()" style="cursor:pointer;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:6px 14px;display:none;align-items:center;gap:6px;">
+      <span style="color:rgba(255,255,255,.5);font-size:10px;font-weight:700;">WALLET</span>
+      <span id="walletBalanceDisplay" style="color:#4ade80;font-size:13px;font-weight:800;">₹0</span>
+    </div>
+    <div id="walletDropdown" style="display:none;position:absolute;right:24px;top:52px;background:#fff;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.25);width:300px;z-index:9999;overflow:hidden;">
+      <div style="background:#0f172a;color:#fff;padding:12px 16px;font-size:11px;font-weight:700;">Recent Transactions</div>
+      <div id="walletTxnList" style="padding:8px;max-height:250px;overflow-y:auto;font-size:11px;"></div>
+    </div>
+    <div style="color:rgba(255,255,255,.4);font-size:10px;" id="navUserLabel"></div>
+  </div>
 </div>
 
 <!-- TAB: ITINERARY BUILDER -->
@@ -134,6 +153,7 @@
                     <img src="images/tripstorelogo.png" alt="Trip Store Holidays" class="h-7" onerror="this.outerHTML='<h1 class=\'text-xl font-black text-blue-600 italic\'>TRIP STORE</h1>'">
                     <div class="flex items-center gap-2">
                         <span id="roleBadge" class="px-2 py-0.5 bg-slate-100 text-[8px] font-bold rounded-full uppercase text-slate-500">User Mode</span>
+                        <button onclick="startNewQuote()" class="text-[8px] font-bold text-blue-600 hover:text-blue-800 border border-blue-200 px-2 py-0.5 rounded bg-blue-50 uppercase">New Quote</button>
                         <button onclick="handleLogout()" class="text-[8px] font-bold text-red-500 hover:text-red-700 border border-red-100 px-2 py-0.5 rounded bg-red-50 uppercase">Logout ⎋</button>
                     </div>
                 </div>
@@ -220,12 +240,21 @@
                     <div id="breakdownTotalLine" style="font-weight:800;"></div>
                     <div id="breakdownUtilLine" style="margin-top:2px;font-weight:700;"></div>
                 </div>
-                <button onclick="runOptimizer(true, true)"
-                    class="no-print w-full py-2 rounded text-xs font-bold text-white flex items-center justify-center gap-1.5"
-                    id="generateQuoteBtn"
-                    style="background:#1a3c5e;">
-                    ▶ Generate Quote
-                </button>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="runOptimizer(true, true)"
+                        class="no-print w-full py-2 rounded text-xs font-bold text-white text-center"
+                        id="generateQuoteBtn"
+                        style="background:#1a3c5e;">
+                        ▶ Generate Quote
+                    </button>
+                    <button onclick="runAutoBuild()"
+                        class="no-print w-full py-2 rounded text-xs font-bold text-white text-center disabled:opacity-40 disabled:cursor-not-allowed"
+                        id="autoBuildBtn"
+                        disabled
+                        style="background:linear-gradient(135deg,#065f46,#059669);">
+                        ⚡ Auto-Build
+                    </button>
+                </div>
                 <div>
                     <label class="text-[8px] font-bold text-gray-500 uppercase">Vehicle Type</label>
                     <select id="vehicleTypeSelect" onchange="runOptimizer(false, false)" class="w-full p-1.5 border rounded text-xs font-bold outline-none mt-0.5">
@@ -292,6 +321,13 @@
         <div class="lg:col-span-8">
             <div class="pdf-viewport">
                 <div id="pdf-content" class="p-4 md:p-12 shadow-2xl rounded-sm">
+
+                    <!-- Auto-Build indicator -->
+                    <div id="autoBuildBanner" class="hidden no-print mb-3" style="background:linear-gradient(135deg,#065f46,#059669);border-radius:8px;padding:6px 12px;color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;gap:6px;">
+                        <span style="font-size:13px;">⚡</span>
+                        <span id="autoBuildBannerText">Auto-built from past quotes</span>
+                        <span style="margin-left:auto;opacity:.6;font-size:9px;">Review &amp; edit as needed</span>
+                    </div>
 
                     <!-- Header -->
                     <div class="flex justify-between items-center mb-8 border-b pb-6">
@@ -482,6 +518,39 @@
   <div id="quoteDashContent"><div style="text-align:center;padding:80px;color:#94a3b8;"><div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:dashSpin .8s linear infinite;margin:0 auto 16px;"></div>Loading quote data...</div></div>
 </div>
 
+<!-- TAB: WALLET ADMIN (admin only) -->
+<div id="tab-wallet" style="display:none;padding:28px 32px;background:#f1f5f9;min-height:100vh;">
+  <div style="max-width:700px;margin:0 auto;">
+    <div style="font-size:22px;font-weight:800;color:#0f172a;margin-bottom:24px;">💳 Wallet Administration</div>
+    <div style="background:#fff;border-radius:14px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.06);margin-bottom:20px;">
+      <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px;">Select Agent</label>
+      <select id="walletAgentSelect" onchange="onWalletAgentSelect()" style="width:100%;padding:10px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:14px;font-weight:600;background:#f8fafc;">
+        <option value="">— Choose agent —</option>
+      </select>
+    </div>
+    <div id="walletAgentPanel" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+        <div style="background:#fff;border-radius:14px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.06);text-align:center;">
+          <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Current Balance</div>
+          <div id="walletAgentBalance" style="font-size:32px;font-weight:900;color:#059669;">₹0</div>
+        </div>
+        <div style="background:#fff;border-radius:14px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
+          <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Add Credits</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <input id="walletTopUpAmount" type="number" placeholder="Amount (₹)" style="padding:10px;border:2px solid #e2e8f0;border-radius:8px;font-size:14px;font-weight:600;">
+            <input id="walletBankRef" type="text" placeholder="Bank reference / UTR / confirmation" style="padding:10px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;color:#334155;">
+            <button onclick="handleTopUp()" style="background:#2563eb;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;">Add ₹</button>
+          </div>
+        </div>
+      </div>
+      <div style="background:#fff;border-radius:14px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.06);">
+        <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">Recent Transactions</div>
+        <div id="walletAdminTxnList" style="font-size:12px;color:#334155;">No transactions yet</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- TAB: DATA DASHBOARD -->
 <div id="tab-data" style="display:none;padding:28px 32px;background:#f1f5f9;min-height:100vh;">
   <div id="dataDashContent"><div style="text-align:center;padding:80px;color:#94a3b8;"><div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:dashSpin .8s linear infinite;margin:0 auto 16px;"></div>Loading master data...</div></div>
@@ -578,7 +647,7 @@
 // =============================================================
 // CONFIGURATION
 // =============================================================
-const API_URL = "https://script.google.com/macros/s/AKfycbzjz5S7bHhvY-Az-XpUQpyZ4iLcNVFnOL8FIAwFksSXa_B9Oz2BPhnw_tLPTAleBSVI0Q/exec"; // DEV — swap to production URL on go-live
+const API_URL = "https://script.google.com/macros/s/AKfycbwI0EKmAEJlHVDZQcBTrRscEE0G0y6A5lXRa1VIQBMPwOQRsqnIOWJEeelWNtUguVb2_g/exec"; // DEV — swap to production URL on go-live
 
 // =============================================================
 // GLOBAL STATE
@@ -594,6 +663,7 @@ let selectedIntercity  = [];
 let cityIntelligenceCache = {};   // city_lower → intelligence data from City_Intelligence tab
 let swissPassEnabled      = false; // whether Swiss Pass toggle is on
 let pdfMode               = 'agent'; // 'agent' (full) or 'client' (no profitability section)
+let walletBalance      = 0; // agent wallet balance, loaded on login
 
 // =============================================================
 // VEHICLE HELPERS
@@ -812,6 +882,7 @@ function launchApp(modeText) {
         refreshAdminList();
     }
     init();
+    loadWalletBalance(); // load agent wallet on login
     showToast(`System Unlocked: ${modeText}`);
 }
 
@@ -819,6 +890,53 @@ function handleLogout() {
     localStorage.removeItem("tripstore_session");
     showToast("Logging out...", "error");
     setTimeout(() => location.reload(), 1000);
+}
+
+function startNewQuote() {
+    // Clear all state
+    selectedRoute     = [];
+    currentPlan       = [];
+    selectedTransfers = [];
+    selectedIntercity = [];
+    _loadedFromName   = null;
+
+    // Clear form inputs
+    document.getElementById('paxNameInput').value     = '';
+    document.getElementById('adultCountInput').value  = 2;
+    document.getElementById('childCountInput').value  = 0;
+    document.getElementById('roomCountInput').value   = '';
+    document.getElementById('hotelBudget').value      = '';
+    document.getElementById('sightBudget').value      = '';
+    document.getElementById('markupInput').value      = 15;
+    document.getElementById('cityInput').value        = '';
+    document.getElementById('checkinInput').value     = '';
+    document.getElementById('checkoutInput').value    = '';
+    document.getElementById('searchInput').value      = '';
+    const vSel = document.getElementById('vehicleTypeSelect');
+    if (vSel) vSel.value = 'auto';
+    const gstNone = document.getElementById('gstNone');
+    if (gstNone) gstNone.checked = true;
+
+    // Reset UI
+    document.getElementById('routeList').innerHTML = '';
+    const genBtn = document.getElementById('generateQuoteBtn');
+    if (genBtn) genBtn.innerHTML = '▶ Generate Quote';
+    const abBanner = document.getElementById('autoBuildBanner');
+    if (abBanner) { abBanner.classList.add('hidden'); abBanner.style.display = 'none'; }
+    const bbBar = document.getElementById('budgetBreakdownBar');
+    if (bbBar) bbBar.classList.add('hidden');
+    const hHint = document.getElementById('hotelBudgetHint');
+    const sHint = document.getElementById('sightBudgetHint');
+    if (hHint) hHint.style.display = 'none';
+    if (sHint) sHint.style.display = 'none';
+    const spCard = document.getElementById('swissPassCard');
+    if (spCard) spCard.classList.add('hidden');
+
+    // Re-render
+    handlePaxChange();
+    renderTables();
+    updateAutoBuildBtn();
+    showToast('Ready for a new quote');
 }
 
 async function checkAutoLogin() {
@@ -960,7 +1078,20 @@ async function saveItinerary() {
         }
     };
     try {
-        await fetch(API_URL, { method: "POST", body: JSON.stringify(data) });
+        // Save first — only deduct wallet if save succeeds
+        const saveRes = await fetch(API_URL, { method: "POST", body: JSON.stringify(data) });
+        const saveText = await saveRes.text();
+        if (!saveRes.ok || saveText.startsWith('Server Error')) {
+            showToast("Save Failed: " + saveText, "error");
+            return;
+        }
+
+        // ── WALLET: deduct AFTER successful save ──
+        const walletPaxName = cleanBase || fallback;
+        const walletCities = selectedRoute.map(r => r.city || r).join(' → ');
+        await walletDeductForQuote(walletPaxName, walletCities);
+        // ── END WALLET ──
+
         const wasVersioned = saveName !== rawName;
         _loadedFromName = null;
         showToast(wasVersioned ? `Saved as new version: ${saveName}` : "Saved Successfully");
@@ -1324,13 +1455,13 @@ function renderRouteInputs() {
     document.getElementById('routeList').innerHTML = selectedRoute.map(r => {
         const fmt = d => d ? new Date(d).toLocaleDateString('en-GB', {day:'2-digit', month:'short'}) : '';
         const dates = (r.cin && r.cout) ? fmt(r.cin) + ' – ' + fmt(r.cout) + ', ' : '';
-        const intel = cityIntelligenceCache[r.city.toLowerCase()];
-        const _iq  = parseInt(intel.quoteCount) || 0;
+        const intel = cityIntelligenceCache[r.city.toLowerCase()] || null;
+        const _iq  = intel ? (parseInt(intel.quoteCount) || 0) : 0;
         const _fmtQ = _iq >= 100 ? (Math.ceil(_iq/50)*50)+'+'
                     : _iq >= 10  ? (Math.ceil(_iq/10)*10)+'+'
                     : _iq + '+';
-        const _fmtN = Math.round(parseFloat(intel.avgNights) || 0);
-        const _bkfRaw = parseFloat(intel.avgBreakfastPct);
+        const _fmtN = intel ? Math.round(parseFloat(intel.avgNights) || 0) : 0;
+        const _bkfRaw = intel ? parseFloat(intel.avgBreakfastPct) : 0;
         const _fmtB = _bkfRaw ? (Math.round(_bkfRaw < 1 ? _bkfRaw * 100 : _bkfRaw) + '% incl. breakfast') : '';
         const banner = (intel && intel.found)
             ? `<div class="mt-1 px-2 py-1 bg-blue-50 border border-blue-100 rounded text-[9px] text-slate-500">
@@ -1348,6 +1479,7 @@ function renderRouteInputs() {
     }).join('');
     suggestBudgets();
     checkSwissPass();
+    updateAutoBuildBtn();
 }
 
 function removeRoute(id) {
@@ -1627,19 +1759,33 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
             const getAttractionTags = (s) =>
                 getTourTags(s).filter(t => !GENERIC_TAGS.has(t));
 
-            // Extract 2-word bigrams from tour name to detect same-attraction duplicates
-            // e.g. "Eiffel Tower Entry Ticket" and "Eiffel Tower Guided Tour" both produce "eiffel_tower"
+            // Extract bigrams + landmark keywords from tour name to detect same-attraction duplicates
+            // Bigrams: "Eiffel Tower Entry Ticket" and "Eiffel Tower Guided Tour" both produce "eiffel_tower"
+            // Keywords: "Colosseum with Arena" and "Fast-Track Colosseum" both produce "colosseum"
+            const LANDMARK_KEYWORDS = new Set([
+                'colosseum','vatican','sistine','louvre','versailles','eiffel','duomo','uffizi',
+                'pompeii','gondola','rialto','murano','burano','sagrada','gaudi','montmartre',
+                'pantheon','trevi','palatine','forum','trastevere','borghese','piazzale',
+                'michelangelo','jungfraujoch','titlis','schilthorn','pilatus','rigi','matterhorn',
+                'keukenhof','zaanse','rijksmuseum','anne frank','stedelijk','heineken',
+                'stonehenge','buckingham','westminster','tower bridge','windsor',
+                'acropolis','parthenon','santorini','delphi','meteora',
+                'disneyland','moulin rouge','seine','danube','rhine','plitvice'
+            ]);
             const getAttractionBigrams = (tourName) => {
                 const words = (tourName || '').toLowerCase()
                     .replace(/[éèêë]/g, 'e').replace(/[àâä]/g, 'a').replace(/[ùûü]/g, 'u')
                     .replace(/[îï]/g, 'i').replace(/[ôö]/g, 'o')
                     .replace(/[^a-z0-9\s]/g, ' ')
                     .split(/\s+/).filter(w => w.length >= 3);
-                const bigrams = [];
+                const results = [];
+                // Bigrams
                 for (let i = 0; i < words.length - 1; i++) {
-                    bigrams.push(words[i] + '_' + words[i + 1]);
+                    results.push(words[i] + '_' + words[i + 1]);
                 }
-                return bigrams;
+                // Landmark unigrams — catches "Colosseum with Arena" vs "Fast-Track Colosseum"
+                words.forEach(w => { if (LANDMARK_KEYWORDS.has(w)) results.push('_LM_' + w); });
+                return results;
             };
 
             const getTourHours = (s) => {
@@ -1827,11 +1973,14 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
         return { ...sourceRoute, hotel: finalHotel, isHotelManual, sights: finalSights.sort((a, b) => a.assignedDay - b.assignedDay) };
     });
 
-    optimizeTransfers(landBudgetTotal, paxCount);
-    optimizeIntercity(landBudgetTotal, paxCount);
+    optimizeTransfers(landBudgetNet, paxCount);
+    optimizeIntercity(landBudgetNet, paxCount);
     renderTables();
     const genBtn = document.getElementById('generateQuoteBtn');
     if (genBtn) genBtn.innerHTML = '↺ Revise Quote';
+    // Hide auto-build banner when manual Generate Quote is used
+    const _abBanner = document.getElementById('autoBuildBanner');
+    if (_abBanner) { _abBanner.classList.add('hidden'); _abBanner.style.display = 'none'; }
     showToast("Plan generated successfully", "success");
 }
 
@@ -2285,6 +2434,73 @@ function calculateBudgetInvestment() {
         bar.classList.add('hidden');
         const utilEl = document.getElementById('valUtil');
         if (utilEl) utilEl.innerText = '—';
+    }
+}
+
+// =============================================================
+// AUTO-BUILD
+// =============================================================
+function updateAutoBuildBtn() {
+    const btn = document.getElementById('autoBuildBtn');
+    if (!btn) return;
+    btn.disabled = !selectedRoute || selectedRoute.length === 0;
+}
+
+async function runAutoBuild() {
+    if (!selectedRoute || selectedRoute.length === 0) return;
+
+    const btn = document.getElementById('autoBuildBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="animate-spin inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full"></span> Building...';
+
+    const config = getTravelConfigs();
+    const params = {
+        cities:      selectedRoute.map(r => ({ city: r.city, nights: r.nights, cin: r.cin, cout: r.cout, id: r.id })),
+        adults:      config.adults,
+        children:    config.children,
+        vehicleType: document.getElementById('vehicleTypeSelect')?.value || 'auto',
+        hotelBudget: Number(document.getElementById('hotelBudget').value) || 0,
+        landBudget:  Number(document.getElementById('sightBudget').value) || 0,
+        markup:      Number(document.getElementById('markupInput').value) || 15
+    };
+
+    try {
+        const res  = await fetch(`${API_URL}?action=autoBuild&params=${encodeURIComponent(JSON.stringify(params))}`);
+        const data = await res.json();
+
+        if (data.error) {
+            showToast('Auto-Build: ' + data.error, 'error');
+            return;
+        }
+
+        currentPlan       = data.currentPlan       || [];
+        selectedTransfers = data.selectedTransfers || [];
+        selectedIntercity = data.selectedIntercity || [];
+
+        // Count total quotes behind the intelligence
+        let totalQuotes = 0;
+        const intel = data.intelligence || {};
+        Object.keys(intel).forEach(city => {
+            totalQuotes += Number(intel[city].quoteCount) || 0;
+        });
+
+        // Show banner
+        const banner = document.getElementById('autoBuildBanner');
+        const bannerText = document.getElementById('autoBuildBannerText');
+        if (banner) {
+            bannerText.innerText = 'Auto-built from ' + totalQuotes + ' past quotes across ' + Object.keys(intel).length + ' cities';
+            banner.classList.remove('hidden');
+            banner.style.display = 'flex';
+        }
+
+        renderTables();
+        showToast('Auto-Build complete — review and edit as needed', 'success');
+
+    } catch (e) {
+        showToast('Auto-Build failed: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '⚡ Auto-Build';
     }
 }
 
@@ -3358,7 +3574,7 @@ async function downloadExcel() {
 
 function switchAdminTab(tab) {
     // Update nav button styles
-    ['itinerary','saved','quote','data'].forEach(t => {
+    ['itinerary','saved','quote','data','wallet'].forEach(t => {
         const btn = document.getElementById('navBtn-' + t);
         if (!btn) return;
         if (t === tab) {
@@ -3376,10 +3592,12 @@ function switchAdminTab(tab) {
     document.getElementById('tab-saved').style.display     = tab === 'saved'     ? '' : 'none';
     document.getElementById('tab-quote').style.display     = tab === 'quote'     ? '' : 'none';
     document.getElementById('tab-data').style.display      = tab === 'data'      ? '' : 'none';
+    document.getElementById('tab-wallet').style.display    = tab === 'wallet'    ? '' : 'none';
 
     if (tab === 'saved') loadSavedList();
     if (tab === 'quote') loadQuoteDashboard();
     if (tab === 'data')  loadDataDashboard();
+    if (tab === 'wallet') loadWalletAdmin();
 }
 
 // ── QUOTE DASHBOARD ──────────────────────────────────────────
@@ -3961,6 +4179,162 @@ function timeAgoD(isoStr) {
     const hrs = Math.floor(mins/60);
     if (hrs<24)  return hrs+'h ago';
     return Math.floor(hrs/24)+'d ago';
+}
+
+// ══════════════════════════════════════════════════════════════
+// WALLET SYSTEM
+// ══════════════════════════════════════════════════════════════
+
+async function loadWalletBalance() {
+    const session = JSON.parse(localStorage.getItem('tripstore_session') || '{}');
+    if (!session.username) return;
+    try {
+        const res = await fetch(`${API_URL}?action=getWalletBalance&agentId=${encodeURIComponent(session.username)}`);
+        const data = await res.json();
+        walletBalance = data.balance || 0;
+        updateWalletDisplay();
+    } catch(e) { console.log('Wallet load error:', e); }
+}
+
+function updateWalletDisplay() {
+    const badge = document.getElementById('walletBadge');
+    const display = document.getElementById('walletBalanceDisplay');
+    if (!badge || !display) return;
+    badge.style.display = 'flex';
+    display.textContent = '₹' + walletBalance.toLocaleString('en-IN');
+    display.style.color = walletBalance < 200 ? '#ef4444' : '#4ade80';
+}
+
+async function toggleWalletDropdown() {
+    const dd = document.getElementById('walletDropdown');
+    if (dd.style.display === 'block') { dd.style.display = 'none'; return; }
+    dd.style.display = 'block';
+    const session = JSON.parse(localStorage.getItem('tripstore_session') || '{}');
+    const list = document.getElementById('walletTxnList');
+    list.innerHTML = '<div style="padding:12px;color:#94a3b8;text-align:center;">Loading...</div>';
+    try {
+        const res = await fetch(`${API_URL}?action=getRecentTransactions&agentId=${encodeURIComponent(session.username)}`);
+        const txns = await res.json();
+        if (!txns.length) { list.innerHTML = '<div style="padding:12px;color:#94a3b8;text-align:center;">No transactions</div>'; return; }
+        list.innerHTML = txns.map(t => `
+            <div style="display:flex;justify-content:space-between;padding:8px 10px;border-bottom:1px solid #f1f5f9;align-items:center;">
+                <div>
+                    <div style="font-weight:600;color:#334155;">${t.description || ''}</div>
+                    <div style="color:#94a3b8;font-size:9px;">${t.date ? new Date(t.date).toLocaleDateString() : ''}</div>
+                </div>
+                <div style="font-weight:800;color:${t.type==='CREDIT'?'#059669':'#dc2626'};">${t.type==='CREDIT'?'+':'-'}₹${Number(t.amount).toLocaleString('en-IN')}</div>
+            </div>`).join('');
+    } catch(e) { list.innerHTML = '<div style="padding:12px;color:#dc2626;">Error loading transactions</div>'; }
+}
+
+document.addEventListener('click', function(e) {
+    const dd = document.getElementById('walletDropdown');
+    const badge = document.getElementById('walletBadge');
+    if (dd && badge && !badge.contains(e.target) && !dd.contains(e.target)) dd.style.display = 'none';
+});
+
+async function loadWalletAdmin() {
+    const select = document.getElementById('walletAgentSelect');
+    if (select.options.length > 1) return;
+    try {
+        const res = await fetch(`${API_URL}?action=getAgentList`);
+        const agents = await res.json();
+        agents.forEach(a => {
+            const opt = document.createElement('option');
+            opt.value = a.agentId;
+            opt.textContent = (a.agencyName || a.personName || a.agentId) + ' — ₹' + (a.balance || 0).toLocaleString('en-IN');
+            select.appendChild(opt);
+        });
+    } catch(e) { showToast('Failed to load agents', 'error'); }
+}
+
+async function onWalletAgentSelect() {
+    const agentId = document.getElementById('walletAgentSelect').value;
+    const panel = document.getElementById('walletAgentPanel');
+    if (!agentId) { panel.style.display = 'none'; return; }
+    panel.style.display = 'block';
+    try {
+        const res = await fetch(`${API_URL}?action=getWalletBalance&agentId=${encodeURIComponent(agentId)}`);
+        const data = await res.json();
+        document.getElementById('walletAgentBalance').textContent = '₹' + (data.balance || 0).toLocaleString('en-IN');
+        document.getElementById('walletAgentBalance').style.color = (data.balance||0) < 200 ? '#dc2626' : '#059669';
+    } catch(e) {}
+    try {
+        const res = await fetch(`${API_URL}?action=getRecentTransactions&agentId=${encodeURIComponent(agentId)}`);
+        const txns = await res.json();
+        const el = document.getElementById('walletAdminTxnList');
+        if (!txns.length) { el.innerHTML = '<div style="color:#94a3b8;">No transactions yet</div>'; return; }
+        el.innerHTML = '<table style="width:100%;border-collapse:collapse;">' +
+            '<tr style="border-bottom:2px solid #e2e8f0;"><th style="text-align:left;padding:6px 8px;font-size:10px;color:#64748b;">Date</th><th style="text-align:left;padding:6px 8px;font-size:10px;color:#64748b;">Type</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#64748b;">Amount</th><th style="text-align:left;padding:6px 8px;font-size:10px;color:#64748b;">Description</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#64748b;">Balance</th></tr>' +
+            txns.map(t => `<tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:6px 8px;">${t.date ? new Date(t.date).toLocaleDateString() : ''}</td>
+                <td style="padding:6px 8px;"><span style="background:${t.type==='CREDIT'?'#dcfce7':'#fef2f2'};color:${t.type==='CREDIT'?'#059669':'#dc2626'};padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;">${t.type}</span></td>
+                <td style="padding:6px 8px;text-align:right;font-weight:700;">₹${Number(t.amount).toLocaleString('en-IN')}</td>
+                <td style="padding:6px 8px;color:#64748b;">${t.description||''}</td>
+                <td style="padding:6px 8px;text-align:right;font-weight:600;">₹${Number(t.balance).toLocaleString('en-IN')}</td>
+            </tr>`).join('') + '</table>';
+    } catch(e) {}
+}
+
+async function handleTopUp() {
+    const agentId = document.getElementById('walletAgentSelect').value;
+    const amount  = Number(document.getElementById('walletTopUpAmount').value);
+    const bankRef = (document.getElementById('walletBankRef').value || '').trim();
+    if (!agentId) { showToast('Select an agent first', 'error'); return; }
+    if (!amount || amount <= 0) { showToast('Enter a valid amount', 'error'); return; }
+
+    const session = JSON.parse(localStorage.getItem('tripstore_session') || '{}');
+    const description = bankRef ? 'Top-up | Ref: ' + bankRef : '';
+    try {
+        const res = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'topUpWallet', agentId: agentId, amount: amount, addedBy: session.username || 'Admin', bankRef: description })
+        });
+        const result = await res.json();
+        if (result.success) {
+            showToast(result.message, 'success');
+            document.getElementById('walletTopUpAmount').value = '';
+            document.getElementById('walletBankRef').value = '';
+            onWalletAgentSelect();
+            const select = document.getElementById('walletAgentSelect');
+            select.innerHTML = '<option value="">— Choose agent —</option>';
+            loadWalletAdmin();
+            setTimeout(() => { select.value = agentId; }, 500);
+        } else {
+            showToast(result.message, 'error');
+        }
+    } catch(e) { showToast('Top-up failed: ' + e.message, 'error'); }
+}
+
+async function walletDeductForQuote(paxName, description) {
+    const session = JSON.parse(localStorage.getItem('tripstore_session') || '{}');
+    if (!session.username) return { success: true, charge: 0 };
+
+    try {
+        const res = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'processQuoteDeduction', agentId: session.username, paxName: paxName, description: description || '' })
+        });
+        const result = await res.json();
+
+        if (!result.success) {
+            showToast(result.message, 'error');
+            return result;
+        }
+
+        walletBalance = result.newBalance;
+        updateWalletDisplay();
+
+        if (result.charge > 0) {
+            showToast('₹' + result.charge + ' deducted. Balance: ₹' + result.newBalance, 'success');
+        } else {
+            showToast('Requote — no charge. Balance: ₹' + result.newBalance, 'success');
+        }
+        return result;
+    } catch(e) {
+        showToast('Wallet error: ' + e.message, 'error');
+        return { success: false, message: e.message };
+    }
 }
 </script>
 </body>

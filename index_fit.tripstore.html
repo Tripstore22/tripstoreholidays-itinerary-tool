@@ -1,3 +1,11 @@
+<!--
+  ============================================================
+  LIVE FILE — index_fit.tripstore.html
+  DO NOT copy this to create DEV files. DEV has features this doesn't.
+  LIVE Sheet: 1U3f6PhTpvbEO7JG937t2z9EW9dfB0gcIOUVA_GATIHM
+  LIVE API: AKfycbzAbIgzRoN_MNs377jm3u
+  ============================================================
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1599,8 +1607,8 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
         return { ...sourceRoute, hotel: finalHotel, isHotelManual, sights: finalSights.sort((a, b) => a.assignedDay - b.assignedDay) };
     });
 
-    optimizeTransfers(landBudgetTotal, paxCount);
-    optimizeIntercity(landBudgetTotal, paxCount);
+    optimizeTransfers(landBudgetNet, paxCount);
+    optimizeIntercity(landBudgetNet, paxCount);
     renderTables();
     const genBtn = document.getElementById('generateQuoteBtn');
     if (genBtn) genBtn.innerHTML = '↺ Revise Quote';

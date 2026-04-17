@@ -238,6 +238,19 @@ function processSheet(ss, type) {
       const row = batch[res.idx];
       if (!row) { auditLog(ss, `  WARNING: Claude returned out-of-range idx=${res.idx} — skipping`); return; }
 
+      // Server-side guard: hotels with all 12 monthly prices = 0 must not pass
+      if (res.valid && type === 'hotels') {
+        const d = row.data;
+        const hasPrice = [HC.JAN,HC.FEB,HC.MAR,HC.APR,HC.MAY,HC.JUN,
+                          HC.JUL,HC.AUG,HC.SEP,HC.OCT,HC.NOV,HC.DEC]
+                         .some(c => Number(d[c-1]) > 0);
+        if (!hasPrice) {
+          res.valid = false;
+          res.error_reason = 'All 12 monthly prices are 0 — server-side reject';
+          auditLog(ss, `  OVERRIDE row ${row.rowIndex}: Claude said valid but all prices=0`);
+        }
+      }
+
       if (!res.valid) {
         markRow(inp, row.rowIndex, CFG.STATUS.ERROR, res.error_reason, cfg.col);
         appendToLog(ss, CFG.LOG.ERRORS, type, row, res.error_reason);

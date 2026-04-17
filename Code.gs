@@ -49,6 +49,19 @@ function doGet(e) {
     if (action === 'validateSession') {
       return validateSession(e.parameter.user || '', e.parameter.token || '');
     }
+    // ── WALLET ROUTES (GET) ──
+    if (action === 'getWalletBalance') {
+      return ContentService.createTextOutput(JSON.stringify({ balance: getWalletBalance(e.parameter.agentId || '') }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    if (action === 'getRecentTransactions') {
+      return ContentService.createTextOutput(JSON.stringify(getRecentTransactions(e.parameter.agentId || '', 5)))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    if (action === 'getAgentList') {
+      return getAgentList();
+    }
+    // ── END WALLET ROUTES ──
     return ContentService.createTextOutput('Invalid action');
   } catch (err) {
     return ContentService.createTextOutput('Server Error: ' + err.message);
@@ -66,6 +79,16 @@ function doPost(e) {
     if (action === 'saveItinerary') {
       return saveItinerary(data.paxName || '', data.payload || {});
     }
+    // ── WALLET ROUTES (POST) ──
+    if (action === 'topUpWallet') {
+      return ContentService.createTextOutput(JSON.stringify(topUpWallet(data.agentId || '', Number(data.amount) || 0, data.addedBy || '', data.bankRef || '')))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    if (action === 'processQuoteDeduction') {
+      return ContentService.createTextOutput(JSON.stringify(processQuoteDeduction(data.agentId || '', data.paxName || '', data.description || '')))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    // ── END WALLET ROUTES ──
     return ContentService.createTextOutput('Invalid action');
   } catch (err) {
     return ContentService.createTextOutput('Server Error: ' + err.message);
