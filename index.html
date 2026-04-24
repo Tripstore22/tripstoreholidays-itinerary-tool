@@ -1,4 +1,4 @@
-<!-- LIVE FILE — index_fit.tripstore.html / Phase 8 launch 2026-04-25 / Unified Engine via LIVE @43 -->
+<!-- LIVE FILE — index_fit.tripstore.html / Phase 8 launch 2026-04-25 / Unified Engine via LIVE @44 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1395,7 +1395,7 @@ thead{display:table-header-group;}
 // =============================================================
 // CONFIGURATION
 // =============================================================
-const API_URL = "https://script.google.com/macros/s/AKfycbyEKHNFJ5GmyNowijyzgzMj_k1QkGhLQidNFUZ9sA4snCEmhk3ZRL2Gpa__ArT1rvjnHw/exec"; // LIVE @43 — 2026-04-25 Phase 8 launch: unified engine. Deployed from clasp-live/ 
+const API_URL = "https://script.google.com/macros/s/AKfycbwP9KQH39hcBcLQsPsOL_c4hKIuV3TTlm1XW2CT2e72W-TYVP01-adjsVAKtAAArhGQWA/exec"; // LIVE @44 — 2026-04-25 Phase 8 launch: unified engine. Deployed from clasp-live/ 
 
 // =============================================================
 // GLOBAL STATE
@@ -3971,11 +3971,13 @@ function transformEngineResult(result, route, config) {
         const from = isArrival ? ((t.city || firstCity.city || '') + ' Airport') : lastHotel;
         const to   = isArrival ? firstHotel : ((t.city || lastCity.city || '') + ' Airport');
         const vehicleLabel = t.vehicle || t.vehicleType || '';
+        // Prefer the master's Schedule text (Transfers Col N); fall back to generic "vehicle · city" if empty.
+        const details = (t.schedule && t.schedule.trim()) ? t.schedule : (vehicleLabel + ' · ' + (t.city || ''));
         return Object.assign({}, t, {
             date:    d,
             from:    from,
             to:      to,
-            details: vehicleLabel + ' · ' + (t.city || ''),
+            details: details,
             legId:   t.legId || (t.leg + '-' + (t.city || ''))
         });
     });
