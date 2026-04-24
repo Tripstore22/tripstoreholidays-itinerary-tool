@@ -87,7 +87,7 @@ REQUIRED = [
     # API
     # NOTE: If Apps Script is redeployed, update the URL fragment below.
     # Get it from: Apps Script → Deploy → Manage Deployments → copy unique ID here.
-    ("AKfycbzAbIgzRoN_MNs377jm3u",    "Correct API URL"),
+    ("AKfycbyEKHNFJ5GmyNowijyzgzMj_k1QkGhLQidNFUZ9sA4snCEmhk3ZRL2Gpa__ArT1rvjnHw",    "Correct API URL"),
 
     # Login / auth
     ("function launchApp",             "Login / launch"),
@@ -122,7 +122,7 @@ else:
 # Check that the API URL appears exactly once.
 # 0 = already caught by section 2; >1 = may point to different deployments.
 
-api_count = src.count('AKfycbzAbIgzRoN_MNs377jm3u')
+api_count = src.count('AKfycbyEKHNFJ5GmyNowijyzgzMj_k1QkGhLQidNFUZ9sA4snCEmhk3ZRL2Gpa__ArT1rvjnHw')
 if api_count > 1:
     warn(f'API URL fragment appears {api_count} times — verify all point to the same deployment')
 elif api_count == 1:

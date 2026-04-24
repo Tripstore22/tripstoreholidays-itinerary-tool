@@ -14,9 +14,47 @@ index_V*.html
 index_Old.html
 index1.html
 
-# Summary doc
+# Summary / design / test / legacy HTML — never public-serve
 conversation_summary.html
-.claude/worktrees/
+test_optimizer*.html
+engine_test.html
+Design_*.html
+Final_UI_Design.html
+index_fit.tripstore_DEV_New UI.html
+index_fit_tripstore_DEV_New UI.html
+index_fit.tripstore.DEV.backup_*.html
+temp.*.html
+temp.*
 
 # Claude Code chat backups (contain tokens — never commit)
 chat_backups/
+.claude/worktrees/
+
+# Backup / deprecated / old copies (any stamped backup format)
+*.bak
+*.bak.*
+*.backup
+*.backup_*
+*.backup_*.html
+*.backup_*.js
+*.backup_*.gs
+*.old
+*.deprecated
+backups/
+
+# Credentials — NEVER commit
+credentials
+credentials/
+*credentials*.json
+*credentials*.txt
+sheets-credentials.json
+service-account*.json
+.env
+.env.*
+
+# Logs — may contain sensitive data
+*.log
+logs/
+
+# Node / Playwright
+node_modules/
