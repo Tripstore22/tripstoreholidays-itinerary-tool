@@ -895,7 +895,7 @@ thead{display:table-header-group;}
           onfocus="filterCityDropdown()"
           onblur="setTimeout(()=>closeCityDropdown(),150)">
         <div id="cityDropdown"></div>
-        <div class="no-print" style="font-size:9px;color:#7A9E7E;font-weight:600;margin-top:3px;letter-spacing:.3px;">Launch: 40 destinations</div>
+        <div id="launchBadge" class="no-print" style="font-size:9px;color:#7A9E7E;font-weight:600;margin-top:3px;letter-spacing:.3px;">Launch: 40 destinations</div>
       </div>
       <div class="ts-row ts-field">
         <div>
@@ -1908,6 +1908,7 @@ async function checkAutoLogin() {
     } catch (e) { /* network error — stay on login screen */ }
 }
 window.addEventListener('DOMContentLoaded', checkAutoLogin);
+window.addEventListener('DOMContentLoaded', fetchLaunchCities);
 
 // =============================================================
 // ADMIN
@@ -2362,18 +2363,64 @@ function updatePaxHeader() {
 // =============================================================
 let _ddHighlight = -1;
 
-// ── 2026-04-23 Launch whitelist — 40 Tier-1 cities per brief v2 ──
-// Soft launch restriction: agents can only add these cities. Others show the
-// "coming soon" message. Keep lowercased for O(1) check.
-const LAUNCH_CITIES = [
+// ── 2026-04-23 Launch whitelist — Tier-1 cities ──
+// 2026-04-27: now sheet-driven via action=getLaunchCities. Hardcoded list kept
+// as FALLBACK_ARRAY for graceful degradation if the backend fetch fails.
+// FALLBACK_ARRAY — used only if backend fetch fails
+const LAUNCH_CITIES_FALLBACK = [
     'Paris','Rome','London','Amsterdam','Prague','Florence','Barcelona','Madrid',
     'Istanbul','Venice','Lisbon','Porto','Budapest','Berlin','Munich','Edinburgh',
     'Dublin','Milan','Vienna','Dubrovnik','Brussels','Montreux','Interlaken','Lucerne',
     'Zermatt','Innsbruck','Rovaniemi','Antalya','Geneva','Helsinki','Seville','Glasgow',
     'Manchester','Frankfurt','Gothenburg','Aalborg','Levi','Warsaw','Tallinn','Albufeira'
 ];
-const LAUNCH_CITIES_LOW = new Set(LAUNCH_CITIES.map(c => c.toLowerCase()));
+let LAUNCH_CITIES = LAUNCH_CITIES_FALLBACK.slice();
+let LAUNCH_CITIES_LOW = new Set(LAUNCH_CITIES.map(c => c.toLowerCase()));
 function _isLaunchCity(c) { return LAUNCH_CITIES_LOW.has(String(c || '').toLowerCase().trim()); }
+
+function _setLaunchCities(arr) {
+    if (!Array.isArray(arr) || arr.length === 0) return;
+    LAUNCH_CITIES = arr.slice();
+    LAUNCH_CITIES_LOW = new Set(LAUNCH_CITIES.map(c => c.toLowerCase()));
+    updateLaunchBadge();
+}
+
+function updateLaunchBadge() {
+    const badge = document.getElementById('launchBadge');
+    if (badge) badge.textContent = `Launch: ${LAUNCH_CITIES.length} destinations`;
+}
+
+function getComingSoonMessage(typedCity) {
+    const sample = LAUNCH_CITIES.slice(0, 4).join(', ');
+    const remaining = Math.max(0, LAUNCH_CITIES.length - 4);
+    return `"${typedCity}" is coming soon. Currently available: ${sample}, + ${remaining} more.`;
+}
+
+async function fetchLaunchCities() {
+    const CACHE_KEY = 'tripstore_launch_cities_v1';
+    const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+    try {
+        const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+        if (cached && Array.isArray(cached.cities) && cached.cities.length > 0 &&
+            (Date.now() - cached.fetchedAt) < CACHE_TTL_MS) {
+            _setLaunchCities(cached.cities);
+        }
+    } catch (e) { /* ignore cache errors */ }
+    try {
+        const url = `${API_URL}?action=getLaunchCities`;
+        const response = await fetch(url);
+        const data = await response.json();
+        if (data && Array.isArray(data.cities) && data.cities.length > 0) {
+            _setLaunchCities(data.cities);
+            localStorage.setItem(CACHE_KEY, JSON.stringify({
+                cities: data.cities,
+                fetchedAt: Date.now()
+            }));
+        }
+    } catch (err) {
+        console.warn('Whitelist fetch failed, using fallback:', err);
+    }
+}
 
 function filterCityDropdown() {
     const input = document.getElementById('cityInput');
@@ -2441,7 +2488,7 @@ function addCityToRoute() {
     }
     // ── 2026-04-23 Launch whitelist gate ──
     if (!_isLaunchCity(matched)) {
-        showToast(`"${matched}" is coming soon. Currently available: Paris, Rome, Amsterdam, London, + 36 more.`, 'error');
+        showToast(getComingSoonMessage(matched), 'error');
         return;
     }
     const city = matched; // use canonical casing from master
