@@ -967,6 +967,18 @@ thead{display:table-header-group;}
         <button onclick="onAutoBuildQuote()" id="autoBuildBtn" class="no-print" style="font-size:12px;background:#7A9E7E;color:#fff;border:none;border-radius:7px;padding:0 14px;height:34px;font-weight:700;font-family:'Playfair Display',serif;letter-spacing:.3px;cursor:pointer;flex:1;">⚡ Auto-Build Quote</button>
       </div>
       <div class="ts-field no-print" style="margin-top:-6px;font-size:9px;color:var(--ink3);font-style:italic;text-align:right;">Builds itinerary from 1,527 past quotes</div>
+      <!-- Algorithm toggle (v2.2 beta) -->
+      <div id="algoToggleWrap" class="no-print" style="display:flex;align-items:center;gap:10px;margin:6px 0 0 0;font-size:11px;color:#6b5d54;flex-wrap:wrap;">
+        <span style="font-weight:600;">Algorithm:</span>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+          <input type="radio" name="algoChoice" value="v1" id="algoV1" checked onchange="setAlgorithm('v1')" style="margin:0;">
+          <span>v1 (Default)</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+          <input type="radio" name="algoChoice" value="v2.2" id="algoV22" onchange="setAlgorithm('v2.2')" style="margin:0;">
+          <span>v2.2 <span style="background:#d97757;color:#fff;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:700;">BETA</span></span>
+        </label>
+      </div>
       <div class="ts-field">
         <label class="ts-label">Vehicle Type</label>
         <select id="vehicleTypeSelect" class="ts-select" onchange="if (typeof currentPlan !== 'undefined' && currentPlan.length > 0) showToast('Vehicle type changed — click Auto-Build Quote again to re-optimize transfers.', 'success')">
@@ -4062,6 +4074,37 @@ function transformEngineResult(result, route, config) {
     };
 }
 
+// V2.2 Beta toggle — persists per session
+function setAlgorithm(algo) {
+    try { sessionStorage.setItem('tripstore_algo', algo); } catch (e) {}
+    const btn = document.getElementById('autoBuildBtn');
+    if (btn) {
+        const existing = btn.querySelector('.beta-badge');
+        if (existing) existing.remove();
+        if (algo === 'v2.2') {
+            const badge = document.createElement('span');
+            badge.className = 'beta-badge';
+            badge.style.cssText = 'background:#d97757;color:#fff;padding:1px 6px;margin-left:6px;border-radius:3px;font-size:9px;font-weight:700;';
+            badge.textContent = 'BETA';
+            btn.appendChild(badge);
+        }
+    }
+}
+
+function getAlgorithm() {
+    try { return sessionStorage.getItem('tripstore_algo') || 'v1'; }
+    catch (e) { return 'v1'; }
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+    const stored = getAlgorithm();
+    const radio = document.getElementById(stored === 'v2.2' ? 'algoV22' : 'algoV1');
+    if (radio) {
+        radio.checked = true;
+        setAlgorithm(stored);
+    }
+});
+
 async function onAutoBuildQuote() {
     if (!selectedRoute || selectedRoute.length === 0) {
         showToast('Add at least one city first', 'error');
@@ -4094,7 +4137,8 @@ async function onAutoBuildQuote() {
         markupPct: Number(document.getElementById('markupInput').value) || 15,
         gstOnMarkupPct: gstMode === '18svc' ? 18 : 0,
         travelStartDate: firstCin,
-        vehicleType: document.getElementById('vehicleTypeSelect')?.value || 'auto'
+        vehicleType: document.getElementById('vehicleTypeSelect')?.value || 'auto',
+        algorithm: getAlgorithm()
     };
 
     try {
