@@ -2028,13 +2028,20 @@ async function saveItinerary() {
         } catch(e) { /* fall through, save with auto name */ }
     }
 
-    let _agentName = '';
-    try { _agentName = JSON.parse(localStorage.getItem('tripstore_session') || '{}').username || ''; } catch(e) {}
+    let _agentName = window.currentUsername || '';
+    if (!_agentName) {
+        try { _agentName = JSON.parse(localStorage.getItem('tripstore_session') || '{}').username || ''; } catch(e) {}
+    }
+    if (!_agentName) {
+        showToast("Session expired. Please log in again.", "error");
+        btn.innerText = "Save Itinerary"; btn.disabled = false;
+        return;
+    }
 
     const data = {
         action: "saveItinerary",
         paxName: saveName,
-        savedBy: window.currentUsername || _agentName,
+        savedBy: _agentName,
         payload: {
             agentName:     _agentName,
             adults:        cfg.adults,
