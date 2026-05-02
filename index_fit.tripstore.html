@@ -1309,6 +1309,26 @@ thead{display:table-header-group;}
   <div id="agentMgmtContent"><div style="text-align:center;padding:80px;color:var(--ink4);"><div style="width:32px;height:32px;border:3px solid var(--border2);border-top-color:var(--terra);border-radius:50%;animation:dashSpin .8s linear infinite;margin:0 auto 14px;"></div>Loading agents...</div></div>
 </div>
 
+<!-- APPROVE/EDIT AGENT MODAL -->
+<div id="approveAgentOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;width:380px;max-width:92vw;padding:22px 24px;box-shadow:0 12px 40px rgba(0,0,0,.25);">
+    <div style="font-family:var(--serif);font-size:18px;font-weight:700;color:var(--ink);margin-bottom:4px;" id="approveAgentTitle">Approve Agent</div>
+    <div style="font-size:11px;color:var(--ink4);margin-bottom:14px;">@<span id="approveAgentUsername"></span></div>
+    <input type="hidden" id="approveAgentUsernameHidden">
+    <input type="hidden" id="approveAgentFlipRole" value="1">
+    <label style="font-size:9px;font-weight:700;color:var(--ink4);text-transform:uppercase;display:block;margin-bottom:3px;">Full Name</label>
+    <input type="text" id="approveAgentFullName" class="ts-input" placeholder="e.g. Rahul Sharma" style="margin-bottom:10px;">
+    <label style="font-size:9px;font-weight:700;color:var(--ink4);text-transform:uppercase;display:block;margin-bottom:3px;">Mobile</label>
+    <input type="tel" id="approveAgentMobile" class="ts-input" placeholder="10-digit" style="margin-bottom:10px;">
+    <label style="font-size:9px;font-weight:700;color:var(--ink4);text-transform:uppercase;display:block;margin-bottom:3px;">Email</label>
+    <input type="email" id="approveAgentEmail" class="ts-input" placeholder="agent@example.com" style="margin-bottom:18px;">
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="closeApproveAgentModal()" style="background:#e2e8f0;color:#0f172a;border:none;border-radius:7px;padding:8px 16px;font-size:11px;font-weight:700;cursor:pointer;">Cancel</button>
+      <button id="approveAgentSubmit" onclick="submitApproveAgent()" style="background:#a55b3a;color:#fff;border:none;border-radius:7px;padding:8px 16px;font-size:11px;font-weight:700;cursor:pointer;">Approve & Activate</button>
+    </div>
+  </div>
+</div>
+
 <!-- SWAP MODAL -->
 <div id="swapModal" class="modal-overlay hidden">
   <div class="modal-box">
@@ -1815,6 +1835,57 @@ async function saveAgentProfileData() {
     } catch(e) { showToast('Connection error', 'error'); }
 }
 
+// ── AGENT APPROVE / EDIT MODAL ───────────────────────────────
+function openApproveAgentModal(username, current) {
+    current = current || {};
+    const isPending = current.role === 'PENDING';
+    const overlay = document.getElementById('approveAgentOverlay');
+    document.getElementById('approveAgentTitle').innerText = isPending ? 'Approve Agent' : 'Update Agent Info';
+    document.getElementById('approveAgentUsername').innerText = username;
+    document.getElementById('approveAgentUsernameHidden').value = username;
+    document.getElementById('approveAgentFullName').value = current.fullName || '';
+    document.getElementById('approveAgentMobile').value   = current.mobile   || '';
+    document.getElementById('approveAgentEmail').value    = current.email    || '';
+    document.getElementById('approveAgentFlipRole').value = isPending ? '1' : '0';
+    document.getElementById('approveAgentSubmit').innerText = isPending ? 'Approve & Activate' : 'Save';
+    overlay.style.display = 'flex';
+}
+function closeApproveAgentModal() {
+    document.getElementById('approveAgentOverlay').style.display = 'none';
+}
+async function submitApproveAgent() {
+    const username  = document.getElementById('approveAgentUsernameHidden').value;
+    const fullName  = document.getElementById('approveAgentFullName').value.trim();
+    const mobile    = document.getElementById('approveAgentMobile').value.trim();
+    const email     = document.getElementById('approveAgentEmail').value.trim();
+    const flipRole  = document.getElementById('approveAgentFlipRole').value === '1';
+    if (!fullName || !mobile || !email) {
+        showToast('Full Name, Mobile, Email all required', 'error');
+        return;
+    }
+    const btn = document.getElementById('approveAgentSubmit');
+    const originalLabel = btn.innerText;
+    btn.innerText = 'Saving...'; btn.disabled = true;
+    try {
+        const res = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'approveAgent', username, fullName, mobile, email, flipRole })
+        });
+        const result = await res.json();
+        if (!result.success) {
+            showToast(result.message || 'Update failed', 'error');
+        } else {
+            showToast(flipRole ? 'Agent approved' : 'Updated', 'success');
+            closeApproveAgentModal();
+            loadAgentManagement();
+        }
+    } catch (e) {
+        showToast('Error: ' + e.message, 'error');
+    } finally {
+        btn.innerText = originalLabel; btn.disabled = false;
+    }
+}
+
 // ── AGENT MANAGEMENT ──────────────────────────────────────────
 async function loadAgentManagement() {
     const el = document.getElementById('agentMgmtContent');
@@ -1824,20 +1895,29 @@ async function loadAgentManagement() {
         const agents = await res.json();
         if (!agents.length) { el.innerHTML = '<div style="padding:40px;text-align:center;color:#94a3b8;">No agents found.</div>'; return; }
 
-        const rows = agents.map(a => `
+        const esc = s => String(s || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        const rows = agents.map(a => {
+          const fullNameCell = a.fullName
+            ? `${a.fullName} <span onclick="openApproveAgentModal('${esc(a.username)}',{fullName:'${esc(a.fullName)}',mobile:'${esc(a.mobile)}',email:'${esc(a.email)}',role:'${a.role}'})" title="Edit" style="cursor:pointer;color:#94a3b8;font-size:10px;margin-left:4px;">✏️</span>`
+            : (a.role === 'PENDING' || a.role === 'USER')
+              ? `<span style="color:#94a3b8;">—</span> <span onclick="openApproveAgentModal('${esc(a.username)}',{fullName:'',mobile:'${esc(a.mobile)}',email:'${esc(a.email)}',role:'${a.role}'})" title="Add" style="cursor:pointer;color:#a55b3a;font-size:10px;margin-left:4px;">✏️</span>`
+              : '—';
+          const statusCell = a.role === 'PENDING'
+            ? `<button onclick="openApproveAgentModal('${esc(a.username)}',{fullName:'${esc(a.fullName)}',mobile:'${esc(a.mobile)}',email:'${esc(a.email)}',role:'PENDING'})" style="background:#a55b3a;color:#fff;border:none;border-radius:14px;padding:4px 12px;font-size:10px;font-weight:700;cursor:pointer;">Approve</button>`
+            : `<span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:${a.status==='Active'?'#dcfce7':'#fef9c3'};color:${a.status==='Active'?'#166534':'#854d0e'};">${a.status}</span>`;
+          return `
           <tr style="border-bottom:1px solid #f1f5f9;">
             <td style="padding:10px 12px;font-size:12px;font-weight:700;color:#0f172a;">${a.username}</td>
             <td style="padding:10px 12px;font-size:12px;color:#334155;">${a.agencyName || '—'}</td>
-            <td style="padding:10px 12px;font-size:12px;color:#334155;">${a.fullName || '—'}</td>
+            <td style="padding:10px 12px;font-size:12px;color:#334155;">${fullNameCell}</td>
             <td style="padding:10px 12px;text-align:center;">
               <span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:${a.role==='ADMIN'?'#dbeafe':a.role==='PENDING'?'#fef9c3':'#dcfce7'};color:${a.role==='ADMIN'?'#1d4ed8':a.role==='PENDING'?'#854d0e':'#166534'};">${a.role}</span>
             </td>
-            <td style="padding:10px 12px;text-align:center;">
-              <span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:${a.status==='Active'?'#dcfce7':'#fef9c3'};color:${a.status==='Active'?'#166534':'#854d0e'};">${a.status}</span>
-            </td>
+            <td style="padding:10px 12px;text-align:center;">${statusCell}</td>
             <td style="padding:10px 12px;text-align:center;font-size:13px;font-weight:800;color:#2563eb;">${a.quoteCount}</td>
             <td style="padding:10px 12px;font-size:11px;color:#94a3b8;">${a.lastLogin || '—'}</td>
-          </tr>`).join('');
+          </tr>`;
+        }).join('');
 
         el.innerHTML = `
           <div style="background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden;">
