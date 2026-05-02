@@ -1414,7 +1414,7 @@ thead{display:table-header-group;}
 // =============================================================
 // CONFIGURATION
 // =============================================================
-const API_URL = "https://script.google.com/macros/s/AKfycbwP9KQH39hcBcLQsPsOL_c4hKIuV3TTlm1XW2CT2e72W-TYVP01-adjsVAKtAAArhGQWA/exec"; // DEV @32 — 2026-04-25 Pre-launch C1–H3 pass: autoBuild route deprecated, setupSheets live-fallback removed (prev @31 AKfycbyFEaz9...)
+const API_URL = "https://script.google.com/macros/s/AKfycbwRr9k5XrA0M_bDSS5W4XdbTFYEZIFoDz5cKnuq3nqVARFlhigCfD9fZgzPpFxkhpyobw/exec"; // DEV @5 — 2026-04-30 Swiss Pass v3 + SPP column (prev AKfycbwP9KQH39hcBcLQsPsOL_c4hKIuV3TTlm1XW2CT2e72W-TYVP01-adjsVAKtAAArhGQWA... was bound to orphan scriptId 1BP-Zh79... per TRUTH.md)
 
 // =============================================================
 // GLOBAL STATE
@@ -2596,8 +2596,37 @@ async function fetchCityIntelligence(city) {
 // =============================================================
 const SWISS_CITIES_SET = new Set([
     'zurich','geneva','interlaken','lucerne','zermatt','grindelwald',
-    'montreux','basel','bern','st. moritz','lausanne','wengen','engelberg'
+    'montreux','basel','bern','st. moritz','lausanne','wengen','engelberg',
+    'lauterbrunnen','davos','st moritz'
 ]);
+
+// Helper — match a tour to a city via exact city OR Base_Cities membership
+function tourMatchesCity(tour, city) {
+    const cityLower = (city || '').toLowerCase().trim();
+    if (!cityLower) return false;
+    if ((tour.city || '').toLowerCase().trim() === cityLower) return true;
+    if (tour.base_cities) {
+        const bases = String(tour.base_cities).split(',').map(c => c.trim().toLowerCase());
+        if (bases.indexOf(cityLower) !== -1) return true;
+    }
+    return false;
+}
+
+// Helper — Swiss Pass tour detection (mirrors backend isSwissPassTour_)
+function isSwissPassTour(tourName) {
+    const lower = (tourName || '').toLowerCase();
+    const markers = ['with swiss pass','on swiss pass','on your swiss pass',
+                     'swiss pass included','using swiss pass'];
+    return markers.some(m => lower.indexOf(m) !== -1);
+}
+
+// Helper — full sight visibility filter: city match (with Base_Cities) + Swiss Pass toggle
+function sightVisibleForCity(s, cityLower) {
+    if (!s.city) return false;
+    if (!tourMatchesCity(s, cityLower)) return false;
+    if (!swissPassEnabled && isSwissPassTour(s.info)) return false;
+    return true;
+}
 
 // Swiss Pass activity marker — sights master already has entries like
 // "Explore Mount Titlis with Swiss Pass" at the discounted rate
@@ -2606,7 +2635,10 @@ const SWISS_PASS_MARKER = 'with swiss pass';
 function checkSwissPass() {
     const card = document.getElementById('swissPassCard');
     if (!card) return;
-    const swissCities = selectedRoute.filter(r => SWISS_CITIES_SET.has(r.city.toLowerCase()));
+    const swissCities = selectedRoute.filter(r => {
+        const c = String(r.city || '').toLowerCase().trim();
+        return c && SWISS_CITIES_SET.has(c);
+    });
     if (swissCities.length < 2) {
         card.classList.add('hidden');
         swissPassEnabled = false;
@@ -2618,106 +2650,145 @@ function checkSwissPass() {
     if (swissPassEnabled) fetchSwissPassOptions();
 }
 
+// Display helper — clean "with Swiss Pass" suffix and add badge when toggle ON
+function displayTourName(tourName, swissPassEnabled) {
+    if (!tourName) return '';
+    if (swissPassEnabled && isSwissPassTour(tourName)) {
+        const clean = String(tourName)
+            .replace(/\s*[-–]\s*with swiss pass.*/gi, '')
+            .replace(/\s*with swiss pass.*/gi, '')
+            .replace(/\s*on your swiss pass.*/gi, '')
+            .replace(/\s*on swiss pass.*/gi, '')
+            .replace(/\s*using swiss pass.*/gi, '')
+            .replace(/\s*swiss pass included.*/gi, '')
+            .trim();
+        return clean + ' <span style="color:#2e7d32;font-size:11px;font-weight:600;">(Swiss Pass)</span>';
+    }
+    return tourName;
+}
+
 async function fetchSwissPassOptions() {
-    const swissCities  = selectedRoute.filter(r => SWISS_CITIES_SET.has(r.city.toLowerCase()));
+    const swissCities  = selectedRoute.filter(r => {
+        const c = String(r.city || '').toLowerCase().trim();
+        return c && SWISS_CITIES_SET.has(c);
+    });
     const swissNights  = swissCities.reduce((s, r) => s + (r.nights || 0), 0);
     const allCities    = selectedRoute.map(r => r.city).join(',');
     const detailsEl    = document.getElementById('swissPassDetails');
     if (!detailsEl) return;
     detailsEl.innerHTML = '<span class="text-slate-400">Loading...</span>';
+
+    const cfg = getTravelConfigs();
+    const adults   = cfg.adults   || 2;
+    const children = cfg.children || 0;
+
+    // Gather ALL tours currently in day plan (Mode A trigger).
+    // Backend filters to pass-tagged ones internally; sending the full plan
+    // means Mode A fires as soon as any itinerary exists, killing Mode B
+    // intelligence suggestions for unbooked tours.
+    let selectedTours = [];
     try {
-        const res  = await fetch(`${API_URL}?action=getSwissPassOptions&cities=${encodeURIComponent(allCities)}&nights=${swissNights}`);
-        const data = await res.json();
-        if (!data.eligible) {
-            const _sp = document.createElement('span');
-            _sp.className = 'text-red-500';
-            _sp.textContent = data.reason || 'Not eligible';
-            detailsEl.innerHTML = '';
-            detailsEl.appendChild(_sp);
+        (currentPlan || []).forEach(p => {
+            (p.sights || []).forEach(s => {
+                selectedTours.push({ tour_name: s.info, price: Math.round(Number(s.price || 0)) });
+            });
+        });
+    } catch(e) { selectedTours = []; }
+
+    try {
+        const url = `${API_URL}?action=getSwissPassOptions`
+                  + `&cities=${encodeURIComponent(allCities)}`
+                  + `&nights=${swissNights}`
+                  + `&adults=${adults}`
+                  + `&children=${children}`
+                  + `&tours=${encodeURIComponent(JSON.stringify(selectedTours))}`;
+        const res  = await fetch(url);
+        const rawText = await res.text();
+
+        // Better error: surface raw response if not JSON (stale deployment, auth redirect, etc.)
+        let data;
+        try {
+            data = JSON.parse(rawText);
+        } catch (parseErr) {
+            const snippet = rawText.slice(0, 120).replace(/</g, '&lt;');
+            detailsEl.innerHTML = `<span class="text-red-500">Bad response (not JSON). API URL may be stale. Snippet: <code>${snippet}…</code></span>`;
+            return;
+        }
+
+        // v3 has no "eligible" field — error case is missing pass_duration
+        if (!data || !data.pass_duration) {
+            detailsEl.innerHTML = '<span class="text-red-500">Not eligible — need ≥2 Swiss cities</span>';
             return;
         }
 
         const fmtInr = v => v != null ? '₹' + Number(v).toLocaleString('en-IN') : '—';
-        const saving2 = data.saving2ndClass;
 
-        // ── Activity savings — find "with Swiss Pass" alternatives in master ──
-        // masterData.sights already has entries like "Explore Mount Titlis with Swiss Pass"
-        // at their actual discounted price. For each activity in the current plan, look for
-        // a matching pass-version and calculate the real saving.
-        const passActivities = [];
-        let activitySavingTotal = 0;
-        const paxCount = getTravelConfigs().totalPax || 1;
+        // Train legs (v3 shape: swiss_legs[].from / .to / .cost_per_person)
+        const legs = (data.swiss_legs || []).map(l =>
+            `<span>${l.from} → ${l.to}: ${l.cost_per_person ? fmtInr(l.cost_per_person) : '<i>not in master</i>'}</span>`
+        ).join('<br>');
+        const missingLegs = (data.swiss_legs || [])
+            .filter(l => !l.cost_per_person)
+            .map(l => `${l.from}→${l.to}`);
 
-        // Build lookup: base-name (lowercased, "with swiss pass" stripped) → pass sight entry
-        const passAlternatives = {};
-        (masterData.sights || []).forEach(s => {
-            const nameLower = (s.info || '').toLowerCase();
-            if (nameLower.includes(SWISS_PASS_MARKER)) {
-                const baseName = nameLower.replace(SWISS_PASS_MARKER, '').replace(/[-–,]+$/, '').trim();
-                passAlternatives[baseName] = s;
-            }
-        });
-
-        (currentPlan || []).forEach(p => {
-            if (!SWISS_CITIES_SET.has((p.city || '').toLowerCase())) return;
-            (p.sights || []).forEach(s => {
-                const nameLower = (s.info || '').toLowerCase();
-                // Skip if already the pass version
-                if (nameLower.includes(SWISS_PASS_MARKER)) return;
-                // Try to find a matching pass alternative
-                const matchKey = Object.keys(passAlternatives).find(base => nameLower.includes(base) || base.includes(nameLower));
-                if (!matchKey) return;
-                const passAlt     = passAlternatives[matchKey];
-                const regularPrice = Math.round(Number(s.price || 0));
-                const passPrice    = Math.round(Number(passAlt.price || 0));
-                if (passPrice >= regularPrice) return; // no saving
-                const savingPerPerson = regularPrice - passPrice;
-                passActivities.push({
-                    name:        s.info,
-                    passName:    passAlt.info,
-                    regular:     regularPrice,
-                    withPass:    passPrice,
-                    saving:      savingPerPerson,
-                });
-                activitySavingTotal += savingPerPerson;
-            });
-        });
-
-        const trainSaving2 = saving2 != null ? saving2 : 0;
-        const totalSaving  = trainSaving2 + activitySavingTotal; // per person (train saving) + per person (activity saving)
-
+        // Saving label — v3 gives saving_total + saving_per_adult directly
         let savingLabel;
-        if (saving2 == null && activitySavingTotal === 0) {
-            savingLabel = '<span class="text-slate-400">Add missing train legs to Trains master for complete saving calc</span>';
-        } else if (totalSaving > 0) {
-            savingLabel = `<span class="text-green-700 font-bold">Estimated saving: ${fmtInr(totalSaving)}/person vs individual${saving2 == null ? ' (trains partial)' : ''}</span>`;
+        if (data.saving_total > 0) {
+            savingLabel = `<span class="text-green-700 font-bold">Saves ${fmtInr(data.saving_per_adult)}/adult vs individual${data.calculation_mode === 'estimate' ? ' (estimate)' : ''}</span>`;
+        } else if (data.saving_total < 0) {
+            savingLabel = `<span class="text-red-600 font-bold">Costs ${fmtInr(Math.abs(data.saving_total))} more than individual tickets</span>`;
         } else {
-            savingLabel = `<span class="text-red-600 font-bold">Costs ${fmtInr(Math.abs(totalSaving))} more than individual tickets${activitySavingTotal > 0 ? ' (after activity discounts)' : ''}</span>`;
+            savingLabel = '<span class="text-slate-400">No saving vs individual tickets</span>';
         }
 
-        const legs = (data.legs || []).map(l =>
-            `<span>${l.from} → ${l.to}: ${l.inr ? fmtInr(l.inr) : '<i>not in master</i>'}</span>`
-        ).join('<br>');
+        // Stash for toggle handler
+        window.swissPassData = data;
 
-        const activityRows = passActivities.length
+        // Dedupe tours (same name across cities) for display only
+        const seen = {};
+        const dedupTours = (data.pass_tours_used || []).filter(t => {
+            const key = (t.tour_name || '').toLowerCase().replace(/\s*with swiss pass.*/i, '').trim();
+            if (seen[key]) return false;
+            seen[key] = true;
+            return true;
+        });
+        const confirmed = dedupTours.filter(t => t.in_plan);
+        const potential = dedupTours.filter(t => !t.in_plan);
+
+        const renderTourRow = t => `<span>${t.tour_name}: <s class="text-slate-400">${fmtInr(t.full_price)}</s> → ${fmtInr(t.with_pass_price)} &nbsp;saves <b>${fmtInr(t.delta_per_person || ((t.full_price||0) - (t.with_pass_price||0)))}/person</b></span>`;
+
+        const confirmedBlock = confirmed.length
             ? `<div class="mt-1 border-t border-amber-200 pt-1">
-                 <span class="font-bold text-amber-800">Activity savings (pass rate vs regular):</span><br>
-                 ${passActivities.map(a =>
-                     `<span>${a.name}: <s class="text-slate-400">${fmtInr(a.regular)}</s> → ${fmtInr(a.withPass)} &nbsp;saves <b>${fmtInr(a.saving)}/person</b></span>`
-                 ).join('<br>')}
+                 <span class="font-bold text-amber-800">In plan (${confirmed.length}):</span><br>
+                 ${confirmed.map(renderTourRow).join('<br>')}
                </div>`
-            : `<div class="mt-1 text-[9px] text-slate-400 italic">No matching pass-rate activities in current plan. Add activities like "Explore Mount Titlis with Swiss Pass" to see savings.</div>`;
-
-        // ── Children's policy — child pass is ₹0 when adults hold pass ─────
-        const cfg = getTravelConfigs();
-        const adultCount = cfg.adults || 0;
-        const childCount = cfg.children || 0;
-        const childPassNote = adultCount > 0 && childCount > 0
-            ? `· <b>Children 6–15 (${childCount})</b>: Swiss Pass cost = <b class="text-green-700">₹0</b> — travel free with Swiss Family Card (parent holds Swiss Pass)<br>`
-            : adultCount > 0
-            ? `· Children 6–15 travel free with Swiss Family Card when accompanied by a Swiss Pass–holding parent<br>`
             : '';
 
+        const potentialBlock = potential.length
+            ? `<div class="mt-1 text-[9px] text-slate-500 border-t border-amber-100 pt-1">
+                 <span class="text-slate-600 italic">Potential extra savings if added (${potential.length} suggested):</span><br>
+                 ${potential.map(renderTourRow).join('<br>')}
+               </div>`
+            : '';
+
+        const tourRows = (confirmed.length || potential.length)
+            ? confirmedBlock + potentialBlock
+            : `<div class="mt-1 text-[9px] text-slate-400 italic">No matching pass-rate tours yet. Add activities like "Mount Titlis with Swiss Pass" to see savings.</div>`;
+
+        // Missing SPP flags (sheet column blank)
+        const missingFlags = (data.missing_price_flags || []);
+        const missingRows = missingFlags.length
+            ? `<div class="mt-1 text-[9px] text-amber-700 italic">⚠ ${missingFlags.length} pass-tour(s) skipped (Swiss_Pass_Price blank in sheet): ${missingFlags.map(m => m.tour_name).slice(0,3).join(', ')}${missingFlags.length > 3 ? '…' : ''}</div>`
+            : '';
+
+        const mtnFlags = (data.mountain_railway_flags || []).map(m => m.tour);
+
+        // Children policy
+        const childPassNote = data.children_travel_free
+            ? `· <b>Children 6–15 (${children})</b>: Swiss Pass cost = <b class="text-green-700">₹0</b> — travel free with Swiss Family Card (parent holds Swiss Pass)<br>`
+            : adults > 0
+            ? `· Children 6–15 travel free with Swiss Family Card when accompanied by a Swiss Pass–holding parent<br>`
+            : '';
         const childPolicy = `
             <div class="mt-1 border-t border-amber-200 pt-1 text-[9px] text-slate-600">
                 <span class="font-bold text-amber-800">👨‍👩‍👧 Children's travel:</span><br>
@@ -2726,30 +2797,201 @@ async function fetchSwissPassOptions() {
             </div>`;
 
         detailsEl.innerHTML = `
-            <div class="font-bold text-amber-800">${data.recommendedPass}</div>
-            <div>2nd class: <b>${fmtInr(data.price2ndClass)}/person</b> &nbsp;·&nbsp; 1st class: <b>${fmtInr(data.price1stClass)}/person</b></div>
-            <div class="mt-1 text-[9px] text-slate-500 border-t border-amber-100 pt-1">
-              <span class="font-bold text-amber-800">Train legs (individual prices):</span><br>${legs}
+            <div class="font-bold text-amber-800">${data.pass_duration}-day Swiss Travel Pass</div>
+            <div>2nd class: <b>${fmtInr(data.pass_price_per_adult_2nd)}/adult</b> &nbsp;·&nbsp; 1st class: <b>${fmtInr(data.pass_price_per_adult_1st)}/adult</b>
+              ${data.children_travel_free ? '&nbsp;·&nbsp; <span class="text-green-700">Children FREE</span>' : ''}
             </div>
-            ${activityRows}
+            <div class="mt-1 text-[9px] text-slate-500 border-t border-amber-100 pt-1">
+              <span class="font-bold text-amber-800">Train legs (individual prices):</span><br>${legs || '<i>none</i>'}
+            </div>
+            ${tourRows}
             <div class="mt-1">${savingLabel}</div>
-            ${data.mountainFlags && data.mountainFlags.length ? `<div class="text-orange-600 font-bold mt-1">⚠️ Mountain railways in route: ${data.mountainFlags.join(', ')}</div>` : ''}
-            ${data.missingLegs && data.missingLegs.length ? `<div class="text-slate-400 mt-1">Missing from Trains master: ${data.missingLegs.join(', ')}</div>` : ''}
             ${childPolicy}
         `;
-    } catch(e) { detailsEl.innerHTML = '<span class="text-red-500">Error loading pass data</span>'; }
+    } catch(e) { detailsEl.innerHTML = '<span class="text-red-500">Error loading pass data: ' + (e.message || e) + '</span>'; }
+}
+
+function isSwissCityFE(city) {
+    return SWISS_CITIES_SET.has(String(city || '').toLowerCase().trim());
+}
+
+// Toggle ON: zero Swiss-to-Swiss train legs, apply Swiss_Pass_Price to in-plan
+// pass tours, add pass line item. Toggle OFF reverses everything.
+// No cascade — in-plan tours only.
+function applySwissPassToQuote(enabled, passData) {
+    if (typeof selectedIntercity === 'undefined' || !Array.isArray(selectedIntercity)) return;
+
+    if (enabled && passData && passData.pass_duration) {
+        // 1. Zero out Swiss-to-Swiss train legs in selectedIntercity
+        selectedIntercity.forEach(ic => {
+            const m = String(ic.legId || '').match(/^ic-(.+?)-(.+)$/);
+            if (!m) return;
+            const fromC = m[1], toC = m[2];
+            if (isSwissCityFE(fromC) && isSwissCityFE(toC)) {
+                if (ic._originalPrice == null) ic._originalPrice = ic.price;
+                ic.price = 0;
+                ic._swissPassCovered = true;
+                ic.notes = 'Covered by Swiss Pass';
+            }
+        });
+
+        // 2. Apply Swiss_Pass_Price to in-plan pass tours (look up SPP from masterData.sights)
+        if (Array.isArray(currentPlan)) {
+            currentPlan.forEach(cityBlock => {
+                if (!Array.isArray(cityBlock.sights)) return;
+                cityBlock.sights.forEach(s => {
+                    if (!isSwissPassTour(s.info)) return;
+                    const sheetRow = (masterData.sights || []).find(m => (m.info || '') === s.info);
+                    if (!sheetRow || sheetRow.swiss_pass_price == null) return;
+                    if (s._originalPrice == null) s._originalPrice = s.price;
+                    s.price = Number(sheetRow.swiss_pass_price) || 0;
+                    s._swissPassPriced = true;
+                });
+            });
+        }
+
+        // 3. Add pass as line item (avoid dup)
+        if (!selectedIntercity.find(ic => ic._isSwissPassRow)) {
+            const cfg = (typeof getTravelConfigs === 'function') ? getTravelConfigs() : { adults: 2, totalPax: 2 };
+            const adults = cfg.adults || 0;
+            const totalPax = cfg.totalPax || 1;
+            const passCostTotal = (passData.pass_price_per_adult_2nd || 0) * adults;
+            const perPax = totalPax > 0 ? Math.round(passCostTotal / totalPax) : 0;
+            selectedIntercity.push({
+                legId:    'swiss-pass-line',
+                date:     '',
+                mode:     `Swiss Pass (${passData.pass_duration}d)`,
+                fromTo:   `Swiss Travel Pass — ${adults} adult${adults === 1 ? '' : 's'}` + (passData.children_travel_free ? ', children FREE' : ''),
+                notes:    passData.pass_duration + '-day pass · adults pay, children free',
+                price:    perPax,
+                isManual: true,
+                _isSwissPassRow: true
+            });
+        }
+
+    } else {
+        // Reverse everything
+        selectedIntercity.forEach(ic => {
+            if (ic._swissPassCovered) {
+                ic.price = ic._originalPrice != null ? ic._originalPrice : ic.price;
+                delete ic._originalPrice;
+                delete ic._swissPassCovered;
+                if (ic.notes === 'Covered by Swiss Pass') ic.notes = '';
+            }
+        });
+        selectedIntercity = selectedIntercity.filter(ic => !ic._isSwissPassRow);
+
+        if (Array.isArray(currentPlan)) {
+            currentPlan.forEach(cityBlock => {
+                if (!Array.isArray(cityBlock.sights)) return;
+                cityBlock.sights.forEach(s => {
+                    if (s._swissPassPriced) {
+                        s.price = s._originalPrice != null ? s._originalPrice : s.price;
+                        delete s._originalPrice;
+                        delete s._swissPassPriced;
+                    }
+                });
+            });
+        }
+    }
+
+    if (typeof calculateBudgetInvestment === 'function') calculateBudgetInvestment();
+    if (typeof renderTables === 'function') renderTables();
+}
+
+function addToursWithBudget(extraBudgetTotal) {
+    if (!Array.isArray(currentPlan) || currentPlan.length === 0) return;
+    const cfg = (typeof getTravelConfigs === 'function') ? getTravelConfigs() : { totalPax: 1 };
+    const totalPax = cfg.totalPax || 1;
+
+    const swissBlocks = currentPlan.filter(p => isSwissCityFE(p.city));
+    if (swissBlocks.length === 0) return;
+
+    let remaining = extraBudgetTotal;
+    const perCity = remaining / swissBlocks.length;
+
+    swissBlocks.forEach(cityBlock => {
+        let cityRemaining = perCity;
+        const planIdx = currentPlan.findIndex(p => p.id === cityBlock.id);
+        if (planIdx < 0) return;
+
+        const havePicked = new Set((cityBlock.sights || []).map(s => (s.info || '').toLowerCase()));
+
+        const candidates = (masterData.sights || [])
+            .filter(s => tourMatchesCity(s, cityBlock.city)
+                      && !isSwissPassTour(s.info)
+                      && !havePicked.has((s.info || '').toLowerCase())
+                      && Number(s.price) > 0)
+            .sort((a, b) => Number(b.price) - Number(a.price)); // highest value first
+
+        // Days available in this city — assignedDay range 1..nights
+        const nights = Number(cityBlock.nights) || 1;
+        const assignedDayCounts = {};
+        (cityBlock.sights || []).forEach(s => {
+            const d = Number(s.assignedDay) || 1;
+            assignedDayCounts[d] = (assignedDayCounts[d] || 0) + 1;
+        });
+        const pickDay = () => {
+            // Pick the day with fewest sights so far
+            let best = 1, bestCount = Infinity;
+            for (let d = 1; d <= nights; d++) {
+                const c = assignedDayCounts[d] || 0;
+                if (c < bestCount) { bestCount = c; best = d; }
+            }
+            return best;
+        };
+
+        for (const tour of candidates) {
+            const linePerPax = Number(tour.price) || 0;
+            const lineTotal  = linePerPax * totalPax;
+            if (lineTotal <= 0) continue;
+            if (lineTotal > cityRemaining) continue;
+            const day = pickDay();
+            cityBlock.sights = cityBlock.sights || [];
+            cityBlock.sights.push({
+                info:             tour.info,
+                price:            linePerPax,
+                category:         tour.category || '',
+                duration:         tour.duration || '',
+                tags:             tour.tags || '',
+                assignedDay:      day,
+                instanceId:       'swp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+                _addedBySwissPass: true
+            });
+            havePicked.add((tour.info || '').toLowerCase());
+            assignedDayCounts[day] = (assignedDayCounts[day] || 0) + 1;
+            cityRemaining -= lineTotal;
+            if (cityRemaining <= 0) break;
+        }
+    });
+}
+
+function removePassCascadedTours() {
+    if (!Array.isArray(currentPlan)) return;
+    currentPlan.forEach(cityBlock => {
+        if (Array.isArray(cityBlock.sights)) {
+            cityBlock.sights = cityBlock.sights.filter(s => !s._addedBySwissPass);
+        }
+    });
 }
 
 function toggleSwissPass(enabled) {
     swissPassEnabled = enabled;
     const detailsEl = document.getElementById('swissPassDetails');
+
     if (!enabled) {
+        // Reverse quote effects, clear panel
+        applySwissPassToQuote(false, null);
         if (detailsEl) detailsEl.innerHTML = '';
-        renderTables(); // restore original train prices
         return;
     }
-    fetchSwissPassOptions();
-    renderTables(); // zero out Swiss train legs immediately
+
+    // Fetch first, then apply (apply reads window.swissPassData populated by fetch)
+    (async () => {
+        await fetchSwissPassOptions();
+        if (window.swissPassData) applySwissPassToQuote(true, window.swissPassData);
+        else renderTables();
+    })();
 }
 
 // =============================================================
@@ -2852,7 +3094,8 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
         if (reoptimizeSights || finalSights.length === 0) {
             finalSights = finalSights.filter(s => s.isManual);
             const citySights = (masterData.sights || [])
-                .filter(s => s.city && s.city.toLowerCase().trim() === cityName.toLowerCase().trim() && Number(s.price) > 0);
+                .filter(s => tourMatchesCity(s, cityName) && Number(s.price) > 0
+                          && (swissPassEnabled || !isSwissPassTour(s.info)));
 
             const daysInThisCity = Number(sourceRoute.nights) + 1;
 
@@ -3202,7 +3445,8 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
             currentPlan.forEach(route => {
                 const cityLower = (route.city || '').toLowerCase().trim();
                 const pool = (masterData.sights || [])
-                    .filter(s => s.city && s.city.toLowerCase().trim() === cityLower && Number(s.price) > 0);
+                    .filter(s => tourMatchesCity(s, cityLower) && Number(s.price) > 0
+                              && (swissPassEnabled || !isSwissPassTour(s.info)));
                 (route.sights || []).forEach((s, idx) => {
                     if (s.isManual) return;
                     const ft = firstTag(s.tags);
@@ -3504,6 +3748,9 @@ function renderTables() {
                 const cat    = s.category ? `<span class="act-cat">${s.category}</span>` : '';
                 const dur    = s.duration ? `<span class="act-dur">${s.duration}</span>` : '';
                 const icon   = `<span style="font-size:14px;flex-shrink:0;line-height:1;">${_catEmoji(s.category)}</span>`;
+                const passBadge = (swissPassEnabled && isSwissPassTour(s.info))
+                    ? `<span style="color:#2e7d32;font-size:11px;font-style:italic;font-weight:600;flex-shrink:0;"> · Swiss Pass</span>`
+                    : '';
                 return `
                 <div class="act-row flex justify-between items-center gap-1">
                     <div class="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
@@ -3512,7 +3759,7 @@ function renderTables() {
                             class="pdf-input bg-transparent outline-none font-medium resize-none overflow-hidden"
                             style="flex:1;min-width:80px;font-size:13px;"
                             rows="1">${s.info}</textarea>
-                        ${cat}${dur}
+                        ${passBadge}${cat}${dur}
                     </div>
                     <div class="price-col flex items-center whitespace-nowrap ml-2 justify-end" style="color:var(--terra);font-weight:800;font-size:13px;">
                         ₹<input type="number" value="${sTotal}"
@@ -4621,7 +4868,7 @@ function openSightSwap(routeId, swapInstanceId, swapDay) {
 }
 
 function renderSightModalWrapper(route, paxCount) {
-    const allCitySights = (masterData.sights || []).filter(s => s.city && s.city.toLowerCase().trim() === route.city.toLowerCase().trim());
+    const allCitySights = (masterData.sights || []).filter(s => tourMatchesCity(s, route.city) && (swissPassEnabled || !isSwissPassTour(s.info)));
     const cityMaxPrice  = allCitySights.length > 0 ? Math.max(...allCitySights.map(s => Number(s.price) * paxCount)) : 50000;
     const cityMinPrice  = allCitySights.length > 0 ? Math.min(...allCitySights.map(s => Number(s.price) * paxCount)) : 0;
     const categories    = [...new Set(allCitySights.map(s => s.category).filter(Boolean))].sort();
@@ -4744,7 +4991,7 @@ function filterSightsInModal(routeId) {
     const maxPrice   = Number(document.getElementById('sightMaxPrice')?.value) || 999999;
     const catFilter  = document.getElementById('sightCategoryFilter')?.value || '';
 
-    const allCitySights = (masterData.sights || []).filter(s => s.city && s.city.toLowerCase().trim() === route.city.toLowerCase().trim());
+    const allCitySights = (masterData.sights || []).filter(s => tourMatchesCity(s, route.city) && (swissPassEnabled || !isSwissPassTour(s.info)));
     const alreadyPicked = new Set((route.sights || []).map(s => s.info));
 
     const filtered = allCitySights.filter(s => {
@@ -4933,7 +5180,7 @@ function openAddTourDirect(planIdx, dayIdx, city, dateStr) {
 
     window._addTourCtx = { planIdx, dayIdx, city };
 
-    const allCitySights = (masterData.sights || []).filter(s => s.city && s.city.toLowerCase() === city.toLowerCase());
+    const allCitySights = (masterData.sights || []).filter(s => tourMatchesCity(s, city) && (swissPassEnabled || !isSwissPassTour(s.info)));
     const paxCount      = getPaxCount();
     const cityMax = allCitySights.length > 0 ? Math.max(...allCitySights.map(s => Number(s.price) * paxCount)) : 50000;
     const cityMin = allCitySights.length > 0 ? Math.min(...allCitySights.map(s => Number(s.price) * paxCount)) : 0;
@@ -4986,7 +5233,7 @@ function renderAddTourList() {
     const minP      = Number(document.getElementById('addTourMin')?.value) || 0;
     const maxP      = Number(document.getElementById('addTourMax')?.value) || 999999;
 
-    const allCitySights = (masterData.sights || []).filter(s => s.city && s.city.toLowerCase() === city.toLowerCase());
+    const allCitySights = (masterData.sights || []).filter(s => tourMatchesCity(s, city) && (swissPassEnabled || !isSwissPassTour(s.info)));
     const alreadyPicked = new Set((currentPlan[planIdx]?.sights || []).map(s => s.info));
 
     const filtered = allCitySights.filter(s => {
