@@ -2198,6 +2198,8 @@ async function loadSavedList() {
         <thead>
           <tr style="background:#0f172a;">
             <th style="padding:11px 14px;text-align:left;font-size:10px;font-weight:700;color:#fff;letter-spacing:.5px;white-space:nowrap;">PAX NAME</th>
+            ${isAdmin ? '<th style="padding:11px 14px;text-align:left;font-size:10px;font-weight:700;color:#fff;letter-spacing:.5px;">AGENT</th>' : ''}
+            <th style="padding:11px 14px;text-align:left;font-size:10px;font-weight:700;color:#fff;letter-spacing:.5px;">FULL NAME</th>
             <th style="padding:11px 14px;text-align:center;font-size:10px;font-weight:700;color:#fff;letter-spacing:.5px;">PAX</th>
             <th style="padding:11px 14px;text-align:center;font-size:10px;font-weight:700;color:#fff;letter-spacing:.5px;">NIGHTS</th>
             <th style="padding:11px 14px;text-align:left;font-size:10px;font-weight:700;color:#fff;letter-spacing:.5px;">CITIES</th>
@@ -2227,6 +2229,8 @@ async function loadSavedList() {
               <td style="padding:11px 14px;font-size:12px;font-weight:700;color:#0f172a;white-space:nowrap;">
                 ${r.paxName.replace(/_V\d+$/i,'')}${verBadge}${latestBadge}
               </td>
+              ${isAdmin ? `<td style="padding:11px 14px;font-size:11px;color:#334155;white-space:nowrap;">${r.savedBy || '<span style=\"color:#94a3b8;\">—</span>'}</td>` : ''}
+              <td style="padding:11px 14px;font-size:11px;color:#334155;white-space:nowrap;">${r.fullName || '<span style="color:#94a3b8;">—</span>'}</td>
               <td style="padding:11px 14px;text-align:center;font-size:12px;">${r.totalPax}<br><span style="font-size:9px;color:#94a3b8;">${r.adults}A${r.children>0?' '+r.children+'C':''}</span></td>
               <td style="padding:11px 14px;text-align:center;font-size:13px;font-weight:800;color:#0f172a;">${r.totalNights}</td>
               <td style="padding:11px 14px;font-size:11px;color:#475569;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.cities}">${r.cities||'—'}</td>
