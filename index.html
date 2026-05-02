@@ -2067,99 +2067,28 @@ function _ddRefreshBar(which) {
 }
 
 async function saveItinerary() {
-    const cfg     = getTravelConfigs();
-    const rawName = document.getElementById('paxNameInput').value.trim();
-
-    // Auto-generate name: "PaxName x2_09Apr" or "Rome x2_09Apr" if no name
-    function buildSaveName(base) {
-        const n = cfg.totalPax;
-        const firstDate = selectedRoute.length > 0
-            ? new Date(selectedRoute[0].cin).toLocaleDateString('en-GB', {day:'2-digit', month:'short'}).replace(' ','')
-            : new Date().toLocaleDateString('en-GB', {day:'2-digit', month:'short'}).replace(' ','');
-        return `${base} x${n}_${firstDate}`;
-    }
-    const fallback = selectedRoute.length > 0 ? selectedRoute[0].city : 'Draft';
-    // Strip any previously auto-appended " x2_09Apr" suffix so it isn't doubled on re-save
-    const cleanBase = rawName.replace(/\s+x\d+_\d{2}[A-Za-z]{3}$/i, '').trim();
-    const autoName = buildSaveName(cleanBase || fallback);
-    if (!rawName) document.getElementById('paxNameInput').value = autoName;
-
+    // Step 5: thin wrapper. Hash compare, popup flow, charge, save and toast
+    // all live inside processBillableAction. The deliverFn for 'save' is a
+    // no-op — the orchestrator already toasts on save success.
     const btn = document.getElementById('btnSave');
+    if (!btn) return;
     btn.innerText = "SAVING..."; btn.disabled = true;
-
-    let saveName = autoName;
-
-    // ── VERSIONING: if itinerary was loaded from saved, ALWAYS create a new version
-    //    so the original is never overwritten.
-    //    Format: <base name>_V1, V2, V3 … (flat — V2 is not built on V1)
-    if (_loadedFromName) {
-        try {
-            const allRes   = await fetch(`${API_URL}?action=getAllSaved`);
-            const allNames = await allRes.json();
-            // Base = auto-generated name with any trailing _Vn stripped
-            const base    = autoName.replace(/_V\d+$/i, '');
-            const escaped = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const vNums = allNames
-                .filter(n => new RegExp('^' + escaped + '_V(\\d+)$', 'i').test(n))
-                .map(n => { const m = n.match(/_V(\d+)$/i); return parseInt(m[1]); });
-            const nextV = (vNums.length ? Math.max(...vNums) : 0) + 1;
-            saveName = `${base}_V${nextV}`;
-            document.getElementById('paxNameInput').value = saveName;
-        } catch(e) { /* fall through, save with auto name */ }
-    }
-
-    let _agentName = window.currentUsername || '';
-    if (!_agentName) {
-        try { _agentName = JSON.parse(localStorage.getItem('tripstore_session') || '{}').username || ''; } catch(e) {}
-    }
-    if (!_agentName) {
-        showToast("Session expired. Please log in again.", "error");
-        btn.innerText = "Save Itinerary"; btn.disabled = false;
-        return;
-    }
-
-    const data = {
-        action: "saveItinerary",
-        paxName: saveName,
-        savedBy: _agentName,
-        payload: {
-            agentName:     _agentName,
-            adults:        cfg.adults,
-            children:      cfg.children,
-            paxCount:      cfg.totalPax,
-            roomsRequired: cfg.roomsRequired,
-            hotelBudget: document.getElementById('hotelBudget').value,
-            sightBudget: document.getElementById('sightBudget').value,
-            markup:      document.getElementById('markupInput').value,
-            gstMode:     document.querySelector('input[name="gstMode"]:checked')?.value || 'none',
-            vehicleType: document.getElementById('vehicleTypeSelect')?.value || 'auto',
-            selectedRoute,
-            currentPlan,
-            selectedTransfers,
-            selectedIntercity
-        }
-    };
     try {
-        // Save first — only deduct wallet if save succeeds
-        const saveRes = await fetch(API_URL, { method: "POST", body: JSON.stringify(data) });
-        const saveText = await saveRes.text();
-        if (!saveRes.ok || saveText.startsWith('Server Error')) {
-            showToast("Save Failed: " + saveText, "error");
-            return;
-        }
-
-        // ── WALLET: deduct AFTER successful save ──
-        const walletPaxName = cleanBase || fallback;
-        const walletCities = selectedRoute.map(r => r.city || r).join(' → ');
-        await walletDeductForQuote(walletPaxName, walletCities);
-        // ── END WALLET ──
-
-        const wasVersioned = saveName !== rawName;
-        _loadedFromName = null;
-        showToast(wasVersioned ? `Saved as new version: ${saveName}` : "Saved Successfully");
-        if (isAdmin) refreshAdminList();
-    } catch (e) { showToast("Save Failed", "error"); }
-    finally { btn.innerText = "Save Itinerary"; btn.disabled = false; }
+        await processBillableAction('save', async () => {
+            // Auto-fill the paxName input so the user sees the canonical name
+            const rawName = document.getElementById('paxNameInput').value.trim();
+            const auto = _buildAutoSaveName();
+            if (!rawName || rawName !== auto) {
+                document.getElementById('paxNameInput').value = auto;
+            }
+            _loadedFromName = null;
+            if (isAdmin) refreshAdminList();
+        });
+    } catch (e) {
+        showToast("Save Failed: " + e.message, "error");
+    } finally {
+        btn.innerText = "Save Itinerary"; btn.disabled = false;
+    }
 }
 
 async function searchItinerary(query) {
@@ -5686,7 +5615,209 @@ function confirmAddTransfer() {
 }
 
 // =============================================================
-// EXPORT WRAPPER — immediate visual feedback so users don't double-click
+// STEP 5 — BILLABLE ACTION ORCHESTRATOR
+// One path for Save / PDF / Print / Excel. Hash compare decides:
+//   • unchanged payload → deliver, no save, no charge (free forever)
+//   • changed payload   → Popup 1 [Yes/No]
+//       Yes → save (which charges per pricing) → deliver
+//       No  → Popup 2 [Yes,revert / Cancel]
+//           Yes → revert UI to original payload, deliver (free)
+//           Cancel → no-op
+// =============================================================
+
+// Recursively sort object keys → match backend _canonicalJson_ exactly.
+function _canonicalJsonFE(value) {
+    if (value === null || typeof value !== 'object') return JSON.stringify(value);
+    if (Array.isArray(value)) {
+        return '[' + value.map(_canonicalJsonFE).join(',') + ']';
+    }
+    const keys = Object.keys(value).sort();
+    return '{' + keys.map(k => JSON.stringify(k) + ':' + _canonicalJsonFE(value[k])).join(',') + '}';
+}
+
+async function computeFrontendHash(payload) {
+    const canonical = _canonicalJsonFE(payload || {});
+    const buf = new TextEncoder().encode(canonical);
+    const digest = await crypto.subtle.digest('SHA-256', buf);
+    return Array.from(new Uint8Array(digest))
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function _buildCurrentPayload() {
+    const cfg = getTravelConfigs();
+    return {
+        agentName:     window.currentUsername || '',
+        adults:        cfg.adults,
+        children:      cfg.children,
+        paxCount:      cfg.totalPax,
+        roomsRequired: cfg.roomsRequired,
+        hotelBudget: document.getElementById('hotelBudget').value,
+        sightBudget: document.getElementById('sightBudget').value,
+        markup:      document.getElementById('markupInput').value,
+        gstMode:     document.querySelector('input[name="gstMode"]:checked')?.value || 'none',
+        vehicleType: document.getElementById('vehicleTypeSelect')?.value || 'auto',
+        selectedRoute, currentPlan, selectedTransfers, selectedIntercity
+    };
+}
+
+function _buildAutoSaveName() {
+    const cfg     = getTravelConfigs();
+    const rawName = document.getElementById('paxNameInput').value.trim();
+    const firstDate = selectedRoute.length > 0
+        ? new Date(selectedRoute[0].cin).toLocaleDateString('en-GB', {day:'2-digit', month:'short'}).replace(' ','')
+        : new Date().toLocaleDateString('en-GB', {day:'2-digit', month:'short'}).replace(' ','');
+    const fallback = selectedRoute.length > 0 ? selectedRoute[0].city : 'Draft';
+    const cleanBase = rawName.replace(/\s+x\d+_\d{2}[A-Za-z]{3}$/i, '').trim();
+    return `${cleanBase || fallback} x${cfg.totalPax}_${firstDate}`;
+}
+
+// Resolve current agent — reuses Step 3 contract: window.currentUsername first,
+// localStorage second, refuse if neither.
+function _resolveAgentName() {
+    let a = window.currentUsername || '';
+    if (!a) {
+        try { a = JSON.parse(localStorage.getItem('tripstore_session') || '{}').username || ''; } catch(e) {}
+    }
+    return a;
+}
+
+// Styled two-popup dialogs — V3 palette (cream / Playfair Display / terracotta).
+// Each returns a Promise resolving to true (primary action) or false (cancel).
+function _showBillingModal({ title, body, primary, primaryColor }) {
+    return new Promise(resolve => {
+        const id = 'tsBillingModal_' + Date.now();
+        const overlay = document.createElement('div');
+        overlay.id = id;
+        overlay.style.cssText =
+            'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;' +
+            'display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML =
+            '<div style="background:#faf6f0;border-radius:12px;width:400px;max-width:92vw;padding:24px 26px;box-shadow:0 12px 40px rgba(0,0,0,.25);">' +
+              '<div style="font-family:\'Playfair Display\',serif;font-size:20px;font-weight:700;color:#1a1a1a;margin-bottom:10px;">' + title + '</div>' +
+              '<div style="font-family:system-ui,-apple-system,sans-serif;font-size:13px;color:#475569;line-height:1.55;margin-bottom:20px;">' + body + '</div>' +
+              '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+                '<button data-act="cancel" style="background:#e2e8f0;color:#0f172a;border:none;border-radius:7px;padding:9px 18px;font-size:12px;font-weight:700;cursor:pointer;font-family:system-ui,sans-serif;">Cancel</button>' +
+                '<button data-act="primary" style="background:' + primaryColor + ';color:#fff;border:none;border-radius:7px;padding:9px 18px;font-size:12px;font-weight:700;cursor:pointer;font-family:system-ui,sans-serif;">' + primary + '</button>' +
+              '</div>' +
+            '</div>';
+        document.body.appendChild(overlay);
+        const close = (val) => { overlay.remove(); resolve(val); };
+        overlay.querySelector('[data-act="cancel"]').onclick  = () => close(false);
+        overlay.querySelector('[data-act="primary"]').onclick = () => close(true);
+        overlay.addEventListener('click', e => { if (e.target === overlay) close(false); });
+    });
+}
+
+async function _confirmCreateNewVersion() {
+    return _showBillingModal({
+        title:        "Create new version?",
+        body:         "You've made changes to this itinerary. Continuing will save it as a new version.",
+        primary:      "Yes, create new version",
+        primaryColor: "#a55b3a",   // terracotta — V3 primary
+    });
+}
+async function _confirmDiscardChanges() {
+    return _showBillingModal({
+        title:        "Discard your changes?",
+        body:         "This will revert the itinerary to the last saved version. Your edits will be lost.",
+        primary:      "Yes, discard",
+        primaryColor: "#c0392b",   // red — signals destructive
+    });
+}
+
+async function _revertToSaved(paxName) {
+    const agent = _resolveAgentName();
+    const res = await fetch(`${API_URL}?action=search&name=${encodeURIComponent(paxName)}&username=${encodeURIComponent(agent)}&role=${encodeURIComponent(window.currentRole||'USER')}`);
+    const text = await res.text();
+    if (text === 'Not Found') throw new Error('Original quote not found on server');
+    const original = JSON.parse(text);
+    selectedRoute     = original.selectedRoute     || [];
+    currentPlan       = original.currentPlan       || [];
+    selectedTransfers = original.selectedTransfers || [];
+    selectedIntercity = original.selectedIntercity || [];
+    if (typeof renderTables === 'function') renderTables();
+}
+
+async function processBillableAction(actionType, deliverFn) {
+    const agent = _resolveAgentName();
+    if (!agent) {
+        showToast('Session expired. Please log in again.', 'error');
+        return;
+    }
+    if (!currentPlan || currentPlan.length === 0) {
+        showToast('Build the itinerary first.', 'error');
+        return;
+    }
+
+    const payload  = _buildCurrentPayload();
+    const paxName  = _buildAutoSaveName();
+    let hash;
+    try {
+        hash = await computeFrontendHash(payload);
+    } catch (e) {
+        showToast('Hash error: ' + e.message, 'error'); return;
+    }
+
+    // Ask the server: does an identical-hash row already exist for this (paxName, agent)?
+    let state;
+    try {
+        const r = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'checkQuoteState', paxName, agentId: agent, currentHash: hash })
+        });
+        state = await r.json();
+    } catch (e) {
+        showToast('checkQuoteState failed: ' + e.message, 'error'); return;
+    }
+
+    // FREE PATH — payload unchanged. Just deliver.
+    if (state.hash_matches) {
+        await deliverFn();
+        return;
+    }
+
+    // CHANGED PATH — Popup 1
+    const yes1 = await _confirmCreateNewVersion();
+    if (yes1) {
+        // Save (charges per pricing inside saveItinerary), then deliver
+        const saveRes = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'saveItinerary', paxName, payload, savedBy: agent })
+        });
+        let result;
+        try { result = await saveRes.json(); } catch(e) { result = { success: false, message: await saveRes.text() }; }
+        if (!result.success) {
+            showToast('Save blocked: ' + (result.message || 'unknown'), 'error');
+            return;
+        }
+        if (result.charged) {
+            showToast(result.message || 'Saved with charge', 'success');
+            // Refresh wallet badge if available
+            if (typeof loadWalletBalance === 'function') { try { loadWalletBalance(); } catch(e){} }
+        } else {
+            showToast(result.message || 'Saved (free)', 'success');
+        }
+        await deliverFn();
+        return;
+    }
+
+    // Popup 2 — discard changes?
+    const yes2 = await _confirmDiscardChanges();
+    if (yes2) {
+        try {
+            await _revertToSaved(paxName);
+            showToast('Reverted to saved version.', 'success');
+        } catch (e) {
+            showToast('Revert failed: ' + e.message, 'error');
+            return;
+        }
+        await deliverFn();
+        return;
+    }
+    // Cancel — do nothing
+}
+
+// EXPORT WRAPPER — immediate visual feedback, then routes through processBillableAction.
 function triggerExport(type, btnEl) {
     if (btnEl.disabled) return;
     const origText = btnEl.innerText;
@@ -5694,42 +5825,12 @@ function triggerExport(type, btnEl) {
     btnEl.disabled  = true;
     btnEl.style.opacity = '0.7';
     const restore = () => { btnEl.innerText = origText; btnEl.disabled = false; btnEl.style.opacity = ''; };
-    const actionFn = type === 'print' ? () => window.print()
-                   : type === 'pdf'   ? downloadPDF
-                   : downloadExcel;
-    setTimeout(() => {
-        try { autoSaveThenDo(actionFn); } finally { restore(); }
+    const deliver = type === 'print' ? () => window.print()
+                  : type === 'pdf'   ? downloadPDF
+                  :                    downloadExcel;
+    setTimeout(async () => {
+        try { await processBillableAction(type, deliver); } finally { restore(); }
     }, 50);
-}
-
-// AUTO-SAVE before any export action — fire-and-forget, never blocks the export
-function autoSaveThenDo(action) {
-    if (currentPlan.length > 0) {
-        try {
-            const cfg      = getTravelConfigs();
-            const nameRaw  = document.getElementById('paxNameInput').value.trim();
-            const firstCity = selectedRoute.length > 0 ? selectedRoute[0].city : 'Draft';
-            const firstDate = selectedRoute.length > 0
-                ? new Date(selectedRoute[0].cin).toLocaleDateString('en-GB', {day:'2-digit', month:'short'}).replace(' ','')
-                : new Date().toLocaleDateString('en-GB', {day:'2-digit', month:'short'}).replace(' ','');
-            const paxName = `${nameRaw || firstCity} x${cfg.totalPax}_${firstDate}`;
-            const payload = {
-                adults:      cfg.adults,
-                children:    cfg.children,
-                paxCount:    cfg.totalPax,
-                hotelBudget: document.getElementById('hotelBudget').value,
-                sightBudget: document.getElementById('sightBudget').value,
-                markup:      document.getElementById('markupInput').value,
-                gstMode:     document.querySelector('input[name="gstMode"]:checked')?.value || 'none',
-                vehicleType: document.getElementById('vehicleTypeSelect')?.value || 'auto',
-                selectedRoute, currentPlan, selectedTransfers, selectedIntercity
-            };
-            // Fire and forget — do NOT await. Export starts immediately.
-            fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'saveItinerary', paxName, payload, savedBy: window.currentUsername || '' }) })
-                .catch(() => {/* silent */});
-        } catch(e) { /* silent */ }
-    }
-    action();
 }
 
 // EXPORT — PDF
