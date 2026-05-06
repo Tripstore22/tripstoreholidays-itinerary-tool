@@ -838,6 +838,8 @@ thead{display:table-header-group;}
   <button id="navBtn-profile" class="ts-nav-btn user-only-tab" style="display:none;" onclick="switchAdminTab('profile')">👤 My Profile</button>
   <button id="navBtn-quote" class="ts-nav-btn admin-only-tab" style="display:none;" onclick="switchAdminTab('quote')">📊 Quote Dashboard</button>
   <button id="navBtn-data" class="ts-nav-btn admin-only-tab" style="display:none;" onclick="switchAdminTab('data')">🗂️ Data Dashboard</button>
+  <button id="navBtn-coverage" class="ts-nav-btn" style="display:none;" onclick="switchAdminTab('coverage')">📍 Coverage Dashboard</button>
+  <button id="navBtn-manager" class="ts-nav-btn" style="display:none;" onclick="switchAdminTab('manager')">👥 Manager View</button>
   <button id="navBtn-wallet" class="ts-nav-btn admin-only-tab" style="display:none;" onclick="switchAdminTab('wallet')">💳 Wallet Admin</button>
   <button id="navBtn-agents" class="ts-nav-btn admin-only-tab" style="display:none;" onclick="switchAdminTab('agents')">🏢 Agents</button>
   <div class="ts-nav-right">
@@ -1309,6 +1311,23 @@ thead{display:table-header-group;}
   <div id="agentMgmtContent"><div style="text-align:center;padding:80px;color:var(--ink4);"><div style="width:32px;height:32px;border:3px solid var(--border2);border-top-color:var(--terra);border-radius:50%;animation:dashSpin .8s linear infinite;margin:0 auto 14px;"></div>Loading agents...</div></div>
 </div>
 
+<div id="tab-coverage" style="display:none;flex:1;overflow-y:auto;padding:24px 28px;background:var(--cream);">
+  <div style="font-family:var(--serif);font-size:22px;font-style:italic;color:var(--ink);margin-bottom:20px;">📍 Coverage Dashboard</div>
+  <div style="background:#fff;border:1px solid var(--border2);border-radius:10px;padding:40px;text-align:center;color:var(--ink4);">
+    Coverage Dashboard content coming in next session.
+  </div>
+</div>
+
+<div id="tab-manager" style="display:none;flex:1;overflow-y:auto;padding:24px 28px;background:var(--cream);">
+  <div style="font-family:var(--serif);font-size:22px;font-style:italic;color:var(--ink);margin-bottom:20px;">👥 Manager View</div>
+  <div id="managerViewContent">
+    <div style="text-align:center;padding:60px;color:var(--ink4);">
+      <div style="width:32px;height:32px;border:3px solid var(--border2);border-top-color:var(--terra);border-radius:50%;animation:dashSpin .8s linear infinite;margin:0 auto 14px;"></div>
+      Loading users…
+    </div>
+  </div>
+</div>
+
 <!-- APPROVE/EDIT AGENT MODAL -->
 <div id="approveAgentOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:12px;width:380px;max-width:92vw;padding:22px 24px;box-shadow:0 12px 40px rgba(0,0,0,.25);">
@@ -1434,7 +1453,7 @@ thead{display:table-header-group;}
 // =============================================================
 // CONFIGURATION
 // =============================================================
-const API_URL = "https://script.google.com/macros/s/AKfycbwRr9k5XrA0M_bDSS5W4XdbTFYEZIFoDz5cKnuq3nqVARFlhigCfD9fZgzPpFxkhpyobw/exec"; // DEV @5 — 2026-04-30 Swiss Pass v3 + SPP column (prev AKfycbwP9KQH39hcBcLQsPsOL_c4hKIuV3TTlm1XW2CT2e72W-TYVP01-adjsVAKtAAArhGQWA... was bound to orphan scriptId 1BP-Zh79... per TRUTH.md)
+const API_URL = "https://script.google.com/macros/s/AKfycbxrC4tULOlFLPvTIDt8HpJtmsiuueF2gurUxaoaiHQzns_fxeLyMoKP2WZrt6OhalWkPQ/exec"; // DEV @18 — 2026-05-04 RBAC 5-role + getAllUsers (prev pinned @5 AKfycbwP9KQH39hcBcLQsPsOL_c4hKIuV3TTlm1XW2CT2e72W-TYVP01-adjsVAKtAAArhGQWA...)
 
 // =============================================================
 // GLOBAL STATE
@@ -1676,16 +1695,14 @@ function launchApp(modeText) {
             if (agentRef) { agentRef.innerText = _u; agentRef.style.display = _u ? 'block' : 'none'; }
         } catch(e) {}
     }
+    applyRoleVisibility(window.currentRole);
     if (isAdmin) {
         document.getElementById('adminPanel').classList.remove('hidden');
-        document.querySelectorAll('.admin-only-tab').forEach(el => el.style.display = 'inline-block');
         refreshAdminList();
-    } else {
-        document.querySelectorAll('.user-only-tab').forEach(el => el.style.display = 'inline-block');
     }
     init();
     loadWalletBalance(); // load agent wallet on login
-    if (!isAdmin) {
+    if (window.currentRole === 'AGENT') {
         const ql = document.getElementById('quoteLogo');
         if (ql) { ql.src = ''; ql.style.display = 'none'; }
         applyAgentBranding();
@@ -2000,12 +2017,14 @@ async function checkAutoLogin() {
         // Verify token with server — do NOT trust isAdmin from localStorage
         const res  = await fetch(`${API_URL}?action=validateSession&user=${encodeURIComponent(s.username)}&token=${encodeURIComponent(s.token)}`);
         const data = await res.json();
-        if (data.role === 'ADMIN' || data.role === 'USER') {
+        const VALID_ROLES = ['ADMIN','INTERNAL','AGENT','MANAGER','DATA_MANAGER','USER'];
+        if (VALID_ROLES.indexOf(data.role) >= 0) {
             window.currentRole     = data.role;
             window.currentAgentId  = data.agent_id;
             window.currentUsername = s.username;
             isAdmin = (data.role === 'ADMIN');
-            launchApp(data.role === 'ADMIN' ? 'ADMIN MODE' : 'USER MODE');
+            launchApp(data.role === 'ADMIN' ? 'ADMIN MODE' : (data.role + ' MODE'));
+            applyRoleVisibility(data.role);
         }
         // If INVALID, stay on login screen — tampered or expired session
     } catch (e) { /* network error — stay on login screen */ }
@@ -6046,7 +6065,7 @@ async function downloadExcel() {
 
 function switchAdminTab(tab) {
     // Update nav button active class
-    ['itinerary','saved','profile','quote','data','wallet','agents'].forEach(t => {
+    ['itinerary','saved','profile','quote','data','coverage','manager','wallet','agents'].forEach(t => {
         const btn = document.getElementById('navBtn-' + t);
         if (!btn) return;
         btn.classList.toggle('active', t === tab);
@@ -6063,6 +6082,8 @@ function switchAdminTab(tab) {
     document.getElementById('tab-data').style.display      = tab === 'data'      ? 'flex' : 'none';
     document.getElementById('tab-wallet').style.display    = tab === 'wallet'    ? 'flex' : 'none';
     document.getElementById('tab-agents').style.display    = tab === 'agents'    ? 'flex' : 'none';
+    const _tc = document.getElementById('tab-coverage'); if (_tc) _tc.style.display = tab === 'coverage' ? 'block' : 'none';
+    const _tm = document.getElementById('tab-manager');  if (_tm) _tm.style.display = tab === 'manager'  ? 'block' : 'none';
 
     if (tab === 'saved')   loadSavedList();
     if (tab === 'profile') loadAgentProfile();
@@ -6070,6 +6091,71 @@ function switchAdminTab(tab) {
     if (tab === 'data')    loadDataDashboard();
     if (tab === 'wallet')  loadWalletAdmin();
     if (tab === 'agents')  loadAgentManagement();
+    if (tab === 'manager') loadManagerView();
+}
+
+function applyRoleVisibility(role) {
+    const r = String(role || '').trim().toUpperCase();
+    const VIS = {
+        ADMIN:        ['itinerary','saved','quote','data','coverage','manager','wallet','agents'],
+        INTERNAL:     ['itinerary','saved'],
+        AGENT:        ['itinerary','saved','profile'],
+        MANAGER:      ['itinerary','saved','quote','coverage','manager'],
+        DATA_MANAGER: ['itinerary','saved','data','coverage'],
+    };
+    const allowed = VIS[r] || ['itinerary','saved'];
+    ['itinerary','saved','profile','quote','data','coverage','manager','wallet','agents'].forEach(t => {
+        const btn = document.getElementById('navBtn-' + t);
+        if (!btn) return;
+        btn.style.display = allowed.indexOf(t) >= 0 ? 'inline-block' : 'none';
+    });
+    const lbl = document.getElementById('navRoleLabel');
+    if (lbl) lbl.textContent = r || 'USER';
+}
+
+async function loadManagerView() {
+    const el = document.getElementById('managerViewContent');
+    if (!el) return;
+    try {
+        const res  = await fetch(`${API_URL}?action=getAllUsers&role=${encodeURIComponent(window.currentRole || '')}`);
+        const data = await res.json();
+        if (data && data.error) {
+            el.innerHTML = '<div style="text-align:center;padding:60px;color:#dc2626;">Forbidden — admin/manager only.</div>';
+            return;
+        }
+        if (!Array.isArray(data) || data.length === 0) {
+            el.innerHTML = '<div style="text-align:center;padding:60px;color:var(--ink4);">No users found.</div>';
+            return;
+        }
+        const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const rows = data.map(u => `
+            <tr>
+                <td style="padding:10px 12px;font-weight:600;border-top:1px solid var(--border2);">${esc(u.agent_id)}</td>
+                <td style="padding:10px 12px;border-top:1px solid var(--border2);">${esc(u.fullName) || '—'}</td>
+                <td style="padding:10px 12px;border-top:1px solid var(--border2);"><span style="display:inline-block;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;background:#e0e7ff;color:#3730a3;">${esc(u.role)}</span></td>
+                <td style="padding:10px 12px;border-top:1px solid var(--border2);">${esc(u.agency) || '—'}</td>
+                <td style="padding:10px 12px;color:#64748b;border-top:1px solid var(--border2);">${esc(u.lastQuote) || '—'}</td>
+                <td style="padding:10px 12px;text-align:right;font-weight:700;border-top:1px solid var(--border2);">${u.totalQuotes}</td>
+            </tr>`).join('');
+        el.innerHTML = `
+            <div style="background:#fff;border:1px solid var(--border2);border-radius:10px;overflow:hidden;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <thead style="background:#f8fafc;">
+                        <tr>
+                            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">Agent ID</th>
+                            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">Name</th>
+                            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">Role</th>
+                            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">Agency</th>
+                            <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">Last Quote</th>
+                            <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">Total Quotes</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+    } catch (e) {
+        el.innerHTML = `<div style="text-align:center;padding:60px;color:#dc2626;">Error: ${e.message}</div>`;
+    }
 }
 
 // ── QUOTE DASHBOARD ──────────────────────────────────────────
