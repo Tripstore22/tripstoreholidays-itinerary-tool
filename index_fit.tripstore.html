@@ -293,8 +293,8 @@ html{height:100%;overflow:hidden;}body{height:100%;font-family:var(--sans);backg
 /* PROPOSAL BANNER */
 .proposal-banner{
   background:linear-gradient(to right,#2a1609 0%,#5c2d1a 40%,#a04525 75%,#c86030 100%);
-  padding:24px 28px 20px;
-  display:flex;justify-content:space-between;align-items:flex-start;
+  padding:0;
+  display:grid;grid-template-columns:1fr clamp(180px, 25%, 280px);align-items:stretch;
   position:relative;overflow:hidden;
   border-bottom:2px solid rgba(0,0,0,.3);
 }
@@ -317,11 +317,22 @@ html{height:100%;overflow:hidden;}body{height:100%;font-family:var(--sans);backg
   font-family:var(--serif);font-size:24px;color:#fff;
   font-style:italic;line-height:1.2;
 }
-.pb-left{z-index:1;flex:1;}
+.pb-left{z-index:1;padding:24px 28px 20px;min-width:0;}
 .pb-right{
-  text-align:right;z-index:1;
-  display:flex;flex-direction:column;align-items:flex-end;gap:8px;
-  min-width:150px;
+  z-index:2;display:flex;padding:0;
+}
+.pb-right-panel{
+  background:var(--cream);
+  display:flex;align-items:center;justify-content:center;
+  padding:14px 18px;flex:1;min-height:0;width:100%;
+}
+.pb-right-panel img{
+  max-width:100%;max-height:120px;width:auto;height:auto;
+  object-fit:contain;display:block;border-radius:0;box-shadow:none;
+}
+.pb-left-meta{
+  margin-top:10px;text-align:right;
+  font-size:11px;color:rgba(255,255,255,.6);
 }
 .pb-agent-logo{
   width:120px;height:34px;border-radius:5px;
@@ -1061,11 +1072,15 @@ thead{display:table-header-group;}
           <div class="pb-eyebrow" id="bannerEyebrow">Travel Proposal · Trip Store Holidays</div>
           <div id="proposalTitleLine">Luxury Europe &amp; Beyond</div>
           <div id="bannerInfoPills" class="pb-info-pills"></div>
+          <div class="pb-left-meta">
+            <span id="bannerDateRef"></span>
+            <span id="bannerAgentRef" style="margin-left:10px;text-transform:uppercase;letter-spacing:.05em;font-weight:600;"></span>
+          </div>
         </div>
         <div class="pb-right">
-          <img id="quoteLogo" src="images/tripstorelogo.png" alt="Trip Store" style="height:38px;width:auto;border-radius:8px;box-shadow:0 3px 14px rgba(0,0,0,.35);display:block;" onerror="this.style.display='none'">
-          <div id="bannerDateRef" style="font-size:9px;color:rgba(255,255,255,.5);font-weight:400;text-align:right;letter-spacing:.02em;margin-top:2px;"></div>
-          <div id="bannerAgentRef" style="font-size:9px;color:rgba(255,255,255,.6);font-weight:600;text-align:right;letter-spacing:.03em;text-transform:uppercase;"></div>
+          <div class="pb-right-panel">
+            <img id="quoteLogo" src="images/tripstorelogo.png" alt="Trip Store" onerror="this.style.display='none'">
+          </div>
         </div>
       </div>
 
@@ -1703,8 +1718,6 @@ function launchApp(modeText) {
     init();
     loadWalletBalance(); // load agent wallet on login
     if (window.currentRole === 'AGENT') {
-        const ql = document.getElementById('quoteLogo');
-        if (ql) { ql.src = ''; ql.style.display = 'none'; }
         applyAgentBranding();
     } else {
         // Admin always sees Trip Store branding — reset any pre-set values
@@ -1747,9 +1760,11 @@ async function applyAgentBranding() {
     try {
         const res  = await fetch(`${API_URL}?action=getAgentProfile&username=${encodeURIComponent(window.currentUsername || '')}`);
         const data = await res.json();
-        if (data.logoUrl) {
-            const logo = document.getElementById('quoteLogo');
-            if (logo) { logo.src = data.logoUrl; logo.alt = data.agencyName || 'Agency Logo'; logo.style.display = ''; }
+        const logo = document.getElementById('quoteLogo');
+        if (logo) {
+            logo.src = data.logoUrl || 'images/tripstorelogo.png';
+            logo.alt = data.logoUrl ? (data.agencyName || 'Agency Logo') : 'Trip Store';
+            logo.style.display = 'block';
         }
         if (data.agencyName) {
             document.title = data.agencyName + ' | Itinerary';
