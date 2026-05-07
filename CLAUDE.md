@@ -24,12 +24,12 @@ Keep each entry short — max 15 bullet points total. Overwrite the "## Latest S
 | File | Purpose | When to edit |
 |------|---------|-------------|
 | `index_fit.tripstore.html` | **LIVE production** | Only for final, tested features going to production |
-| `index_fit.tripstore.DEV.html` | **DEV testing** | All new feature development happens HERE first |
+| `dev/index_fit.tripstore.DEV.html` | **DEV testing** | All new feature development happens HERE first |
 | `index_fit_DEV.html` | **DEPRECATED** | DO NOT USE. Created by mistake. Will be deleted. |
 
 ### Rules
 1. **NEVER copy live → DEV.** The DEV file has features (Swiss Pass, City Intelligence, server-side Auto-Build, custom city autocomplete, PDF mode toggle, budget breakdown bar) that the live file does NOT have. Copying live to DEV destroys these features.
-2. **NEVER create a new DEV file by duplicating the live file.** If you need a fresh DEV, branch from `index_fit.tripstore.DEV.html`.
+2. **NEVER create a new DEV file by duplicating the live file.** If you need a fresh DEV, branch from `dev/index_fit.tripstore.DEV.html`.
 3. **New features go to DEV first.** Code → test in DEV → verify → then merge into live.
 4. **When merging DEV → live:** Cherry-pick specific changes. Never overwrite the live file wholesale.
 5. **Before editing ANY HTML file:** State which file you are editing and why. Get confirmation.
@@ -56,5 +56,5 @@ Keep each entry short — max 15 bullet points total. Overwrite the "## Latest S
 
 ## Testing Rule
 - Simple changes: push to v2 and verify on live site after 3–5 mins.
-- DEV testing: open `index_fit.tripstore.DEV.html` via local server (`python3 -m http.server 8080`), NOT via `file://` protocol.
+- DEV testing: open `dev/index_fit.tripstore.DEV.html` via local server (`python3 -m http.server 8080`), NOT via `file://` protocol.
 - If unsure about a change: ask user to open index.html directly from Desktop (/Users/Sumit/Desktop/Itinerary-Create/index.html) in browser to test locally before pushing.

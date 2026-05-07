@@ -58,3 +58,8 @@ logs/
 
 # Node / Playwright
 node_modules/
+
+# Local-only working files (not for v2 / GitHub Pages)
+dev/
+*.LIVE_STAGING.html
+*.local.md
