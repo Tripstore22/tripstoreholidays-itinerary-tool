@@ -11,11 +11,17 @@ import re, sys, os
 # Values: 'pipeline' | 'automation' | 'code' | 'quote' | (none = full check)
 SCOPE = sys.argv[1].lower() if len(sys.argv) > 1 else 'pipeline'
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
-PIPELINE = os.path.join(ROOT, 'Pipeline.gs')
-AUTOMATION = os.path.join(ROOT, 'Automation.gs')
-CODE_GS = os.path.join(ROOT, 'Code.gs')
-QUOTE_GS = os.path.join(ROOT, 'Quote_Intelligence.gs')
+# MODIFIED 2026-05-07 by Brief 6D — validator now reads canonical clasp-live files,
+# not the orphan stale copies that used to live in this directory.
+CLASP_LIVE_ROOT = os.path.expanduser('~/Desktop/tripstore-pipeline/clasp-live')
+if not os.path.isdir(CLASP_LIVE_ROOT):
+    print(f"ERROR: clasp-live not found at {CLASP_LIVE_ROOT}. Brief 6D assumes Sumit's local setup. If on a different machine, update CLASP_LIVE_ROOT in this file.", file=sys.stderr)
+    sys.exit(1)
+
+PIPELINE = os.path.join(CLASP_LIVE_ROOT, 'Pipeline.gs')
+AUTOMATION = os.path.join(CLASP_LIVE_ROOT, 'Automation.gs')  # Phase-8-retired; absent from clasp-live by design
+CODE_GS = os.path.join(CLASP_LIVE_ROOT, 'Code.gs')
+QUOTE_GS = os.path.join(CLASP_LIVE_ROOT, 'Quote_Intelligence.gs')
 
 errors = []
 warnings = []
@@ -34,7 +40,7 @@ def get_functions(src):
     return re.findall(r'^function\s+(\w+)\s*\(', src, re.MULTILINE)
 
 pipeline_fns   = get_functions(read(PIPELINE))
-automation_fns = get_functions(read(AUTOMATION))
+automation_fns = get_functions(read(AUTOMATION)) if os.path.exists(AUTOMATION) else []
 codegen_fns    = get_functions(read(CODE_GS)) if os.path.exists(CODE_GS) else []
 
 quote_fns = get_functions(read(QUOTE_GS)) if os.path.exists(QUOTE_GS) else []
@@ -62,14 +68,17 @@ if not conflict_found:
 # ── 2. AUTOMATION.GS LEGACY RENAMES (only when Automation.gs or Pipeline.gs changed) ──────────
 
 if SCOPE in ('pipeline', 'automation'):
-    auto_src = read(AUTOMATION)
-    legacy_must_not_exist = ['runMidnightEnrichment', 'callClaudeAPI', 'setupSheets', 'setupTrigger']
-    for fn in legacy_must_not_exist:
-        pattern = rf'^function\s+{fn}\s*\('
-        if re.search(pattern, auto_src, re.MULTILINE):
-            fail(f'Automation.gs still has "{fn}()" without _LEGACY suffix — naming conflict with Pipeline.gs')
-        else:
-            ok(f'Automation.gs: "{fn}" correctly renamed to _LEGACY')
+    if not os.path.exists(AUTOMATION):
+        ok('Section 2 skipped (Automation.gs not in clasp-live — retired during Phase 8)')
+    else:
+        auto_src = read(AUTOMATION)
+        legacy_must_not_exist = ['runMidnightEnrichment', 'callClaudeAPI', 'setupSheets', 'setupTrigger']
+        for fn in legacy_must_not_exist:
+            pattern = rf'^function\s+{fn}\s*\('
+            if re.search(pattern, auto_src, re.MULTILINE):
+                fail(f'Automation.gs still has "{fn}()" without _LEGACY suffix — naming conflict with Pipeline.gs')
+            else:
+                ok(f'Automation.gs: "{fn}" correctly renamed to _LEGACY')
 
 # ── 3–6. PIPELINE-ONLY CHECKS (column maps, dangerous ops, archive safety) ────
 
@@ -98,7 +107,7 @@ if SCOPE == 'pipeline':
     }
 
     KNOWN_HEADERS = {
-        'Hotels': ['City','Hotel Name','Star Rating','Hotel Category','Chain / Brand','Room Type',
+        'Hotels': ['City','Hotel Name','Star Rating','Hotel Category','Chain / Brand','Room Type','Meals',
                    'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec',
                    'Annual Avg (INR)','Added_By','Source_URL','Notes_Input',
                    'Pipeline_Status','Error_Reason','Processed_Date'],

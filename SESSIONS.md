@@ -1,31 +1,28 @@
 # Session Handoff
 
-## Latest Session — 2026-05-06 21:43 (Brief 2E Block B fix: v3.1 picker + cascade per-day-cluster cap)
+## Latest Session — 2026-05-07 (Brief 4: Sheet ID + deployment hygiene + LIVE API_URL leak fix)
 
 ### Completed
-- **Brief 2E Phase A** — audited `pickTours_byBucket` (line 3834) and `cascade_v22` (line 1511). Reproduced Bug #1 (cascade-eats-budget = `tryAddTour` → `tryTourUpgrade` → free-old-nkey → re-add-same-tour loop, 6× steamship adds in BLN_5N) and Bug #2 (boat-stacking on Berlin day 3, 3 water tours).
-- **Phase B Front 1 (picker, v3.1-only)** — added `V31_PER_DAY_BUCKET_CAP = 1`, `usedClusterByDay` (per-day lock) and `usedClusterCity` (round-robin counter); stable-sort `orderedClusters` by city-use count asc with original-idx tiebreak.
-- **Phase B Front 2 first attempt (Option B1)** — dropped 2 `delete` calls in `tryTourUpgrade`. v3.1 stacking fixed but **BLN_5N v2.2 spend −2.242% (outside ±2%)** → reverted per brief contract.
-- **Phase B Path β (B2 final)** — gated per-day-cluster cap inside `tryAddTour` and `tryTourUpgrade` on `ctx.bucketAware = true` (set only by `computeItinerary_v31`). v2.2 ctx omits the flag → cascade byte-equivalent to today.
-- **Diagnostic discovery + fix** — `getSights` reads from `LIVE_SHEET_ID.Sightseeing` while `Sightseeing_v2_Clusters.masterIdx` indexes DEV's `Sightseeing_v2`. Index mismatch silently breaks `_clusterId` mutation at runtime (every pick had `cid=NO_CID`). Worked around with `getNameToClusterMap_v3(ss)` → `ctx.nameToCluster`; helper `_v31ClusterIdOf(tour, ctx)` resolves via `tour._clusterId` first, falls back to name-keyed lookup.
-- **DEV cuts: @25 → @26 (B1) → @27 (B2 first cut) → @30 (B2 + name-keyed lookup, current)**.
-- **B5-v2 verification (7-route panel × 2 algorithms × 2 passes):**
-  - V2.2 byte-equivalence: **PASS** all 7 routes (util, spend, hotels, transfers, trains, tours, cascade log all match baseline exactly).
-  - V3.1 same-clusterId stacks: **PASS** 7/7 routes (BLN_5N + BLN_MUC_8N each had 1 Berlin_5 stack on day 3 → 0).
-- **Brief held in DEV @30. No LIVE promote** (per brief — Brief 2F is separate decision).
-- Reports: `~/Desktop/Itinerary-Create/dev/BRIEF_2E_REPORT.md` (Phase A + Phase B + B2 final). Raw smokes: `~/Desktop/tripstore-pipeline/_brief2e_phaseB_baseline/`, `_brief2e_phaseB2v2_after/`.
+- Audit phase: `AUDIT_2026-05-07.md`, `RECONCILE_2026-05-07.md`, `CLEANUP_2026-05-07.md`. Bucket A=0 (LIVE app→DEV Sheet violations); Bucket F=0 (no 5th Sheet ID).
+- Repointed 8 Python files off `_OLD` Sheet (`1cdI1Gz…`): `cross_reference.py` + `build_city_intelligence.py` → LIVE; `test_intelligence.py` + 5 dev-appscript scripts → DEV. Deleted duplicate `dev-appscript/build_city_intelligence.py`.
+- Cosmetic: HTML header comments + CLAUDE.md DEV Sheet ID + CLAUDE.md DEV deploy ID corrected to current values.
+- **LIVE HTML API_URL leak closed.** Initial promote (`b72e2d1`, 16:35 IST) hit `promote_to_live.sh` URL-detection bug — silent no-op. Fix-forward via direct sed in `8dd7e34` (17:43 IST) corrected `index.html` + `index_fit.tripstore.html` L1471 to `LIVE_DEPLOY_ID` (`AKfycbwP9KQH…`).
+- clasp-live deployments: main @78, BF @79 ("promote 2026-05-07_1635"). `ItineraryEngine.gs` gained `_v31DayClusters` from prior DEV work.
+- Verified: `smoketest_2026_05_07_brief4` signup at 17:43:30 → row landed in LIVE Users (17 rows), absent from DEV Users (16 rows). Leak closed end-to-end.
+- TRUTH.md UNRESOLVED BLOCKER row 5 (Sightseeing tab split) silently resolved already — LIVE's `Sightseeing` tab is now the canonical 15-col 1655-row tab; `Sightseeing_v2` no longer exists on LIVE.
 
 ### Discoveries / lessons
-- **Cascade-eats-budget signature** is the `tryAddTour`/`tryTourUpgrade` dedup-leak loop, not residual overshoot. v3.1's conservative bucket-picker leaves more headroom → cascade has more iterations → more loop. Killing the leak (B1) tightens v2.2 by enough to violate ±2% on low-util routes — hence the gate-revert.
-- **`getSights` LIVE/DEV mismatch** silently breaks `_clusterId` mutation. Picker survives because `cityClusterMap` is built from cluster sheet directly (name+cid known there). Cascade gates need the name-keyed lookup. Generalizable: any future engine code that depends on `tour._clusterSize` or `tour._clusterId` at runtime will silently misbehave.
-- **Theme-level stacking ≠ cluster-level stacking.** Day 4 of BLN_5N v3.1 still has Berlin_5 cruise + Berlin_4 boat (different clusters, both water). Brief explicitly scoped to clusterId stacking — engine satisfies it. Theme grouping = separate scope.
-- **BLN_MUC_8N v2.2 float-overshoot crash** (`CRITICAL: total spend 259179.00000000003 > netBudget 259179`) is pre-existing, reproducible at 4+4N Berlin+Munich ₹150k pp. Same crash before AND after 2E.
+- **`promote_to_live.sh` URL-detection heuristic is broken** (lines 113–128). Grep stops at `.` so HTML comment ellipsis like `prev pinned @5 AKfycbwRr9k5...)` yields a truncated 12-char fragment that may sort alphabetically before the real URL → sed swap silently no-ops. Fix sketch: anchor regex to `macros/s/AKfycb[A-Za-z0-9_-]+/exec`. Until fixed, every promote risks the same silent leak.
+- **Pipeline.gs in `~/Desktop/Itinerary-Create/` is part of the pre-push validation chain** (read by `check_pipeline.py` GUARD 6). 4 orphan `.gs` files + 2 validators in that folder are pre-clasp-split mirrors — cleanup deferred to a session that audits all 6 together.
+- Bucket A=0 confirms `clasp-live/Code.gs` already complies with Rule 2; `_pipeline_map.md` rumour about DEV-Sheet reads in v3 functions was out of date. `DEV_SHEET_ID` constant at L1745 is dead code.
 
 ### Still pending
-- **Brief 2F: v3.1 BETA promote to LIVE** — engine ready in DEV @30, awaiting brief.
-- **Pre-existing tickets to track separately:** (a) BLN_MUC_8N v2.2 float-overshoot crash; (b) `getSights` ↔ `Sightseeing_v2_Clusters.masterIdx` index mismatch breaks `_clusterId`/`_clusterSize` mutation.
-- **Visual confirmation on LIVE** (Brief D3 carryover): ADMIN cream panel; AGENT-with-logo / AGENT-without-logo paths.
-- (Carryover) Coverage Dashboard real content; Sightseeing tab migration; tag taxonomy v2 cleanup; PDF/Excel intelligence merge.
+- **Sumit-manual:** delete `smoketest_2026_05_07_brief4` row from LIVE Users; revoke service-account write access on `_OLD` Sheet (`1cdI1Gz…`); confirm Drive rename `Itinerary Builder_Master [DEV]_OLD_ARCHIVED_2026_05_07_DO_NOT_USE`.
+- **High-priority:** patch `promote_to_live.sh` URL-regex (otherwise next promote can re-introduce leak). Add unit test for truncated-comment-fragment case.
+- **Orphan cleanup session:** decide delete-vs-update for `Itinerary-Create/{Pipeline,Automation,Code,Quote_Intelligence}.gs` + `check_pipeline.py` + `check_html.py`.
+- (Carryover) Brief 2F v3.1 BETA promote to LIVE — DEV @30 ready.
+- (Carryover) Visual confirmation on LIVE: Brief D3 cream panel + AGENT logo fallback.
+- (Carryover) Coverage Dashboard real content; tag taxonomy v2 cleanup; PDF/Excel intelligence merge.
 
 ---
 
