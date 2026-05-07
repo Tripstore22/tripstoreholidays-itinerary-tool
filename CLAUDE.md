@@ -35,12 +35,12 @@ Keep each entry short — max 15 bullet points total. Overwrite the "## Latest S
 5. **Before editing ANY HTML file:** State which file you are editing and why. Get confirmation.
 6. **API URLs are different:**
    - Live: contains `AKfycbzAbIgzRoN_MNs377jm3u`
-   - DEV: contains `AKfycbwI0EKmAEJlHVDZQcBTrRscEE0G0y6A5lXRa1VIQBMPwOQRsqnIOWJEeelWNtUguVb2_g`
+   - DEV: contains `AKfycbzFTBGVeZ6oQglrgULFCJ1ESHqxipL-QGCHLVL9hBk8`
    - **NEVER put a DEV URL in the live file or vice versa.**
 
 ### Sheet IDs
 - **Live Sheet:** `1U3f6PhTpvbEO7JG937t2z9EW9dfB0gcIOUVA_GATIHM` — never use in DEV code
-- **DEV Sheet:** `1cdI1Gz652pTyqX5gVIJ6AHssMZiHD0VLr_KJXt0hETE` — never use in live code
+- **DEV Sheet:** `1iENrNwWTtU9O664hXYS8dBG1rbcHr2x9Xt294UeORM4` — never use in live code
 
 ### .gs file rules
 - `Code.gs` — shared between live and DEV (routes serve both). Wallet routes are additive only.
@@ -53,6 +53,22 @@ Keep each entry short — max 15 bullet points total. Overwrite the "## Latest S
 - CNAME file must only exist on v2. Never copy or merge it to other branches.
 - If a fix is not showing on the live site, wait 3–5 minutes for CDN. Do NOT diagnose as a branch problem and start pushing to other branches.
 - If GitHub Pages stops deploying: instruct user to go to Settings → Pages → toggle branch to main → Save → toggle back to v2 → Save. That's it.
+
+## DEV deployment workflow
+
+DEV uses TWO deployment IDs (intentional, see `~/Desktop/tripstore-pipeline/.deployment_ids` comments):
+- `DEV_DEPLOY_ID` (`AKfycbzFTBG…`) — @HEAD, locked to Sumit's Google account. Not used by HTML; admin/debug only.
+- `DEV_PINNED_DEPLOY_ID` (`AKfycbxr…`) — pinned at a fixed version with anonymous access. **This is what DEV HTML hits.**
+
+To push DEV code: **always use `dev_push.sh`**, never raw `clasp push`. The wrapper:
+1. Runs `clasp push` (updates @HEAD on DEV script)
+2. Runs `clasp deploy --deploymentId DEV_PINNED_DEPLOY_ID` (advances the pinned version DEV HTML reads)
+
+Raw `clasp push` alone updates @HEAD, which DEV HTML does NOT read → DEV testing silently runs against stale code.
+
+Usage:
+
+    bash ~/Desktop/tripstore-pipeline/dev_push.sh "short description of change"
 
 ## Testing Rule
 - Simple changes: push to v2 and verify on live site after 3–5 mins.
