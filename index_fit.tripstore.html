@@ -1363,6 +1363,22 @@ thead{display:table-header-group;}
   </div>
 </div>
 
+<!-- PASSWORD RESET MODAL (Brief 7) -->
+<div id="passwordResetOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;width:380px;max-width:92vw;padding:22px 24px;box-shadow:0 12px 40px rgba(0,0,0,.25);">
+    <div style="font-family:var(--serif);font-size:18px;font-weight:700;color:var(--ink);margin-bottom:4px;">Reset Password</div>
+    <div style="font-size:11px;color:var(--ink4);margin-bottom:14px;">@<span id="prmUsername"></span></div>
+    <input type="hidden" id="prmUsernameHidden">
+    <label style="font-size:11px;font-weight:700;color:var(--ink2);display:block;margin-bottom:4px;">New Password (min 6 chars)</label>
+    <input type="text" id="prmNewPassword" class="ts-input" placeholder="Enter new password" style="margin-bottom:8px;">
+    <div style="font-size:11px;color:#92400e;background:#fef9c3;border:1px solid #fde68a;border-radius:6px;padding:8px 10px;margin-bottom:18px;">⚠️ Tell the agent this password directly. It will not be emailed.</div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;">
+      <button onclick="closePasswordResetModal()" style="background:#e2e8f0;color:#0f172a;border:none;border-radius:7px;padding:8px 16px;font-size:11px;font-weight:700;cursor:pointer;">Cancel</button>
+      <button id="prmSubmit" onclick="submitPasswordReset()" style="background:#a55b3a;color:#fff;border:none;border-radius:7px;padding:8px 16px;font-size:11px;font-weight:700;cursor:pointer;">Reset Password</button>
+    </div>
+  </div>
+</div>
+
 <!-- SWAP MODAL -->
 <div id="swapModal" class="modal-overlay hidden">
   <div class="modal-box">
@@ -1468,7 +1484,7 @@ thead{display:table-header-group;}
 // =============================================================
 // CONFIGURATION
 // =============================================================
-const API_URL = "https://script.google.com/macros/s/AKfycbwP9KQH39hcBcLQsPsOL_c4hKIuV3TTlm1XW2CT2e72W-TYVP01-adjsVAKtAAArhGQWA/exec"; // DEV @18 — 2026-05-04 RBAC 5-role + getAllUsers (prev pinned @5 AKfycbwP9KQH39hcBcLQsPsOL_c4hKIuV3TTlm1XW2CT2e72W-TYVP01-adjsVAKtAAArhGQWA...)
+const API_URL = "https://script.google.com/macros/s/AKfycbwP9KQH39hcBcLQsPsOL_c4hKIuV3TTlm1XW2CT2e72W-TYVP01-adjsVAKtAAArhGQWA/exec"; // DEV @18 — 2026-05-04 RBAC 5-role + getAllUsers (prev pinned @5 AKfycbwRr9k5...)
 
 // =============================================================
 // GLOBAL STATE
@@ -1918,6 +1934,94 @@ async function submitApproveAgent() {
     }
 }
 
+// ── PASSWORD RESET (Brief 7) ──────────────────────────────────
+function openPasswordResetModal(username) {
+    document.getElementById('prmUsername').innerText      = username;
+    document.getElementById('prmUsernameHidden').value    = username;
+    document.getElementById('prmNewPassword').value       = '';
+    document.getElementById('passwordResetOverlay').style.display = 'flex';
+}
+function closePasswordResetModal() {
+    document.getElementById('passwordResetOverlay').style.display = 'none';
+}
+async function submitPasswordReset() {
+    const targetUsername = document.getElementById('prmUsernameHidden').value;
+    const newPassword    = document.getElementById('prmNewPassword').value;
+    if (!newPassword || newPassword.length < 6) {
+        showToast('Password must be at least 6 characters', 'error');
+        return;
+    }
+    if (!window.currentUsername) {
+        showToast('Session expired. Please log in again.', 'error');
+        return;
+    }
+    const btn  = document.getElementById('prmSubmit');
+    const orig = btn.innerText;
+    btn.innerText = 'Saving...'; btn.disabled = true;
+    try {
+        const res = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                action:         'resetAgentPassword',
+                adminUsername:  window.currentUsername || '',
+                targetUsername: targetUsername,
+                newPassword:    newPassword
+            })
+        });
+        const result = await res.json();
+        if (result.success) {
+            showToast(result.message || 'Password reset', 'success');
+            closePasswordResetModal();
+        } else {
+            showToast(result.error || 'Reset failed', 'error');
+        }
+    } catch (e) {
+        showToast('Network error: ' + e.message, 'error');
+    } finally {
+        btn.innerText = orig; btn.disabled = false;
+    }
+}
+
+// ── ROLE CHANGE (Brief 7) ─────────────────────────────────────
+async function handleRoleChange(username, oldRole, newRole, selectEl) {
+    if (oldRole === newRole) return;
+    if (!window.currentUsername) {
+        showToast('Session expired. Please log in again.', 'error');
+        selectEl.value = oldRole;
+        return;
+    }
+    if (!confirm(`Change role for ${username} from ${oldRole} to ${newRole}?`)) {
+        selectEl.value = oldRole;
+        return;
+    }
+    selectEl.disabled = true;
+    try {
+        const res = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                action:         'changeAgentRole',
+                adminUsername:  window.currentUsername || '',
+                targetUsername: username,
+                newRole:        newRole
+            })
+        });
+        const result = await res.json();
+        if (result.success) {
+            showToast(result.message || 'Role updated', 'success');
+            selectEl.style.background = '#dcfce7';
+            setTimeout(() => { selectEl.style.background = '#fff'; }, 1200);
+        } else {
+            showToast(result.error || 'Role change failed', 'error');
+            selectEl.value = oldRole;
+        }
+    } catch (e) {
+        showToast('Network error: ' + e.message, 'error');
+        selectEl.value = oldRole;
+    } finally {
+        selectEl.disabled = false;
+    }
+}
+
 // ── AGENT MANAGEMENT ──────────────────────────────────────────
 async function loadAgentManagement() {
     const el = document.getElementById('agentMgmtContent');
@@ -1945,12 +2049,22 @@ async function loadAgentManagement() {
             <td style="padding:10px 12px;font-size:12px;color:#334155;">${a.agencyName || '—'}</td>
             <td style="padding:10px 12px;font-size:12px;color:#334155;">${fullNameCell}</td>
             <td style="padding:10px 12px;text-align:center;">
-              <span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:${a.role==='ADMIN'?'#dbeafe':a.role==='PENDING'?'#fef9c3':'#dcfce7'};color:${a.role==='ADMIN'?'#1d4ed8':a.role==='PENDING'?'#854d0e':'#166534'};">${a.role}</span>
+              <select onchange="handleRoleChange('${esc(a.username)}','${a.role}',this.value,this)" style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:14px;border:1px solid #cbd5e1;background:#fff;color:#0f172a;cursor:pointer;">
+                <option value="PENDING"      ${a.role==='PENDING'?'selected':''}>PENDING</option>
+                <option value="AGENT"        ${a.role==='AGENT'?'selected':''}>AGENT</option>
+                <option value="MANAGER"      ${a.role==='MANAGER'?'selected':''}>MANAGER</option>
+                <option value="INTERNAL"     ${a.role==='INTERNAL'?'selected':''}>INTERNAL</option>
+                <option value="DATA_MANAGER" ${a.role==='DATA_MANAGER'?'selected':''}>DATA_MANAGER</option>
+                <option value="ADMIN"        ${a.role==='ADMIN'?'selected':''}>ADMIN</option>
+              </select>
             </td>
             <td style="padding:10px 12px;text-align:center;">${statusCell}</td>
             <td style="padding:10px 12px;text-align:center;font-size:13px;font-weight:800;color:#2563eb;">${a.quoteCount}</td>
             <td style="padding:10px 12px;text-align:right;font-size:12px;font-weight:700;color:${walletColor(a.walletBalance)};">${fmtINR(a.walletBalance)}</td>
             <td style="padding:10px 12px;font-size:11px;color:#94a3b8;">${a.lastLogin || '—'}</td>
+            <td style="padding:10px 12px;text-align:center;">
+              <button onclick="openPasswordResetModal('${esc(a.username)}')" style="background:#fff;color:#a55b3a;border:1px solid #a55b3a;border-radius:14px;padding:4px 10px;font-size:10px;font-weight:700;cursor:pointer;">🔑 Reset</button>
+            </td>
           </tr>`;
         }).join('');
 
@@ -1967,6 +2081,7 @@ async function loadAgentManagement() {
                   <th style="padding:10px 12px;text-align:center;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">Quotes</th>
                   <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">Wallet</th>
                   <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">Last Login</th>
+                  <th style="padding:10px 12px;text-align:center;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;">Action</th>
                 </tr>
               </thead>
               <tbody>${rows}</tbody>
