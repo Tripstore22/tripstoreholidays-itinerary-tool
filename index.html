@@ -991,6 +991,10 @@ thead{display:table-header-group;}
           <input type="radio" name="algoChoice" value="v2.2" id="algoV22" onchange="setAlgorithm('v2.2')" style="margin:0;">
           <span>v2.2 <span style="background:#d97757;color:#fff;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:700;">BETA</span></span>
         </label>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+          <input type="radio" name="algoChoice" value="v3.1" id="algoV31" onchange="setAlgorithm('v3.1')" style="margin:0;">
+          <span>v3.1 <span class="beta-badge" style="background:#5c7a4a;color:#fff;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:700;">NEW</span></span>
+        </label>
       </div>
       <div class="ts-field">
         <label class="ts-label">Vehicle Type</label>
@@ -5529,18 +5533,20 @@ function transformEngineResult(result, route, config) {
     };
 }
 
-// V2.2 Beta toggle — persists per session
+// Algorithm toggle — persists per session. v1 default; v2.2 BETA orange; v3.1 NEW green.
 function setAlgorithm(algo) {
     try { sessionStorage.setItem('tripstore_algo', algo); } catch (e) {}
     const btn = document.getElementById('autoBuildBtn');
     if (btn) {
         const existing = btn.querySelector('.beta-badge');
         if (existing) existing.remove();
-        if (algo === 'v2.2') {
+        if (algo === 'v2.2' || algo === 'v3.1') {
             const badge = document.createElement('span');
             badge.className = 'beta-badge';
-            badge.style.cssText = 'background:#d97757;color:#fff;padding:1px 6px;margin-left:6px;border-radius:3px;font-size:9px;font-weight:700;';
-            badge.textContent = 'BETA';
+            const isNew = (algo === 'v3.1');
+            badge.style.cssText = 'background:' + (isNew ? '#5c7a4a' : '#d97757') +
+                ';color:#fff;padding:1px 6px;margin-left:6px;border-radius:3px;font-size:9px;font-weight:700;';
+            badge.textContent = isNew ? 'NEW' : 'BETA';
             btn.appendChild(badge);
         }
     }
@@ -5553,7 +5559,10 @@ function getAlgorithm() {
 
 window.addEventListener('DOMContentLoaded', function() {
     const stored = getAlgorithm();
-    const radio = document.getElementById(stored === 'v2.2' ? 'algoV22' : 'algoV1');
+    const radioId = stored === 'v3.1' ? 'algoV31'
+                  : stored === 'v2.2' ? 'algoV22'
+                  : 'algoV1';
+    const radio = document.getElementById(radioId);
     if (radio) {
         radio.checked = true;
         setAlgorithm(stored);
