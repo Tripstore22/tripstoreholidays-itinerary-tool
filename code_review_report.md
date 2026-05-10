@@ -1,247 +1,222 @@
 # TripStore Code Review Report
-**Date:** 2026-05-09
-**Reviewer:** Claude (automated daily review)
-**Files Reviewed:** Code.gs, Pipeline.gs, Quote_Intelligence.gs, index_fit.tripstore.html, write_to_sheets.py, archive_to_input.py
-**Commit reviewed:** d64a756
+**Date:** 2026-05-10
+**Reviewer:** Claude (Automated Daily Review)
+**Branch:** v2
+**Files reviewed:** Code.gs, Pipeline.gs, Quote_Intelligence.gs, index_fit.tripstore.html, write_to_sheets.py, archive_to_input.py
+
+> **Files requested but NOT found in repo:**
+> extract_itineraries.py, write_inputs_to_sheets.py, cleanup_sheet.py, clean_pipeline_data.py, cross_reference.py, enrich_hotels.py, enrich_hotels_booking.py
+> These may exist locally on your machine but have not been committed to GitHub. They cannot be reviewed until pushed.
 
 ---
 
-## Summary
+## SUMMARY
 
 | Severity | Count |
-|----------|---------|
-| CRITICAL | 4 |
-| MODERATE | 15 |
-| MINOR    | 11 |
-| **TOTAL** | **30** |
+|----------|-------|
+| 🔴 CRITICAL | 5 |
+| 🟠 MODERATE | 10 |
+| 🟡 MINOR | 7 |
 
 ---
 
-## CRITICAL Issues
+## 🔴 CRITICAL ISSUES
 
-### [CRITICAL-1] Login Never Works for New Users — Backend/Frontend Method Mismatch
-**File:** `index_fit.tripstore.html` line 583 + `Code.gs` lines 25–30
+### [C1] Code.gs + index_fit.tripstore.html — Login action mismatch: login is broken in current repo code
 
-The frontend sends `checkLogin` as an HTTP **POST** with a JSON body:
-```js
-await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "checkLogin", user, pass }) });
-```
-But `Code.gs` only handles `checkLogin` inside `doGet()` (reading URL query parameters), not `doPost()`. Any POST with `action: "checkLogin"` hits the `doPost` fallthrough and returns `"Invalid action"`. The frontend then shows "Invalid Credentials" for every fresh login.
+**File:** `Code.gs` (line 43–58) + `index_fit.tripstore.html` (line 583)
 
-**Why it hasn't been noticed:** Existing users stay logged in via `localStorage.getItem("tripstore_session")` — the app auto-logs them in without hitting the backend. New signups cannot log in.
-
-**Fix:** Move `checkLogin` handling into `doPost()` reading `data.user` and `data.pass`. Redeploy after changing.
-
----
-
-### [CRITICAL-2] Passwords Stored and Transmitted in Plain Text
-**File:** `Code.gs` lines 257–261, 289
-
-Passwords are stored as plain text in the Google Sheet "Users" column B and compared with `dbPass === pass.trim()`. No hashing of any kind. A compromised Google Sheet (accidental public sharing, exported CSV) instantly exposes all agency passwords.
-
-Additionally, `doGet` makes `checkLogin` reachable via URL like `?action=checkLogin&user=X&pass=Y` — credentials appear in server access logs in plain text.
-
-**Fix (short-term):** Remove the doGet `checkLogin` route.
-**Fix (proper):** Hash passwords on signup with SHA-256 via `Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password)`. Store and compare hashes only.
-
----
-
-### [CRITICAL-3] `setupQuoteLog()` Permanently Destroys All Historical Quote Data
-**File:** `Quote_Intelligence.gs` line 196
-
-```js
-function setupQuoteLog() {
-  let ws = ss.getSheetByName('Quote_Log');
-  if (!ws) ws = ss.insertSheet('Quote_Log');
-  ws.clear();   // ← wipes everything unconditionally, even if data already exists
+The HTML sends login credentials via HTTP **POST** with `action: "checkLogin"` in the JSON body:
+```javascript
+fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "checkLogin", user, pass }) });
 ```
 
-`ws.clear()` runs even when the sheet already has 100+ saved quotes. Running `setupQuoteLog()` a second time (e.g. to fix column widths or add a new column) **permanently deletes every quote row with no confirmation, no backup, no undo**.
+But `doPost()` in Code.gs only handles `"signup"` and `"saveItinerary"`. The `checkLogin` handler exists only in `doGet()` (reading from URL query parameters). Any login attempt via the current frontend would receive `"Invalid action"` from the server and show `"❌ Invalid Credentials"`.
 
-**Fix:** Add a guard before clearing:
-```js
-if (ws.getLastRow() > 1) {
-  SpreadsheetApp.getUi().alert('Quote_Log already has data — aborting to protect it. Backup first.');
-  return;
+**If the live site is working, the deployed Apps Script is a different version from the one in this repo.** The repo version is out of sync with production. If Code.gs is ever redeployed from the repo, login will stop working immediately.
+
+**Fix:** Add a `checkLogin` case to `doPost()`:
+```javascript
+if (action === 'checkLogin') {
+  return checkLogin(data.user || '', data.pass || '');
 }
 ```
 
 ---
 
-### [CRITICAL-4] Admin Panel Access Controlled Only Client-Side
-**File:** `index_fit.tripstore.html` lines 641–650
+### [C2] Code.gs — Passwords stored in plain text in Google Sheets
 
-The session is stored in `localStorage` as `{isLoggedIn: true, isAdmin: true, ...}`. Any user can open DevTools → Application → localStorage, change `isAdmin` to `true`, reload, and get full admin access. The server has no concept of "admin" in any endpoint handler — `getAllSaved`, `searchItinerary`, and `saveItinerary` all have zero auth checks.
+**File:** `Code.gs` (lines 261, 289)
 
-**Fix:** Pass a credential token with every request and validate the user's role from the Users sheet on the server side.
+Both `checkLogin()` and `handleSignup()` compare and store passwords as plain strings in the "Users" sheet. Anyone with read access to the Google Sheet (admin, support staff, accidental share) can see every user's password.
 
----
-
-## MODERATE Issues
-
-### [MODERATE-1] GST Calculation in Quote Log Always Defaults to 5% — Field Name Bug
-**File:** `Quote_Intelligence.gs` lines 119–121
-
-```js
-const gstPct = d.gst || 5;  // d.gst is NEVER set — payload uses d.gstMode ('5pkg','18svc','none')
-const gstAmt = Math.round(markupAmt * gstPct / 100);
-```
-
-The saved itinerary payload uses `gstMode` (a string), not `gst` (a number). So `d.gst` is always `undefined`, `gstPct` always defaults to 5, and Quote_Log column R (GST Amount) is wrong for every quote where GST is None or 18%. This silently corrupts all historical reporting.
-
-**Fix:**
-```js
-let gstAmt = 0;
-const gstMode = d.gstMode || 'none';
-if (gstMode === '5pkg')  gstAmt = Math.round((subTotal + markupAmt) * 0.05);
-if (gstMode === '18svc') gstAmt = Math.round(markupAmt * 0.18);
-```
-
----
-
-### [MODERATE-2] `_buildInputSheet` Inserts Duplicate Banner Rows on Every `setupSheets()` Run
-**File:** `Pipeline.gs` line 778
-
-```js
-ws.insertRowBefore(2);  // inserts a new Row 2 every time — no check if banner already exists
-```
-
-Running `setupSheets()` twice creates two banner rows and pushes all data down by one. `getPendingRows()` hardcodes "data starts at row 3 (index 2)" — so any extra banner row silently causes the first real data row to be skipped by the pipeline.
-
-**Fix:**
-```js
-if (!ws.getRange(2, 1).getValue().toString().includes('ℹ️')) {
-  ws.insertRowBefore(2);
+**Fix:** Hash passwords with SHA-256 before storing. Apps Script has `Utilities.computeDigest()` for this:
+```javascript
+function hashPass(p) {
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, p)
+    .map(b => ('0'+(b & 0xff).toString(16)).slice(-2)).join('');
 }
 ```
 
 ---
 
-### [MODERATE-3] Claude May Return Object Instead of Array — Column Order Not Guaranteed
-**File:** `Pipeline.gs` lines 241–242
+### [C3] index_fit.tripstore.html — Admin privilege escalation via localStorage
 
-```js
-const rowArr = Array.isArray(r) ? r
-  : (r && typeof r === 'object' ? Object.values(r) : [String(r)]);
-mst.appendRow(rowArr);
+**File:** `index_fit.tripstore.html` (lines 641–653)
+
+`checkAutoLogin()` restores the session from `localStorage` including `isAdmin = s.isAdmin`. Any user can open the browser console and type:
+```javascript
+localStorage.setItem("tripstore_session", JSON.stringify({isLoggedIn:true, isAdmin:true, modeText:"ADMIN MODE"}))
+```
+then reload to gain full admin access with no server verification whatsoever.
+
+**Fix:** Never derive admin status from localStorage. Re-verify role with the server on every page load, or issue a signed server-side token that the client cannot forge.
+
+---
+
+### [C4] Code.gs — doGet exposes login credentials in URL
+
+**File:** `Code.gs` (line 26–27)
+
+The `doGet` handler accepts `?action=checkLogin&user=X&pass=Y`. GET parameters appear in:
+- Google's server-side request logs
+- Browser history
+- Any proxy or corporate network logs
+
+Even with HTTPS, credentials in query strings are logged at the server level.
+
+**Fix:** Remove the `checkLogin` branch from `doGet` entirely. Login must only be accepted via POST with credentials in the request body.
+
+---
+
+### [C5] index_fit.tripstore.html — XSS via unescaped innerHTML from spreadsheet data
+
+**File:** `index_fit.tripstore.html` (`renderTables()` ~line 1285, `applyTransferFilters()` ~line 1604, `filterIntercityModal()` ~line 1714)
+
+Data from Google Sheets (hotel names, city names, from/to fields) is injected directly into `innerHTML` without escaping:
+```javascript
+hHtml += `...<td class="font-bold">${item.city}</td>...`
+```
+If a hotel name or city in the spreadsheet contains `<img src=x onerror=alert(1)>`, it executes in every agent's browser — and the attacker only needs write access to the spreadsheet.
+
+**Fix:** Add an escape helper and use it everywhere spreadsheet data enters the DOM:
+```javascript
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 ```
 
-When Claude returns an object, `Object.values()` produces values in key-insertion order. If Claude uses different key names or ordering than expected, column data silently lands in the wrong master sheet columns — prices in the city column, star ratings in the name column, etc.
+---
 
-**Fix:** Define an explicit column-extraction function per data type that reads named keys in the declared column order, not `Object.values()`.
+## 🟠 MODERATE ISSUES
+
+### [M1] Code.gs — No authentication on data-retrieval endpoints
+
+**File:** `Code.gs` (lines 29–34, 299–334)
+
+`getAllSaved`, `searchItinerary`, `getQuoteLog`, and `saveItinerary` are all accessible with zero credentials. Anyone who knows the Apps Script URL can list all pax names, load any saved itinerary, read the full quote log, or overwrite any itinerary.
+
+**Fix:** Add a shared API secret to Script Properties and require it as a header or parameter on all non-public endpoints.
 
 ---
 
-### [MODERATE-4] `saveItinerary` Logs Quote Before Verifying Write Succeeded
-**File:** `Code.gs` lines 356–357, 362–363
+### [M2] Quote_Intelligence.gs — GST field mismatch: always logs 5% regardless of user selection
 
-`logQuote(paxName, payload)` is called immediately after the sheet write. If the write throws an exception (quota exceeded, permissions error), `doPost` returns "Server Error" but `logQuote` may have already appended a Quote_Log entry — creating a quote record for a save that never completed.
+**File:** `Quote_Intelligence.gs` (line 119)
 
-**Fix:** Call `logQuote` only after both sheet writes complete successfully, immediately before the return statement.
-
----
-
-### [MODERATE-5] No Server-Side Authentication on Read/Write Endpoints
-**File:** `Code.gs` — `getAllSaved()`, `searchItinerary()`, `saveItinerary()`
-
-All three are accessible to anyone who knows the API URL with no session token or user check. Any person can list all pax names, load any itinerary, or overwrite any saved record.
-
-**Fix:** Accept a session token in POST payloads; validate it server-side against a tokens sheet with a TTL.
-
----
-
-### [MODERATE-6] No Brute-Force Protection on Login
-**File:** `Code.gs` — `checkLogin()` has no rate limiting
-
-The login endpoint has no attempt counter, lockout, or delay. An attacker can make unlimited programmatic login attempts.
-
-**Fix:** Track failed attempts per username in the sheet. Lock after 10 failures within 1 hour.
-
----
-
-### [MODERATE-7] `Array.fill()` Shares Object Reference Across Error Batch
-**File:** `Pipeline.gs` line 593
-
-```js
-return Array(expectedCount).fill({ valid: false, error_reason: '...' });
+```javascript
+const gstPct = d.gst || 5;
 ```
 
-`Array.fill()` with an object fills every slot with the **same object reference**. Mutating one element mutates all.
+The HTML saves `gstMode` (a string: `"5pkg"`, `"18svc"`, or `"none"`), not `d.gst` (a number). Since `d.gst` is always `undefined` in new saves, `gstPct` always defaults to 5. The Quote_Log always shows 5% GST regardless of what the agent actually selected — "No GST" and "18% service charge" quotes are both logged incorrectly.
 
 **Fix:**
-```js
-return Array.from({ length: expectedCount }, () => ({
-  valid: false,
-  error_reason: `Claude API error — will retry: ${e.message}`
-}));
+```javascript
+const gstModeStr = d.gstMode || 'none';
+const isServiceCharge = gstModeStr === '18svc';
+const gstPct  = gstModeStr === '5pkg' ? 5 : (isServiceCharge ? 18 : 0);
+const gstBase = isServiceCharge ? markupAmt : (netTotal + markupAmt);
+const gstAmt  = Math.round(gstBase * gstPct / 100);
 ```
 
 ---
 
-### [MODERATE-8] `parse_hotels_cell` — Pipe Delimiter Breaks on Names Containing `|`
-**File:** `archive_to_input.py` lines 63–76
+### [M3] Pipeline.gs — EUR/INR exchange rate is hardcoded and stale (₹110/€)
 
-The parser splits on `|` and reads groups of 4 fields: city | name | nights | cost. Any hotel name, city, or price containing a literal `|` shifts the offset, misaligning all remaining entries and silently importing wrong city/name pairs.
+**File:** `Pipeline.gs` (line 463)
 
-**Fix:** Validate that parsed field 3 matches `\d+N` and field 4 starts with `INR` before appending, or use a safer delimiter.
-
----
-
-### [MODERATE-9] `parse_trains_cell` — `index(" to ")` Finds First Occurrence Only
-**File:** `archive_to_input.py` lines 109–114
-
-```python
-idx = lower.index(" to ")  # splits on FIRST occurrence only
+```javascript
+`INR price at ₹110/€.`
 ```
 
-Route descriptions like `"Nice to Monaco (connect to Monte Carlo)"` split at the wrong position.
+The EUR/INR rate was around ₹110 in 2022–2023. As of May 2026 the actual rate is approximately ₹92–95/€. Train and intercity prices back-calculated from EUR will be ~15–18% overquoted, leading to agents presenting inflated intercity costs to clients.
 
-**Fix:** Pre-strip parenthetical notes before splitting:
-```python
-desc_clean = re.sub(r'\s*\(.*?\)', '', desc).strip()
-idx = desc_clean.lower().index(" to ")
+**Fix:** Store the rate in Script Properties (`EUR_INR_RATE`) and pull it at runtime:
+```javascript
+const eurRate = Number(PropertiesService.getScriptProperties().getProperty('EUR_INR_RATE')) || 93;
 ```
 
 ---
 
-### [MODERATE-10] Transfer City Heuristic Only Knows 10 Airport Codes
-**File:** `archive_to_input.py` lines 155–161
+### [M4] Pipeline.gs — `_buildInputSheet` corrupts sheets on repeated runs
 
-The regex keyword list knows CDG, LHR, AMS, FRA, VIE, BCN, FCO — but misses MXP, ATH, PRG, CPH, BRU, ZRH, NCE and dozens more. For unrecognised airports, the fallback to the first word of `from_loc` can yield "Terminal" or "Gate" as the city name.
+**File:** `Pipeline.gs` (line 779)
 
-**Fix:** Expand the airport keyword list, or split on a broader set of location-type nouns: `(airport|terminal|station|central|port|hotel|resort|city|downtown|centre|center)`.
+```javascript
+ws.insertRowBefore(2);
+```
 
----
+This inserts a new info banner row every single time `setupSheets()` is run. Running it twice leaves two banner rows at row 2–3, pushing all data rows down by 1. `getPendingRows()` starts reading from row 3 (index 2), so the first data row becomes invisible to the pipeline.
 
-### [MODERATE-11] No Execution Timeout Protection in Pipeline.gs
-**File:** `Pipeline.gs` — `runMidnightEnrichment()`
-
-Google Apps Script has a 6-minute execution limit. With large INPUT sheets and slow Claude API responses, the pipeline can time out mid-run, leaving rows in an indeterminate state with no checkpoint or resume mechanism.
-
-**Fix:** Track the last-processed row index in Script Properties and resume from there on the next run.
-
----
-
-### [MODERATE-12] No Max-Retry Limit for ERROR Rows
-**File:** `Pipeline.gs` — overall design
-
-ERROR rows are retried every night indefinitely. A systemic error creates infinite nightly failures with no escalation alert.
-
-**Fix:** Add a `Retry_Count` column. After 3 failures mark as `PERMANENT_ERROR` and send an email alert.
+**Fix:** Check row 2 before inserting:
+```javascript
+const r2 = ws.getRange(2, 1).getValue();
+if (!r2 || !String(r2).startsWith('ℹ️')) ws.insertRowBefore(2);
+```
 
 ---
 
-### [MODERATE-13] Recursive `logQuote` → `setupQuoteLog` Has No Loop Guard
-**File:** `Quote_Intelligence.gs` lines 34–37
+### [M5] Pipeline.gs — Claude API response count mismatch silently drops rows
 
-If `setupQuoteLog()` itself throws (permissions, quota), the sheet still won't exist, and `logQuote` recurses indefinitely until a stack overflow.
+**File:** `Pipeline.gs` (lines 228–249)
+
+```javascript
+results.forEach((res, idx) => {
+  const row = batch[idx];
+  if (!row) return;
+```
+
+If Claude returns fewer results than the batch size (JSON truncation, token limit hit), rows beyond the last result silently go unprocessed — not PROCESSED, not ERROR, still PENDING. They are re-sent to Claude every night forever, wasting API quota.
+
+**Fix:** After the forEach, detect and mark orphan rows:
+```javascript
+if (results.length < batch.length) {
+  batch.slice(results.length).forEach(row => {
+    markRow(inp, row.rowIndex, CFG.STATUS.ERROR, 'Claude returned fewer results than expected', cfg.col);
+    stats.errors++;
+  });
+}
+```
+
+---
+
+### [M6] Quote_Intelligence.gs — Infinite recursion risk in logQuote
+
+**File:** `Quote_Intelligence.gs` (lines 33–37)
+
+```javascript
+if (!logSheet) {
+  setupQuoteLog();
+  return logQuote(paxName, data); // recursive — no depth guard
+}
+```
+
+If `setupQuoteLog()` fails silently (quota exceeded, permissions issue), the sheet won't exist after setup and `logQuote` recurses infinitely, crashing `saveItinerary` and losing the user's save.
 
 **Fix:**
-```js
-function logQuote(paxName, data, _retry = false) {
-  const logSheet = ss.getSheetByName('Quote_Log');
+```javascript
+function logQuote(paxName, data, _retrying = false) {
+  const logSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Quote_Log');
   if (!logSheet) {
-    if (_retry) { Logger.log('Quote_Log still missing after setup'); return; }
+    if (_retrying) { Logger.log('Quote_Log missing after setup — logging skipped'); return; }
     setupQuoteLog();
     return logQuote(paxName, data, true);
   }
@@ -251,109 +226,188 @@ function logQuote(paxName, data, _retry = false) {
 
 ---
 
-### [MODERATE-14] XSS via `innerHTML` with Unescaped Data from masterData
-**File:** `index_fit.tripstore.html` lines 1287, 1604, 1719
+### [M7] index_fit.tripstore.html — Session never expires
 
-City names, transfer From/To values, and intercity route strings are inserted directly into `innerHTML` without escaping. If a Google Sheet cell contains `<img src=x onerror=alert(1)>`, it executes. Risk is low (admin-controlled sheet) but latent.
+**File:** `index_fit.tripstore.html` (lines 641–653)
 
-**Fix:** Use a `htmlEncode()` helper for all data inserted via innerHTML.
+`localStorage.setItem("tripstore_session", ...)` has no TTL. An agent who uses a shared device (office PC, travel fair laptop) and forgets to log out stays permanently authenticated — forever.
+
+**Fix:** Store `loginTime: Date.now()` in the session object and reject sessions older than 24 hours in `checkAutoLogin()`.
 
 ---
 
-### [MODERATE-15] Hotel Swap Selects by Name Only — Ignores Room Type
-**File:** `index_fit.tripstore.html` line 1823
+### [M8] write_to_sheets.py + archive_to_input.py — Hardcoded Spreadsheet ID in source code
 
-```js
-const origIdx = allCityHotels.findIndex(o => o.name === h.name);
+**File:** `write_to_sheets.py` (line 27), `archive_to_input.py` (line 32)
+
+`SPREADSHEET_ID = "1U3f6PhTpvbEO7JG937t2z9EW9dfB0gcIOUVA_GATIHM"` is committed to the repo. If this repo is ever made public (even briefly), the sheet ID is exposed. The credentials file path is also hardcoded.
+
+**Fix:**
+```python
+import os
+SPREADSHEET_ID = os.environ.get("TRIPSTORE_SHEET_ID", "1U3f6PhTpvbEO7JG937t2z9EW9dfB0gcIOUVA_GATIHM")
+CREDENTIALS_PATH = Path(os.environ.get("GOOGLE_CREDENTIALS", "./sheets-credentials.json"))
 ```
 
-If the same hotel appears multiple times (Deluxe, Suite), this always picks the **first** entry. The agent selects "Suite" in the UI but "Deluxe" gets applied.
+---
 
-**Fix:** Match on both `name` AND `roomType`.
+### [M9] index_fit.tripstore.html — autoSaveThenDo silently swallows all errors before export
+
+**File:** `index_fit.tripstore.html` (lines 2288–2294)
+
+```javascript
+} catch(e) { /* silent — don't block the export */ }
+```
+
+If the auto-save before PDF or Excel export fails (network error, API down, quota exceeded), the user gets no warning. They may assume the quote was saved when it wasn't, leading to lost data.
+
+**Fix:** Show a non-blocking warning toast if auto-save fails, then proceed with export:
+```javascript
+} catch(e) { showToast("⚠️ Auto-save failed — export continuing", "error"); }
+```
 
 ---
 
-## MINOR Issues
+### [M10] index_fit.tripstore.html — Hotel cost manual override accumulates floating-point error
 
-### [MINOR-1] Quote ID Collision Risk
-**File:** `Quote_Intelligence.gs` line 140
-`'Q-' + new Date().getTime().toString().slice(-8)` cycles every ~115 days. Two quotes saved in the same millisecond get the same ID.
-**Fix:** Append a random suffix: `+ Math.random().toString(36).slice(2,6).toUpperCase()`
+**File:** `index_fit.tripstore.html` (line 1307)
 
-### [MINOR-2] `colorLogRow` Uses Hardcoded Column Index 21
-**File:** `Quote_Intelligence.gs` line 179
-`const flag = row[21]` — adding a column before V silently colors based on the wrong value.
+```javascript
+onchange="currentPlan[${planIdx}].hotel.cost = Number(this.value)/(${item.nights||1}*${config.pricingFactor}); ..."
+```
 
-### [MINOR-3] `_titleCase` Uses Deprecated `substr`
-**File:** `Quote_Intelligence.gs` line 315
-`t.substr(1)` is deprecated. Replace with `t.slice(1)`.
+`config.pricingFactor` is a floating-point number (e.g., `1.5` for 3 adults in 1 room). Storing an unrounded per-night rate and then re-multiplying in `calculateHotelPrice()` causes ₹1–₹5 drift in the grand total per city.
 
-### [MINOR-4] `formatDate()` Timezone Edge Case
-**File:** `index_fit.tripstore.html` line 2028
-`new Date("2024-01-15")` parses as midnight UTC — in timezones behind UTC shows the previous date.
-**Fix:** `new Date(d + 'T00:00:00')` to force local time parsing.
-
-### [MINOR-5] `autoSaveThenDo` Swallows Save Errors Silently
-**File:** `index_fit.tripstore.html` line 2292
-If the backend is down, the itinerary is exported but not saved with no warning.
-**Fix:** `showToast("Auto-save failed — export proceeding anyway", "error")` in the catch.
-
-### [MINOR-6] Missing Content-Type Headers on POST Fetch Calls
-**File:** `index_fit.tripstore.html` lines 720, 612, 2288
-All POST requests omit `headers: { 'Content-Type': 'application/json' }`. Works today but non-standard.
-
-### [MINOR-7] `doGet` Returns Server Errors as 200 OK
-**File:** `Code.gs` line 38
-Exceptions returned as `200 OK` with body `"Server Error: ..."` — the frontend cannot distinguish real errors from valid responses.
-
-### [MINOR-8] `appendToLog` Silently Truncates Row Data at 500 Chars
-**File:** `Pipeline.gs` line 654
-`JSON.stringify(d).slice(0, 500)` can hide the actual error cause.
-
-### [MINOR-9] `instanceId` Float Precision Risk
-**File:** `index_fit.tripstore.html` — `addTour()` line 1008
-`instanceId = Date.now() + Math.random()` can lose precision when serialised through HTML attributes.
-**Fix:** Use `crypto.randomUUID()` or an integer counter.
-
-### [MINOR-10] Spreadsheet ID Hardcoded in Python Scripts
-**File:** `write_to_sheets.py` line 29, `archive_to_input.py` line 32
-Live sheet ID exposed in source code. **Fix:** Use `os.environ["TRIPSTORE_SHEET_ID"]`. Confirm `sheets-credentials.json` is in `.gitignore`.
-
-### [MINOR-11] `ws.row_count == 0` Check Unreliable in gspread
-**File:** `write_to_sheets.py` line 168
-`row_count` reflects grid size (default 1000), not data rows. Remove the check; rely solely on `not ws.get_all_values()`.
+**Fix:** Round the stored cost to the nearest rupee:
+```javascript
+currentPlan[${planIdx}].hotel.cost = Math.round(Number(this.value)/(${item.nights||1}*${config.pricingFactor}));
+```
 
 ---
 
-## Missing Files
-These were requested for review but are **not in this repository**:
-- `extract_itineraries.py`, `write_inputs_to_sheets.py`, `cleanup_sheet.py`
-- `clean_pipeline_data.py`, `cross_reference.py` *(lives in separate archive folder on Mac)*
-- `enrich_hotels.py`, `enrich_hotels_booking.py`
+## 🟡 MINOR ISSUES
+
+### [N1] Pipeline.gs — Model ID could become stale when Anthropic retires it
+
+**File:** `Pipeline.gs` (line 39)
+
+`MODEL: 'claude-haiku-4-5-20251001'` is hardcoded. When this version is retired, the pipeline fails at runtime with an opaque API error and no overnight enrichment runs until manually fixed.
+
+**Fix:** Move to Script Properties: `CLAUDE_MODEL = claude-haiku-4-5-20251001`.
 
 ---
 
-## Priority Action Items
+### [N2] Pipeline.gs — No per-call timeout on UrlFetchApp
 
-### Do This Week
-1. **[CRITICAL-2]** Hash passwords before storing in Code.gs. Redeploy.
-2. **[CRITICAL-1]** Move `checkLogin` into `doPost` in Code.gs. Redeploy.
-3. **[CRITICAL-3]** Add a data-protection guard to `setupQuoteLog()` before `ws.clear()`.
-4. **[MODERATE-1]** Fix the GST field name bug in Quote_Intelligence.gs (`d.gst` → `d.gstMode`). This is silently corrupting every Quote_Log financial row right now.
+**File:** `Pipeline.gs` (line 566)
 
-### Do This Month
-5. **[CRITICAL-4]** Add server-side role validation — remove reliance on localStorage `isAdmin`.
-6. **[MODERATE-2]** Fix `_buildInputSheet` banner-row idempotency guard.
-7. **[MODERATE-3]** Replace `Object.values()` with explicit column-order extraction in Pipeline.gs.
-8. **[MODERATE-7]** Fix `Array.fill()` object-reference bug → use `Array.from()`.
-9. **[MODERATE-15]** Fix hotel swap to match on `name + roomType`, not name alone.
-10. **[MODERATE-12]** Add 3-strike PERMANENT_ERROR for pipeline retry limit.
+No `deadline` option is set. If Claude's API is slow (>30s per call) and the batch is 5 rows × 4 sheet types, total call time can exceed the 6-minute Apps Script execution limit, leaving some sheets half-processed with no audit log entry.
 
-### Ongoing
-11. **[MINOR-5]** Show toast warning when `autoSaveThenDo` fails.
-12. **[MINOR-10]** Move hardcoded spreadsheet IDs to environment variables.
-13. **[MINOR-3]** Replace deprecated `substr` with `slice` in Quote_Intelligence.gs.
+**Fix:** Add `deadline: 30` to the UrlFetchApp options object.
 
 ---
 
-*Report generated automatically. Session date: 2026-05-09.*
+### [N3] Quote_Intelligence.gs — Quote ID collision window is narrow
+
+**File:** `Quote_Intelligence.gs` (line 141)
+
+```javascript
+'Q-' + new Date().getTime().toString().slice(-8)
+```
+
+The last 8 digits of epoch-ms wrap every ~27 hours. Two quotes saved in the same millisecond get identical IDs. Low probability but makes Quote_Log queries ambiguous for analytics.
+
+**Fix:** `'Q-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6).toUpperCase()`
+
+---
+
+### [N4] index_fit.tripstore.html — formatDate renders "Invalid Date" on bad strings
+
+**File:** `index_fit.tripstore.html` (line 2028)
+
+```javascript
+function formatDate(d) {
+  if (!d) return '---';
+  return new Date(d).toLocaleDateString('en-GB', ...);
+}
+```
+
+A non-empty but malformed date string (e.g., corrupted localStorage) passes the `!d` check and produces "Invalid Date" visible in the PDF header and tables.
+
+**Fix:** `if (!d || isNaN(new Date(d).getTime())) return '---';`
+
+---
+
+### [N5] archive_to_input.py — No retry on Google Sheets API calls
+
+**File:** `archive_to_input.py` (lines 313–319, 390)
+
+All `get_all_values()` and `append_rows()` calls are single-attempt with no retry. A transient Google quota error (HTTP 429) crashes the entire import with zero rows written.
+
+**Fix:** Use `tenacity` or a simple backoff loop around Sheet API calls.
+
+---
+
+### [N6] Code.gs — Error responses expose raw internal error messages to clients
+
+**File:** `Code.gs` (lines 39, 57)
+
+```javascript
+return ContentService.createTextOutput('Server Error: ' + err.message);
+```
+
+Raw exception messages (including sheet names, column indices, Apps Script internals) are returned to the browser. These can help an attacker map backend structure.
+
+**Fix:** Return a generic message, log details server-side: `Logger.log(err.stack); return ContentService.createTextOutput('Server Error');`
+
+---
+
+### [N7] index_fit.tripstore.html — API URL hardcoded in frontend source
+
+**File:** `index_fit.tripstore.html` (line 426)
+
+Every new Apps Script deployment generates a new `/exec` URL. Updating it requires manually editing the HTML and re-pushing. Easily missed after a Code.gs redeployment.
+
+**Fix:** Document this as a required step in a comment directly above the API_URL line, and include the date it was last updated.
+
+---
+
+## MISSING FILES (Cannot Be Reviewed)
+
+The following 7 files were requested for review but are **not present in the GitHub repo**:
+
+- `extract_itineraries.py`
+- `write_inputs_to_sheets.py`
+- `cleanup_sheet.py`
+- `clean_pipeline_data.py`
+- `cross_reference.py`
+- `enrich_hotels.py`
+- `enrich_hotels_booking.py`
+
+These are likely in a local folder on your Mac. Run `git add <file> && git commit && git push origin v2` for each to include them in future reviews.
+
+---
+
+## PRIORITY ACTION ITEMS
+
+| # | Action | File | Severity |
+|---|--------|------|----------|
+| 1 | Add `checkLogin` to `doPost()` to fix broken login in repo code | Code.gs | 🔴 |
+| 2 | Hash passwords before storing in Users sheet | Code.gs | 🔴 |
+| 3 | Remove client-controlled `isAdmin` from localStorage | index_fit.tripstore.html | 🔴 |
+| 4 | Remove `checkLogin` from `doGet()` | Code.gs | 🔴 |
+| 5 | Add HTML-escape helper for all spreadsheet data in innerHTML | index_fit.tripstore.html | 🔴 |
+| 6 | Fix GST field mismatch — read `gstMode` not `gst` in Quote_Intelligence | Quote_Intelligence.gs | 🟠 |
+| 7 | Update EUR/INR rate from ₹110 to ~₹93 in Pipeline prompt | Pipeline.gs | 🟠 |
+| 8 | Guard `_buildInputSheet` against inserting duplicate banner row | Pipeline.gs | 🟠 |
+| 9 | Mark orphan batch rows as ERROR when Claude returns fewer results | Pipeline.gs | 🟠 |
+| 10 | Add recursion guard to `logQuote` | Quote_Intelligence.gs | 🟠 |
+| 11 | Add 24-hour session expiry to `checkAutoLogin` | index_fit.tripstore.html | 🟠 |
+| 12 | Move Spreadsheet ID to environment variable in Python scripts | write_to_sheets.py, archive_to_input.py | 🟠 |
+| 13 | Show warning toast if auto-save fails before export | index_fit.tripstore.html | 🟠 |
+| 14 | Commit the 7 missing Python files to the repo | local machine | 🟠 |
+
+---
+
+*Generated automatically by Claude Code — TripStore Daily Review*
+*Next review: 2026-05-11*
