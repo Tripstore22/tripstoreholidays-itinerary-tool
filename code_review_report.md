@@ -1,5 +1,5 @@
 # TripStore Code Review Report
-**Date:** 2026-05-10
+**Date:** 2026-05-11
 **Reviewer:** Claude (Automated Daily Review)
 **Branch:** v2
 **Files reviewed:** Code.gs, Pipeline.gs, Quote_Intelligence.gs, index_fit.tripstore.html, write_to_sheets.py, archive_to_input.py
@@ -16,7 +16,9 @@
 |----------|-------|
 | 🔴 CRITICAL | 5 |
 | 🟠 MODERATE | 10 |
-| 🟡 MINOR | 7 |
+| 🟡 MINOR | 12 |
+
+> **New findings 2026-05-11 (added to Minor section below):** N8–N12 are new today.
 
 ---
 
@@ -372,6 +374,67 @@ Every new Apps Script deployment generates a new `/exec` URL. Updating it requir
 
 ---
 
+### [N8] Code.gs — `getHotels` silently drops hotels with zero or blank annual average
+
+**File:** `Code.gs` (line 100)
+
+```javascript
+if (annualAvg <= 0) continue;
+```
+
+Hotels where pricing was never filled are silently excluded from the app with no log entry. A data-entry operator who leaves prices blank will not see any error — the hotel simply disappears from the optimizer.
+
+**Fix:** Add `Logger.log('Skipping hotel with no price: ' + r[1])` when skipping, or write to an ERRORS_LOG sheet entry so data-quality gaps surface automatically.
+
+---
+
+### [N9] Code.gs — `getIntercity` response omits seasonal Euro price columns
+
+**File:** `Code.gs` (lines 229–239)
+
+The Trains sheet stores seasonal Euro prices in columns 6–10 (May€, Aug€, Oct€, Dec€, Avg€), but `getIntercity()` only returns `price` (the INR column). If any downstream report or future frontend feature references `may_e`, `aug_e` etc., it will get `undefined` silently.
+
+**Fix:** Include the Euro columns in the returned object:
+```javascript
+intercity.push({ ..., may_e: parsePrice(r[6]), aug_e: parsePrice(r[7]), oct_e: parsePrice(r[8]), dec_e: parsePrice(r[9]), avg_e: parsePrice(r[10]) });
+```
+
+---
+
+### [N10] Pipeline.gs — Fixed 1,500 ms sleep between Claude batches does not scale
+
+**File:** `Pipeline.gs` (line 252)
+
+`Utilities.sleep(1500)` is a fixed delay with no awareness of actual token usage or rate-limit headers. With large hotel prompts, a single batch can consume 4,000–6,000 tokens. Under high load, sustained calls may still trigger 429 errors with no backoff.
+
+**Fix:** Increase to 3,000 ms as a minimum viable fix. Ideal fix: parse the `retry-after` header from any 429 response and sleep that duration before retrying.
+
+---
+
+### [N11] write_to_sheets.py — `ws.row_count == 0` is dead code
+
+**File:** `write_to_sheets.py` (line 168)
+
+```python
+sheet_is_empty = ws.row_count == 0 or not ws.get_all_values()
+```
+
+`gspread.Worksheet.row_count` returns the sheet's allocated row count (default 1,000), never 0. The first condition is always False.
+
+**Fix:** `sheet_is_empty = not ws.get_all_values()`
+
+---
+
+### [N12] archive_to_input.py — Pipe character inside a hotel name breaks the 4-token stride
+
+**File:** `archive_to_input.py` (lines 70–76)
+
+`parse_hotels_cell` splits on `|` and steps in groups of 4. If any hotel name contains a `|` (e.g. "Radisson Blu | Hotel"), the stride goes out of phase and all subsequent hotels in that cell are mis-parsed — wrong city matched to wrong name — silently queued to INPUT_Hotels.
+
+**Fix:** Validate that `parts[i+2]` matches the nights pattern (`r'^\d+N$'`) before treating the group as a hotel record. Skip with a warning if not.
+
+---
+
 ## MISSING FILES (Cannot Be Reviewed)
 
 The following 7 files were requested for review but are **not present in the GitHub repo**:
@@ -392,7 +455,7 @@ These are likely in a local folder on your Mac. Run `git add <file> && git commi
 
 | # | Action | File | Severity |
 |---|--------|------|----------|
-| 1 | Add `checkLogin` to `doPost()` to fix broken login in repo code | Code.gs | 🔴 |
+| 1 | Add `checkLogin` to `doPost()` — fixes broken login in repo code | Code.gs | 🔴 |
 | 2 | Hash passwords before storing in Users sheet | Code.gs | 🔴 |
 | 3 | Remove client-controlled `isAdmin` from localStorage | index_fit.tripstore.html | 🔴 |
 | 4 | Remove `checkLogin` from `doGet()` | Code.gs | 🔴 |
@@ -410,4 +473,4 @@ These are likely in a local folder on your Mac. Run `git add <file> && git commi
 ---
 
 *Generated automatically by Claude Code — TripStore Daily Review*
-*Next review: 2026-05-11*
+*Next review: 2026-05-12*
