@@ -74,3 +74,81 @@ Usage:
 - Simple changes: push to v2 and verify on live site after 3–5 mins.
 - DEV testing: open `dev/index_fit.tripstore.DEV.html` via local server (`python3 -m http.server 8080`), NOT via `file://` protocol.
 - If unsure about a change: ask user to open index.html directly from Desktop (/Users/Sumit/Desktop/Itinerary-Create/index.html) in browser to test locally before pushing.
+
+---
+
+## Session 2026-05-09 + 2026-05-10 — Instructions update
+
+### New algorithm versions
+
+```
+LIVE algorithms:
+- v1: Legacy default (pure rating fill, no Day Plans)
+- v2.2: BETA (Day Plans + hotel cascade ceiling)
+- v3.1: DEFAULT (cluster dedup + canonical dedup + dynamic ceiling)
+
+DEV only (pending promote):
+- v4-premium: 3-step spec, price-DESC fill, 9-10 tours/city, ~99% util
+- v4-balanced: 3-step spec, rank-hybrid fill, 11-12 tours/city, ~87% util
+```
+
+### New sheet columns — Sightseeing tab
+
+```
+Col P: Canonical_ID — dedup identity per attraction
+Col Q: Day_Slot — Morning/Afternoon/Evening/Night/Flexible
+Col R: Duration — 1hr/2-3hr/Half-Day/Full-Day/Multi-Day
+Col S: Tour_Type — Guided/Private/Small-Group/Ticket-Only
+```
+
+DO NOT modify these columns manually. Rebuilt by `assign_canonical_ids.py`.
+
+### New Python scripts
+
+```
+~/Desktop/tripstore-pipeline/12files/tagger.py — shared tagger module
+~/Desktop/tripstore-pipeline/12files/retag_live.py — live sheet retagger
+~/Desktop/tripstore-pipeline/12files/assign_canonical_ids.py — Canonical_ID builder
+~/Desktop/tripstore-pipeline/12files/coverage_auditor.py — now reads LIVE sheet (no xlsx)
+```
+
+### New sheet tabs
+
+```
+Canonical_Landmarks (LIVE + DEV) — 60 rows, 17 cities, keyword → Canonical_ID mapping
+Sightseeing_Clusters (LIVE) — 2,098 rows, 675 clusters, 98 cities
+Day_Plans_Bucket_Map (LIVE) — 1,217 rows
+Bucket_Rank (LIVE) — 316 rows
+Day_Plans_Lookup_Embeddings (LIVE) — 1,217 rows
+```
+
+### Algorithm test scripts (pipeline/12files/)
+
+```
+_ab_matrix_canonical.py — 60-city A/B test (canonical+dayslot vs keyword)
+_uc1_vs_uc2.py — 14-city UC1 vs UC2 comparison
+spec_test_v2.py — 3-step spec vs UC2 (25 cities)
+```
+
+Run these before any algorithm change promotion.
+
+### Nightly chain (pending Brief 2F wiring)
+
+```
+python3 ~/Desktop/tripstore-pipeline/12files/retag_live.py  # after midnight enrichment
+```
+
+### Hard rules added this session
+
+- NEVER add a `CITY_EXPERIENCE` catch-all bucket in Canonical_ID assignment
+- NEVER use cascade as Step 1 or Step 2 in v4 algorithms
+- NEVER compare algorithm util without applying DQ rule (cap violations = disqualified)
+- NEVER modify Sightseeing cols P/Q/R/S manually — always run `assign_canonical_ids.py`
+- `getSights()` must expose canonical_id, day_slot, duration, tour_type before engine reads them
+
+### Cleanup debt (do not act without explicit instruction)
+
+- `Sightseeing_LEGACY` tab — unknown origin, DO NOT DELETE without investigation
+- `Copy of Sightseeing_v2` tab — Drive housekeeping residue, safe to delete after verification
+- Cols S+T in Sightseeing — stale misaligned data from broken Master_Row_Index run, ignored
+- 494 obsolete embeddings in `Embeddings_Sightseeing` — pre-migration leftovers, harmless

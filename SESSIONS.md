@@ -1,495 +1,729 @@
-# Session Handoff
+# TripStore Pipeline — Sessions Log
 
-## Latest Session — 2026-05-07 (Brief 4: Sheet ID + deployment hygiene + LIVE API_URL leak fix)
+## Latest Session — 2026-05-11 → 12 (v4 caps tightened + departure-day skip)
+
+**Outcome:** V4_DAY_HOURS_CAP 10→9, departure days now serve 0 tours, LIVE @106 / LIVE_BF @107. Smoke verified.
 
 ### Completed
-- Audit phase: `AUDIT_2026-05-07.md`, `RECONCILE_2026-05-07.md`, `CLEANUP_2026-05-07.md`. Bucket A=0 (LIVE app→DEV Sheet violations); Bucket F=0 (no 5th Sheet ID).
-- Repointed 8 Python files off `_OLD` Sheet (`1cdI1Gz…`): `cross_reference.py` + `build_city_intelligence.py` → LIVE; `test_intelligence.py` + 5 dev-appscript scripts → DEV. Deleted duplicate `dev-appscript/build_city_intelligence.py`.
-- Cosmetic: HTML header comments + CLAUDE.md DEV Sheet ID + CLAUDE.md DEV deploy ID corrected to current values.
-- **LIVE HTML API_URL leak closed.** Initial promote (`b72e2d1`, 16:35 IST) hit `promote_to_live.sh` URL-detection bug — silent no-op. Fix-forward via direct sed in `8dd7e34` (17:43 IST) corrected `index.html` + `index_fit.tripstore.html` L1471 to `LIVE_DEPLOY_ID` (`AKfycbwP9KQH…`).
-- clasp-live deployments: main @78, BF @79 ("promote 2026-05-07_1635"). `ItineraryEngine.gs` gained `_v31DayClusters` from prior DEV work.
-- Verified: `smoketest_2026_05_07_brief4` signup at 17:43:30 → row landed in LIVE Users (17 rows), absent from DEV Users (16 rows). Leak closed end-to-end.
-- TRUTH.md UNRESOLVED BLOCKER row 5 (Sightseeing tab split) silently resolved already — LIVE's `Sightseeing` tab is now the canonical 15-col 1655-row tab; `Sightseeing_v2` no longer exists on LIVE.
+- 24-check master audit ran clean (BF URL clarified — backend-only parallel deploy, not an HTML bug).
+- Promote #1 → LIVE @104 / LIVE_BF @105: ItineraryEngine.gs drift (Step 1 fallback + arrival 4h cap + 2O Pass B).
+- Phase 8 hide-CSS (`#hotelBudgetHint, #sightBudgetHint, #budgetBreakdownBar { display:none !important }`) synced into DEV HTML — DEV was missing the guard rule.
+- V4 changes in `clasp-dev/ItineraryEngine.gs`: cap 10→9 (line 1914); `cityIdx`/`totalCities` threaded via `used` object; departure-day skip in `fillDaysFromIntelligence_v4`, `fillDifferentExperiences_v4`, and `redistributeUnspentSight_v4` Pass B.
+- DEV pushed @61 via `dev_push.sh`. Promote #2 → LIVE @106 / LIVE_BF @107.
+- Paris+Amsterdam 9N v4-premium smoke on LIVE: 99.98% util, arrival days 3.5h ≤4h, full day max 9h (right at new cap), Paris Day 4 (departure) and Amsterdam Day 3 (departure) both 0 tours ✅.
+- Zaanse Schans fuzzy-match investigation: read `_v4FuzzyMatch_` + `_v4Tokens_` — formula is `overlap / min(|ta|,|tb|) >= 0.30`. Test pairs score 0.71–0.86. Threshold is not the bug.
+
+### Decisions
+- V4_DAY_HOURS_CAP fixed at 9 (was 10).
+- Hard rule: departure day = 0 tours. Enforced in s1, s2, and 2O Pass B via `dayTypeAt`.
+- `LIVE_BF_DEPLOY_ID` is parallel backend redundancy — by design NOT referenced from HTML; `promote_to_live.sh` redeploys both.
+
+### Still pending
+- Zaanse Schans diagnosis — need actual failing Day_Plans entry → master-pool tour pair from a real v4Log run; symptom unclear without it.
+- Anthropic API key rotation — longstanding.
+- GitHub PAT exposed in `Itinerary-Create/.git/config` — rotation pending.
+
+### Backups
+- `~/Desktop/tripstore-pipeline/clasp-live.backup_20260511_203825` (pre-promote #1)
+- `~/Desktop/tripstore-pipeline/clasp-live.backup_20260511_205115` (pre-promote #2)
+
+---
+
+## Session — 2026-04-28 → 29 (Whitelist v2 LIVE shipped + clasp-deploy bug fixed)
+
+**Date:** 2026-04-28 13:00 → 2026-04-29 14:03
+**Outcome:** Customer URL serves 67 cities (66 + Madeira) on the new pivot schema. `promote_to_live.sh` permanently patched.
+
+### What was built / changed in `tripstore-pipeline/`
+- **`build_whitelist_seed_v2.py`** — reads LIVE masters, applies tier rules (T1 ≥30 quotes → 5H+5S, T2 10–29 → 3H+3S, T3 → 2H+2S), train bar=2, transfer bar=1 (n/a if no-airport), excludes non-EU via `NON EU_Hotels`. Rescues currently-Live=Y cities (Cappadocia, Warsaw, Tallinn). Output: 228 cities.
+- **`push_whitelist_seed_v2.py`** — DEV writer with 9 conditional-formatting rules (Live Y/N green/grey, Done >0 light-green / =0 dark-grey, Pending >0 red bold / "n/a" grey italic, Total_Gap green/amber/red bands).
+- **`promote_to_live.sh`** — created earlier today, then patched late-night to add the missing `clasp deploy --deploymentId` step. Reads ID from `~/Desktop/tripstore-pipeline/.deployment_ids` (new file, gitignored, holds LIVE_DEPLOY_ID + DEV_DEPLOY_ID).
+- **`clasp-dev/`** — renamed all 11 `.js` → `.gs`, narrowed `scriptExtensions` to `[".gs"]`. Re-bound `.clasp.json` from orphan `1BP-Zh79…` to actual container-bound `1Mr-dMvu1roz7zxh3tukTgW3SxOJQYzYJ_X43k8uRXMJ2etfLj5lZ-f_k`.
+- **`clasp-dev/Code.gs`** — appended `refreshWhitelistStatus`, `_buildMasterCounters`, `_getNoAirportSet`, `_getQuoteCounts`, `onOpen()` menu. Patched `getLaunchCities` from col-4 to col-3 (new schema).
+- **`clasp-dev/Temp.gs`** — added `revertEmptyPriceHotels` + `markDuplicateInputHotels` + `__SHEET_ID` constant pinned to DEV sheet.
+- **`clasp-live/Code.gs`** — promoted to whitelist v2 via the (now-fixed) `promote_to_live.sh` flow on 2026-04-29 13:48. Deployment @45 → @46.
+- **`clasp-live/Temp.js`** — appended `FIX_QUOTELOG` + `revertEmptyPriceHotels` (LIVE's original `markDuplicateInputHotels` preserved verbatim).
+- **`clasp-live/Pipeline.gs`** — commented out `getUi().alert` block in `resetErrorRows()` so it can run from script editor without UI context. Same edit also in clasp-dev.
+- **Marker files:** `clasp-live/THIS_IS_PRODUCTION.md`, `clasp-dev/THIS_IS_DEV.md`. Both ignored by clasp.
+- **Python helpers added (copied from archive):** `write_inputs_to_sheets.py`, `clean_pipeline_data.py`. Pipeline is no longer split across two folders.
 
 ### Discoveries / lessons
-- **`promote_to_live.sh` URL-detection heuristic is broken** (lines 113–128). Grep stops at `.` so HTML comment ellipsis like `prev pinned @5 AKfycbwRr9k5...)` yields a truncated 12-char fragment that may sort alphabetically before the real URL → sed swap silently no-ops. Fix sketch: anchor regex to `macros/s/AKfycb[A-Za-z0-9_-]+/exec`. Until fixed, every promote risks the same silent leak.
-- **Pipeline.gs in `~/Desktop/Itinerary-Create/` is part of the pre-push validation chain** (read by `check_pipeline.py` GUARD 6). 4 orphan `.gs` files + 2 validators in that folder are pre-clasp-split mirrors — cleanup deferred to a session that audits all 6 together.
-- Bucket A=0 confirms `clasp-live/Code.gs` already complies with Rule 2; `_pipeline_map.md` rumour about DEV-Sheet reads in v3 functions was out of date. `DEV_SHEET_ID` constant at L1745 is dead code.
+- **DEV scriptId was wrong for unknown duration.** Orphan `1BP-Zh79…` was bound to nothing (standalone script). DEV sheet's container-bound script is `1Mr-dMvu…`. clasp pushes were going to a script that nothing read. Discovered when the new TripStore menu wouldn't appear in DEV after a `clasp push`. Fixed by editing `.clasp.json` and `clasp push --force`.
+- **`clasp push` does NOT update the LIVE customer URL.** That URL is pinned to a versioned deployment. Without `clasp deploy --deploymentId`, push is a silent no-op for the web-app endpoint. UI-bound `onOpen` menus DO use HEAD — that's the misleading bit. Caused a 5-minute outage on 2026-04-28 ~20:30 (rolled back cleanly via sheet schema restore).
 
 ### Still pending
-- **Sumit-manual:** delete `smoketest_2026_05_07_brief4` row from LIVE Users; revoke service-account write access on `_OLD` Sheet (`1cdI1Gz…`); confirm Drive rename `Itinerary Builder_Master [DEV]_OLD_ARCHIVED_2026_05_07_DO_NOT_USE`.
-- **High-priority:** patch `promote_to_live.sh` URL-regex (otherwise next promote can re-introduce leak). Add unit test for truncated-comment-fragment case.
-- **Orphan cleanup session:** decide delete-vs-update for `Itinerary-Create/{Pipeline,Automation,Code,Quote_Intelligence}.gs` + `check_pipeline.py` + `check_html.py`.
-- (Carryover) Brief 2F v3.1 BETA promote to LIVE — DEV @30 ready.
-- (Carryover) Visual confirmation on LIVE: Brief D3 cream panel + AGENT logo fallback.
-- (Carryover) Coverage Dashboard real content; tag taxonomy v2 cleanup; PDF/Excel intelligence merge.
+- Sightseeing migration (`Pipeline.gs:45` MASTER constant + 11→20 col schema reconciliation) — next priority per DECISIONS.md.
+- Frontend `fetchLaunchCities` cache rewrite (1h TTL → network-first) — deferred.
+- ERROR rows (25 INPUT_Hotels + 19 INPUT_Trains) — user-manual `resetErrorRows()` from script editor.
+- Anthropic API key rotation — longstanding.
+
+### Backups
+- `~/Desktop/TripStore/backups/whitelist_v2_2026-04-28_1942/` — DEV-only run snapshots
+- `~/Desktop/TripStore/backups/whitelist_v2_LIVE_2026-04-28_2025/` — failed first attempt
+- `~/Desktop/TripStore/backups/whitelist_v2_LIVE_retry_2026-04-29_1344/` — successful retry
+- `~/Desktop/TripStore/backups/deploy_fix_2026-04-29_1339/` — pre-patch promote_to_live.sh and .clasp.json files
+
+### Handover docs
+- `~/Desktop/TripStore/logs/HANDOVER_whitelist_v2_2026-04-28.md` (DEV-only)
+- `~/Desktop/TripStore/logs/HANDOVER_whitelist_v2_LIVE_FAILED_2026-04-28.md` (failed first attempt — keep for forensics)
+- `~/Desktop/TripStore/logs/HANDOVER_whitelist_v2_LIVE_SHIPPED_2026-04-29.md` (successful retry)
 
 ---
 
-## Session — 2026-05-04 (5-role RBAC system shipped to DEV)
 
-### 04 May 2026 — RBAC: ADMIN / INTERNAL / AGENT / MANAGER / DATA_MANAGER live on DEV
-- 12 existing users migrated to new role taxonomy via one-shot `migrateRoles()` in Code.gs (since deleted). Activated 2 PENDING accounts: vinay.vishwanath → AGENT, mgrad → MANAGER.
-- Backend: `getQuoteLog()` + `getSavedList()` rewritten with 5-role filter — ADMIN/INTERNAL/MANAGER see all rows authored by internal-type users; AGENT/DATA_MANAGER see own only. New `getAllUsers(role)` for Manager View (ADMIN+MANAGER only). All in `clasp-dev/Code.gs`.
-- Frontend: `applyRoleVisibility(role)` added as single source of truth for nav visibility. Replaces legacy `.admin-only-tab` / `.user-only-tab` dual-class scheme. New nav buttons + tab containers for Coverage Dashboard (placeholder) and Manager View (live, fetches `getAllUsers`, renders user table).
-- `checkAutoLogin` widened from hardcoded `ADMIN`/`USER` to all 5 roles + safe fallback. Branding gate switched from `!isAdmin` → `currentRole === 'AGENT'`.
-- DEV deployment cut: **@18** = `AKfycbxrC4tULOlFLPvTIDt8HpJtmsiuueF2gurUxaoaiHQzns_fxeLyMoKP2WZrt6OhalWkPQ`. HTML `API_URL` switched from prior pinned `AKfycbwRr9k5...` (@5).
-- Verified end-to-end via local `python3 -m http.server 8080`: admin (8 nav items), bensonjoseph/MANAGER (5), shreyanka/AGENT (3 + profile), tabassum/DATA_MANAGER (4 incl. coverage). Manager View renders all 12 users with role badges + per-user quote counts.
-- `agent_id == username` confirmed as canonical (no separate Agent_ID column). All RBAC code keys on lowercased username.
-- "Internal-type users" defined as `{ADMIN, INTERNAL, MANAGER}` for `getQuoteLog`/`getSavedList` visibility — chose to include ADMIN over the brief's literal "INTERNAL/MANAGER user" wording.
-- **Trap discovered:** documented "DEV @HEAD URL" `AKfycbzFTBGVeZ6oQglrgULFCJ1ESHqxipL-QGCHLVL9hBk8` requires Google sign-in — fine in editor, but browser `fetch()` from localhost gets bounced to `accounts.google.com`. Pinned "Anyone"-access deployments are mandatory for DEV testing. `.deployment_ids` comment ("DEV is @HEAD only") needs revision.
-- **Sheet hygiene:** role values must use UNDERSCORE (`DATA_MANAGER`, not `DATA MANAGER`). One row was set with a space and silently fell through to safe-default visibility. Fixed in sheet; deliberately did NOT add code-side normalization (would mask future drift).
-
-### Still pending
-- Coverage Dashboard real content — clone from `~/Desktop/tripstore-pipeline/coverage_dashboard.html` into existing `tab-coverage` stub. Deferred to next session.
-- LIVE promote of RBAC — currently DEV-only. Needs separate decision call; LIVE still on old binary ADMIN/USER model.
-- (Carryover) Sightseeing tab migration; tag taxonomy v2 cleanup; PDF/Excel intelligence merge — none touched today.
+## Session 1 — extract_archive.py foundation
+**Date:** earlier session
+**Outcome:** Built extract_archive.py from scratch. Hotels, trains, transfers, passes, self-drive all working. Sightseeing baseline: 408 rows.
 
 ---
 
-## Session — 2026-04-28 → 29 (Whitelist v2 LIVE shipped + deploy-pipeline bug fixed)
-
-> **Resume here.** Customer URL serves **67 launch cities** (66 + Madeira). LIVE Code.gs is on the new pivot schema, Sheet's `Launch_Cities_Whitelist` is the 13-col pivot layout, conditional formatting in place. `promote_to_live.sh` permanently patched to do `clasp deploy --deploymentId` (not just `clasp push`). DECISIONS.md says Sightseeing migration is now the next priority. TRUTH.md and DECISIONS.md at `~/Desktop/TripStore/`.
-
-### Completed
-- **Whitelist v2 LIVE shipped (2026-04-29 13:48 IST)** — atomic flip + push + deploy executed clean. Endpoint verifies 67 cities incl. Madeira. LIVE deployment bumped @45 → @46.
-- **Discovered + fixed deploy-pipeline bug.** `clasp push` only updates HEAD; the customer URL `AKfycbwP9KQH…/exec` is pinned to a versioned deployment and keeps serving its pinned version forever without `clasp deploy --deploymentId`. UI-bound `onOpen` menus DO use HEAD (that's the trap — DEV testing "works" while production silently no-ops). Caused a 5-minute outage on 2026-04-28 ~20:30 (rolled back cleanly).
-- **`promote_to_live.sh` patched** to call `clasp deploy --deploymentId` after `clasp push`. Reads ID from `~/Desktop/tripstore-pipeline/.deployment_ids` (gitignored). Aborts loud if missing.
-- **Captured deployment IDs:** `LIVE_DEPLOY_ID=AKfycbwP9KQH…` (was @45, now @46), `DEV_DEPLOY_ID=AKfycbzFTBGVeZ6oQglrgULFCJ1ESHqxipL-QGCHLVL9hBk8` (DEV is @HEAD-only, push alone updates web app).
-- **Whitelist v2 DEV-side (2026-04-28):** built `build_whitelist_seed_v2.py` (228 cities, 13-col pivot, 67 Live=Y after Madeira), `push_whitelist_seed_v2.py` (DEV write + 9 conditional formatting rules), added `refreshWhitelistStatus` + helpers + `onOpen` menu to clasp-dev/Code.gs, fixed `getLaunchCities` to read col 3.
-- **Structural cleanups (2026-04-28):** renamed clasp-dev `.js` → `.gs` and narrowed `scriptExtensions` to `[".gs"]`; created `THIS_IS_DEV.md` / `THIS_IS_PRODUCTION.md` markers; moved DEV HTML to `~/Desktop/Itinerary-Create/dev/index_fit.tripstore.DEV.html`; updated CLAUDE.md, SESSIONS.md, settings.local.json paths.
-- **DEV scriptId corrected:** clasp-dev was bound to orphan `1BP-Zh79…` for unknown duration. Real DEV container-bound script is `1Mr-dMvu1roz7zxh3tukTgW3SxOJQYzYJ_X43k8uRXMJ2etfLj5lZ-f_k`. Discovered when DEV menu wouldn't load after a `clasp push`.
-- **DEV Sheet ID confirmed:** `1iENrNwWTtU9O664hXYS8dBG1rbcHr2x9Xt294UeORM4` (NOT `1cdI1Gz…` as CLAUDE.md still says — see "Stale CLAUDE.md" below).
-- **GitHub PAT rotated:** old `ghp_Pg7F…` removed from `Itinerary-Create/.git/config`; osxkeychain configured.
-- **`revertEmptyPriceHotels()` + `markDuplicateInputHotels()` written + deployed** to both DEV and LIVE Temp.gs (LIVE original markDuplicateInputHotels preserved; new functions appended). Awaiting first manual run from Apps Script editor.
-
-### Still pending
-- **Sightseeing tab migration** — `Pipeline.gs:45` writes to old `Sightseeing` tab while engine reads `Sightseeing_v2`. Per DECISIONS.md rule 4, this is now the next priority.
-- **Frontend cache rewrite** (network-first `fetchLaunchCities`) — deferred. Customers with cached localStorage need hard refresh to see Madeira/Levi until rewrite ships.
-- **Apps Script `resetErrorRows()`** — 25 ERROR Hotels + 19 ERROR Trains queued; user-manual run from script editor.
-- **Anthropic API key rotation** — longstanding blocker, still unconfirmed.
-- **Cleanup nice-to-have:** orphan DEV script `1BP-Zh79…` and 7 of 9 LIVE deployments can be deleted.
-
-### Stale CLAUDE.md (worth fixing in a future session, not this one)
-- CLAUDE.md says **DEV Sheet** is `1cdI1Gz652pTyqX5gVIJ6AHssMZiHD0VLr_KJXt0hETE`. Actual is `1iENrNwWTtU9O664hXYS8dBG1rbcHr2x9Xt294UeORM4` (per DECISIONS.md and `clasp-dev/THIS_IS_DEV.md`).
-- CLAUDE.md says LIVE URL contains `AKfycbzAbIgzRoN_MNs377jm3u`. That's actually deployment @42 ("BF Added"). Active LIVE customer URL is `AKfycbwP9KQH…` (@46 as of today).
-- CLAUDE.md says clasp-dev uses `.js` — true until 2026-04-28; we standardised to `.gs` everywhere now.
-
-### Key learnings (memory-pinned)
-- **`clasp push` ≠ "production updated."** Always pair with `clasp deploy --deploymentId` for any change touching the web-app endpoint. UI-bound `onOpen` menus use HEAD, that's the misleading bit. Captured in `reference_clasp_deploy_workflow.md`.
-- **Verify brief premises:** today's brief had wrong credential paths, wrong API URL, and proposed using `promote_to_live.sh` despite known DEV HTML drift. Pre-flight checks caught all three.
-- **Atomic schema flips:** when a sheet schema and its reader code change together, do them back-to-back. Window between is protected by frontend fallback (40 hardcoded cities).
-
----
-
-## Session — 2026-04-26 → 27 (Viator v2 diagnostics — paused for strategic call)
-
-> Read `~/Desktop/tripstore-pipeline/VIATOR_V2_DIAGNOSTIC_REPORT.md` first (TL;DR + γ/β/∅ paths). Sumit's strategic call (γ vs β vs ∅) is the only blocker on Viator v2 implementation. All diagnostic artifacts saved to `~/Desktop/tripstore-pipeline/probe5/` and `~/Desktop/tripstore-pipeline/probe5_us/`.
-
-
-
-### Completed
-- **v1 Viator enrichment shipped** (yesterday's work continued): full overnight run of `viator_enrich.py` on 1,732 master rows finished at 08:03 IST, **1,202 MATCH (69.3%) / 351 PARTIAL / 157 NO_RESULT, 0 timeouts**. Output at `~/Desktop/tripstore-pipeline/outputs/Viator_Enrichment.csv` (4,800 data rows + header) and `.xlsx`.
-- **v1 audit harness built and run** (`viator_audit.py audit_20.csv`): originally returned 20/20 BLOCKED because Viator's Akamai blocks `chromium-headless-shell`. Patched to use `channel='chrome'` (real Chrome, headless) — 20/20 pages loaded, 10/20 OK / 10/20 WRONG_PRICE. Diagnosis: every WRONG_PRICE row has `title_match=1.0` (right product) but the audit's greedy `parse_inr` picks up sidebar add-on/decoy prices (₹303, ₹651) as "Min_Price_On_Page", inflating the diff vs scraped price. **Scraper is correct on titles; audit script's price extraction is too greedy.** Documented in chat — three improvement options (DOM-scoped extraction / "any tier within 5%" match / filter low-price add-ons).
-- **Viator v2 brief landed** (`~/Downloads/CLAUDE_CODE_BRIEF_viator_v2.md`, updated v2). Brief specifies page-render via Playwright real Chrome (lessons from v1 baked in), per-option-tile capture, `private_*` / `per_group_flat` / `shared_per_person` pricing models, match scoring, streaming output, resume-by-URL.
-- **`viator_enrich_v2.py` staged** at `~/Desktop/tripstore-pipeline/viator_enrich_v2.py` per brief §9. Built around the brief's original "N tiles per URL" assumptions. **NOT production-tested** — diagnostics revealed those assumptions are stale (see below). Will need revision before any real run.
-- **Diagnostic deep-dive on Viator UX** (Test 1 → 5-URL en-IN probe → headed Chrome probe → 5-URL en-US probe). Conclusive findings written to `~/Desktop/tripstore-pipeline/VIATOR_V2_DIAGNOSTIC_REPORT.md`. Headline: **the brief's "Adults × ₹Y" multi-tile DOM pattern doesn't exist in current Viator UX**, in any locale we can reach (en-IN renders flat, /en-US/ 404s, no-prefix US hits DataDome captcha). en-IN is the *least* protected version.
-- **What is reliably retrievable per URL (en-IN, headless real Chrome)**: H1, headline `tour-grade-price` ("From ₹X"), `retailPrice` JSON, rating/review count, duration, cancellation policy, tour-grade titles from `tourOptions` JSON (when present — ~30-40% of URLs), inventory state via `startTimesByTourGradeCode`. **What is NOT retrievable**: per-grade prices when grades exist (the brief's central goal), per-pax-count scaling, per-group-flat detection.
-- **Three paths drafted** for Sumit to choose:
-  - **γ** "page-level + grade-titles enumerated" — 1 row per URL when no grades, N rows per URL when JSON grades exist (all sharing "From" price). Strict improvement over v1 (real titles, real "From" prices, page metadata, inventory flag, match scoring per brief §6). 1–2 hours implementation, ~50 min run for 1,575 URLs.
-  - **β** "reverse-engineer Viator GraphQL" — call `https://www.viator.com/graphql/` directly. Risky (Akamai/DataDome session-token requirements likely). 2–4 hours feasibility test before knowing.
-  - **∅** "accept v1 + better channel" — investigate Viator Partner API (TripStore uses `pid=P00280233` in URLs, may already be a registered partner — worth confirming), or paid scraping infra (Bright Data $100-200/mo).
-
-### Still Pending
-- **Sumit's strategic call**: γ / β / ∅ / hybrid for Viator v2. Will resume tomorrow.
-- **Audit-script price-extraction fix** (separate from v2): three options proposed (DOM-scoped / multi-tier match / low-price filter); user hasn't picked.
-- **Phase 8 production issues** from prior session: #2 (load saved itineraries), #3 (Paris iconic tours), #5 (day-3 underfilled) all still awaiting Sumit's decisions. None blocking; flagged in `~/Desktop/TripStore/logs/audit_2026-04-25/` artifacts.
-
-### Key learnings
-- **Akamai/DataDome blocks `chromium-headless-shell`** — `playwright.chromium.launch(channel='chrome', headless=True)` (real Chrome) passes through. Verified across both v1 audit and v2 diagnostic. Add to operational playbook.
-- **Viator's PDP collapsed multi-tile per-grade pricing into a checkout-only flow.** What used to render inline as "Adults × ₹Y" + radio-button grades now lives behind an authentication-tokenized GraphQL call. Public scraping can no longer access it. The brief's audit data was captured before this change.
-- **Date-picker `<input>` is `disabled` across all Viator PDPs in headless** — irrespective of inventory state. Click attempts on it always fail. The picker is opened via a sibling element (calendar icon) not the input itself; we never figured out which.
-- **"Check Availability" click in headless does NOT fire any Viator graphql/api/availability/pricing call** — only ad-tracking pixels (DoubleClick / Facebook / Google Ads). The pricing-load workflow short-circuits before hitting backend, almost certainly because of bot signals OR because the disabled date-picker means there's no date to query against.
-- **en-IN is *less* protected than en-US.** Don't assume "default US locale" is always more accessible — sometimes regional sub-sites are deliberately given lighter anti-bot treatment for affiliate traffic (TripStore is a partner per `pid=P00280233`).
-
----
-
-## Session — 2026-04-25 (Phase 8 frontend + Brief 1/2/3 complete; pre-launch bundle staged)
-
-### Completed
-- **Phase 8 DEV frontend** shipped end-to-end: Budget Per Person input + Adults/Children/Markup/GST with live budget calc panel, Auto-Build Quote button (sage green #7A9E7E Playfair), Generate Quote hidden, yellow low_utilisation banner wired, API_URL cutover to clasp-dev `@32`.
-- **Engine response enriched** (ItineraryEngine.gs `buildRouteResponse`): now emits `hotel.meals/roomType/category/chain` (from Hotels master Cols G/F/D/E via existing `getHotels` reader) and `tours[].category` (from Sightseeing_v2 Col C via `getSights`). Transforms derived in the DEV HTML `transformEngineResult()`: transfer date/from/to/details from `selectedRoute`, intercity date from `from`-city `cout`, defaults `notes = "Scheduled"` for economy trains, meals fallback `"Breakfast"` when master col G empty (documented inline).
-- **`_slugContains` dedup guard** (module-scope in ItineraryEngine.gs, wired into `pickTours`, `tryTourUpgrade`, `tryAddTour`): rejects candidates whose experience_id is a hyphen-extended prefix of (or reverse of) any already-picked exp_id. Catches combo/variant slugs automatically (e.g., `milan-last-supper-duomo` ⊃ `milan-last-supper`, `milan-duomo-photoshoot` ⊃ `milan-duomo`). No mass re-tagging needed for that class.
-- **Brief 1 audit**: `~/Desktop/TripStore/logs/AUDIT_REPORT_2026-04-25.md` — 88 features × 3 routes via Playwright. Started 64/11 PASS/FAIL, ended (post Brief 2) **81/0 PASS/FAIL**, 4 UNVERIFIED (PDF/Print/Excel — OS dialogs), 3 N/A (route-conditional warning banner).
-- **Brief 3 harness**: `~/Desktop/tripstore-pipeline/automated_frontend_test.py` + `test_routes_from_archive.json` (120 cases, 85 archive-grounded + 35 synthetic gap-fillers). Modes: `--smoke` (10, ~4 min), `--full` (120, ~22 min), `--engine-only`. First full run = **117/120 (97%)** pass — above 95% launch gate. 3 failures are data/infra edges (one mis-tag already flagged, one transient Apps Script JSON parse, one ultra-tight budget single-city route).
-- **Two launch-blocking bugs** found in human smoke + fixed: (1) **"Error generating PDF"** — real fix was replacing opaque catch toast with exception-name + message surface (user's specific failure didn't reproduce in headless), plus skipping `type=hidden` inputs in html2canvas `onclone` to prevent legacy budget carriers rendering as visible spans; (2) **Milan tour duplicated** — `_slugContains` guard added (classified as hybrid tagging/engine gap — engine fix cleaner than mass re-tag).
-- **Pre-launch code scan** delivered at `~/Desktop/TripStore/logs/CODE_SCAN_PRE_LAUNCH.md`. 5 Critical / 5 High / 7 Medium / 4 Low. Biggest finds: plaintext Anthropic key at `tripstore-pipeline/dev-appscript/credentials`; LIVE sheet ID fallback `|| SpreadsheetApp.openById('1U3f6Ph…')` inside DEV Pipeline.gs `setupSheets`; 9 Python scripts with DEV sheet ID commented "swap when ready"; `action=autoBuild` HTTP route still alive; `#vehicleTypeSelect onchange="runOptimizer(…)"` still calling legacy optimizer.
-- **Pre-launch fixes applied** (C1–C4 + H1 + H3): plaintext key file deleted and grep-verified gone from source; `Pipeline.gs setupSheets` fallback replaced with `throw if (!ss)`; `.gitignore` expanded 24→60 lines covering `*.bak*`, `*.backup_*`, `*.old`, `*.deprecated`, `backups/`, all credentials patterns, test HTMLs, logs, node_modules; `action=autoBuild` now returns deprecation JSON (direct-POST probe confirms); vehicle-type onchange stripped of legacy optimizer call, replaced with nudge toast "click Auto-Build Quote again to re-optimize". Engine redeployed `@32` (`AKfycbw758nBStn6Dqs…`).
-- **LIVE deploy bundle staged** at `~/Desktop/tripstore-pipeline/clasp-live/` — 8 files / 220 KB: Code.gs, ItineraryEngine.gs (debug fns stripped to `dev-appscript/ItineraryEngine_Debug.gs`), City_Intelligence.gs, Wallet.gs, Pipeline.gs, Quote_Intelligence.gs, Quote_Intelligence_Data.gs, appsscript.json. AutoBuild*, Temp.js, Automation.gs (self-declared LEGACY), all .bak/.backup/.deprecated excluded. JS parser syntax-check passes both Code.gs and ItineraryEngine.gs. `.clasp.json` not yet dropped in — bundle ready to `clasp clone <LIVE_SCRIPT_ID>` when user provides it.
-
-### Still Pending (launch-blocking, waiting on user)
-- **Anthropic API key rotation** at console.anthropic.com + Script Properties update in BOTH clasp-dev and LIVE Apps Script projects + `~/.zsh_history` scrub (handover noted key was in shell history twice).
-- **5 already-tracked files** flagged but not removed pending user's `git rm --cached` approval: `backups/Code_2026-04-10_1856.gs`, `backups/Pipeline_2026-04-10_1856.gs`, `backups/Quote_Intelligence_2026-04-10_1856.gs`, `backups/index_fit.tripstore_2026-04-10_1856.html`, `temp.index_fit.tripstore.html`. Each matched by new .gitignore rules but still in git index; they'd ship on v2 push unless purged.
-- **`dev/index_fit.tripstore.DEV.html` is git-tracked** — deploys publicly to v2 with DEV API_URL embedded. Separate decision from user: `git rm --cached`, `robots.txt` / redirect, or accept as internal-tooling leak.
-- **LIVE Apps Script deploy** — user needs to either: (a) supply LIVE script ID for `clasp clone` into `clasp-live/` → push/deploy, or (b) handle the clasp binding / manual paste themselves and hand back the new LIVE deploy URL.
-- **API_URL swap during cutover** — current LIVE HTML uses `AKfycbzAbIgz…` which doesn't have `computeItinerary`. After LIVE engine deploy, copy DEV HTML → live file, sed-replace DEV URL with new LIVE URL, commit to v2.
-- **4 UNVERIFIED audit items** (#83 PDF Agent, #84 PDF Client, #85 Print, #86 Excel) — need human click-through. Can't drive OS download/print dialogs from headless.
-- **211 experience_id mis-tag suspects** across 23 launch cities (Pass 2 over-clustering; Milan additions recorded). Separate data-quality workstream. Engine's slug-containment + name-prefix dedup masks visible regressions, but slugs read wrong in cascade logs.
-- **H2 / H4 / H5** trimming — all are editor-only risks (unreachable via HTTP). Excluded from the clasp-live bundle, so effectively satisfied for launch. Kept in dev-appscript/ for dev use.
-- **M-items** (dead JS: `runAutoBuild`, `runOptimizer`, `applyBudgetSuggestion`, `budgetBreakdownBar` render path; 7 empty catches; 15+ test/legacy HTML files in Itinerary-Create), **L-items** (6 console.log in onAutoBuildQuote, stale DEV URLs in legacy HTML) — cleanup pass post-launch.
-
-### Key decisions this session
-- **Milan combo-tour fix path**: engine-side `_slugContains` guard vs data-sheet re-tag — chose engine fix. Catches the whole class; zero data sheet writes; reversible.
-- **Meals fallback**: Hotels master col G is empty for all sampled rows. Transform uses `r.hotel.meals || 'Breakfast'` — marked as data-gap default in the code comment; engine value wins if master is ever populated.
-- **Vehicle-type onchange (H3)**: picked option (c) *"drop onchange + toast"* over (a) auto-rerun (expensive, clobbers edits) or (b) silent-drop (confuses agent).
-- **`autoBuild` route deprecation (H1)**: JSON error body instead of HTTP 410 — ContentService makes status codes awkward and the HTML's `data.error` path already handles this format.
-- **Automation.gs excluded from LIVE** — self-declared LEGACY, all functions have `_LEGACY` suffix, Pipeline.gs has current versions.
-
-### Commands to continue next session
-- Harness smoke: `python3 ~/Desktop/tripstore-pipeline/automated_frontend_test.py --smoke`
-- Harness full: `python3 ~/Desktop/tripstore-pipeline/automated_frontend_test.py --full`
-- Engine-only full (fastest): `python3 ~/Desktop/tripstore-pipeline/automated_frontend_test.py --engine-only`
-- Local DEV: already serving at `http://localhost:8080` (Python http.server started earlier session; may need restart)
-
----
-
-## Session — 2026-04-24 (unified budget engine shipped to clasp-dev; Phase 8 frontend deferred)
-
-### Completed
-- **ItineraryEngine.gs** built end-to-end per `~/Downloads/UNIFIED_BUDGET_FINAL_BRIEF.md`: Phases 0.2/1/2/3/4/5/6 + cascade + hard ceiling + validate + `computeItinerary` entry point. Wired into `Code.gs` `doPost`. ~700 lines + self-tests + `runTests2To10`.
-- **Phase 1 algorithm fix**: brief's `distributePax` produced 2.80× for 2A+3C instead of expected 2.30×. Founder approved new rules (never leave child alone, reserve 1 + pair rest, post-process merge). All 5 worked examples now match: 1.30 / 2.60 / 2.00 / 2.30 / 3.60.
-- **Phase 0.1**: `getIntercity` reads Col L (`firstClassPrice`, null-safe). **`getSights`**: added `experience_id` from Col S.
-- **Engine bugs found + fixed mid-run**: (a) `parseFloat("⭐⭐⭐⭐★")` returned NaN so ALL hotels parsed as 0★ → wrote `parseStarRating()` that counts ⭐/★ glyphs; (b) `tryHotelUpgrade` only tried the worst-rated city → now iterates worst→best until a viable swap fits.
-- **Tour dedup via `experience_id` (Option B)**: added Col S to `Sightseeing_v2` and tagged 2,214 rows via 3-pass self-healing: (1) `build_experience_ids.py` — Claude Opus 4.7 with confidence score; (2) `cluster_experiences.py` — MiniLM embeddings + cosine ≥0.72 + Levenshtein ≤3, 777 rewrites; (3) `audit_remaining.py` — Claude side-by-side on all singletons, 5 rewrites. Accuracy >99%, zero manual review.
-- **Algorithm verification**: 10/10 tests PASS. `runTests2To10()` halts on any failure. Dedup proof per city, cascade breakdown (H/TU/TA/TX/TR), utilisation, warnings all logged.
-- **Low-util warning flag** (founder directive after T9): if `utilisation < 95`, engine appends `low_utilisation: Premium inventory limited…` to `warningFlags`.
-- **Browser POST verified** via `~/Desktop/Itinerary-Create/engine_test.html` — standalone test page pointing at NEW test-only deployment `AKfycbwcYVCfXQFdy…@27`. Production DEV `API_URL` untouched.
-- **Backups taken**: `index_fit.tripstore.DEV.2026-04-23_1552.bak.html`, `Code.2026-04-23_1552.bak.gs`, `AutoBuild.2026-04-23_1552.bak.gs`.
-- **Handover written**: `~/Desktop/TripStore/logs/MORNING_HANDOVER_2026-04-25.md`.
-- **API key rotated**: old key pasted in chat/shell during session is invalidated; new key live in Script Properties (`ANTHROPIC_API_KEY`); `runCodeCheck` passed ✓.
-
-### Still Pending
-- **Phase 8 frontend wiring** (the ~340KB DEV HTML edit) — founder deferred to a fresh-eyes session. NOT started. Production DEV/live HTML untouched.
-- **AutoBuild.gs → AutoBuild.gs.deprecated** — not renamed yet (brief says after Phase 8 + sign-off).
-- **Quote_Log save + PDF export** on an engine-generated quote — blocked on Phase 8 (no production button wired to new engine yet).
-- **Pipeline.gs sightseeing JSON parse bug** surfaced tonight (pre-existing, unrelated to key rotation or engine). Retries fail with "non-whitespace after JSON at line 35 col 1" — Haiku 4.5 emitting trailing prose after valid JSON. Fix candidates: structured outputs `output_config.format`, or balanced-bracket extraction. Hotels/Trains/Transfers unaffected.
-- **T9 low util (< 95%)** — data limit (no Nordic premium inventory), not algorithm bug. Flag now emits.
-
-### Key learnings
-- Star-rating parsing via `parseFloat` on glyph strings silently returns NaN → 0. Always detect+count the glyphs explicitly. Debug pattern: when "higher-star alternatives: 0" across *every* city, suspect parse, not inventory.
-- Three-pass self-healing (LLM tag → embed+Lev cluster → LLM audit singletons) beats single-pass Claude tagging AND manual review. 782 fixes on 2,214 rows with 0 human minutes. Singleton residual rate < 0.5% = safe to ship without review.
-- `Pipeline.gs` reads `ANTHROPIC_API_KEY` from **Script Properties**, not any file. Key rotation = edit-in-place in Apps Script → Project Settings → Script Properties. Zero code change, zero downtime.
-
----
-
-## Session — 2026-04-22 → 2026-04-23 (launch-day picker iteration + A/B test harness)
-
-### Completed
-- **Step 1**: Auto-Build button hidden (`display:none`) in both DEV and LIVE HTML.
-- **Step 3**: `fixQuoteLogComplete()` run — Quote_Log AE/AF benchmark columns populated for 50 rows.
-- **Frontend tweaks** (DEV only):
-  - Hotel label "Client (X Pax)" → "(X Pax)".
-  - Budget mid suggestion 50% → **35%** of range.
-  - Day hour caps **4h/8h → 6h/10h** (arrival / middle).
-  - City dropdown toggle uses `style.display` (fixed autocomplete popup not appearing).
-  - PDF filename → `{paxName} x {totalPax}_{travelDate}.pdf`.
-  - PDF rewritten as multi-page A4 (was one giant page).
-  - Excel export uses same filename helper.
-- **Picker (runOptimizer) — current active rules (v11 tod-slot)**:
-  - First-tag-only attraction dedup (LAUNCH_BRIEF spec).
-  - Global sight cap + per-city proportional share (fair-share by nights).
-  - `ONCE_PER_DAY` = {cruise, food, fullday}.
-  - Full-day-exclusive rule (only night tours may follow a full-day).
-  - TOD slot dedup (max 1 morning + 1 afternoon + 1 evening per day).
-  - Sig-word overlap ≥4 dedup layer.
-  - Multi-round premium-upgrade pass.
-  - `window._dedupLog` diagnostics + toast version markers.
-- **A/B testing harness** placed in `~/Desktop/Itinerary-Create/`:
-  - `test_optimizer.html` (24 KB) — 20-city × 4N runner with 5 rule configs.
-  - `test_optimizer_bruteforce.html` (26 KB) — brute-force rule-combo exploration.
-  - `test_optimizer_intel.html` (43.6 KB) — with intelligence data; latest copy 21:31.
-  - `day_plans_lookup.json` (128 KB) — sourced from `~/Desktop/tripstore-pipeline/`.
-- **Test result (2026-04-22 run, Config A vs E)**: current rules produce avg 7.3 tours / 27% util / no Disneyland; Config E (tag + bigram + oncePerDay, no TOD-slot, no sig-word) produces avg 11.2 tours / 42% util / Disneyland eligible. User chose to revert the E-matching change and keep v11 state.
-
-### Still Pending / Broken
-- Picker variety / utilisation still below target on real quotes; user continues to evaluate via test harnesses.
-- Step 5 (go live) not started: rename Sightseeing tabs, revert `Sightseeing_v2` refs in Code.gs, deploy LIVE, copy DEV HTML → LIVE.
-- localhost:8080 left running in a prior terminal (address-in-use when re-starting).
-
-### Key learning
-- Do **not** re-solve per-city fair-share budget for the picker — it was already solved in prior sessions; I reintroduced the regression by adding `_globalSightCap`.
-- Layered dedup (first-tag + bigram + sig-word + TOD-slot + ONCE_PER_DAY + fullday-exclusive) stacks into ~9 rejection gates per tour → picker can't find variety even when data is plentiful. Test harness at `test_optimizer.html` is the fastest way to compare rule combinations; use it BEFORE editing picker rules.
-
----
-
-## Session — 2026-04-21 (long session — intelligence layer wired in, AutoBuild rewritten)
-
-### Completed — this session
-
-**Data infrastructure:**
-- Uploaded `Sightseeing_v2_FINAL.xlsx` (2,218 tours × 11 cols) as new `Sightseeing_v2` tab on **both** LIVE (`1U3f6Ph…`) and DEV (`1cdI1Gz…`) sheets.
-- Retagged all 2,218 tours in Column K with attraction-identity tags — 20 Eiffel tours now share `eiffel-tower`, 5 Louvre → `louvre`, etc. (180 unique identities, down from ~2,000 hyper-granular strings).
-- Created `City_Intelligence` tab on LIVE sheet from `city_intelligence.json` (171 cities × 14 cols). DEV sheet already had legacy-schema tab.
-- Annotated all 1,388 entries in `DAY_PLANS_LOOKUP` (AutoBuild_Data.gs) with `i` identity tags. File grew 128KB → 151KB.
-
-**Backend — AutoBuild.gs overhaul:**
-- `_loadSights` switched from `'Sightseeing'` to `'Sightseeing_v2'`.
-- `_findMasterSight` now 3-tiered: (1) identity-tag match primary, (2) fuzzy keyword ≥0.4, (3) tag-tokens-in-name fallback. Handles seasonal relists + punctuation drift.
-- `isWrongCity` extended to consult all 98 Sightseeing_v2 cities, not just 43 in DAY_PLANS — kills Grindelwald-leaking-into-Paris bug.
-- `maxHours` cap corrected: 3N = 4 days, so middle days (including the one before departure) now get full 8h, not 6h. Fixed Disneyland-can't-fit-Day-3 bug.
-- **Real bug fix**: `tourHours` now uses master's actual duration, not `cand.d` flag. Previously a `cand.d=true` tag-matching to a 1.5hr master was marking the day as 8h-used — killing fill-pass.
-- Tag-based dedup in `usedAttrTags` (cross-day) in both DAY_PLANS pick loop and master-fallback/fill paths.
-- New **slot-fill pass** after the per-day loop — tops each day up to `maxHours - 1` with highest-rated eligible master (up to 5 tours/day).
-- New **premium-swap pass** — after fill, walks each placed tour and swaps for the priciest unused master in the same identity-tag family (same/shorter duration). Up to 3 rounds. Drives utilisation toward 95% target.
-- **Result**: Paris 3N jumped from 49% → 98.1% utilisation, no duplicate attractions.
-
-**Backend — other .gs files:**
-- `Code.gs` — `getSheetByName('Sightseeing')` → `'Sightseeing_v2'` (both refs).
-- `City_Intelligence.gs` — reader now supports BOTH legacy (Quote_Count, Avg_Nights, Budget tiers) and new (Tour_Count, Readiness, Type_Distribution) schemas.
-- `Quote_Intelligence.gs` — added `getBenchmarkForRoute()` + `_normRoute()`. Schema extended to 32 cols with AE=Benchmark CPA (₹), AF=vs Benchmark. Wired into `buildQuoteLogRow`, `setupQuoteLog`, `fixQuoteLogComplete`, `formatLogRow`.
-- New file `Quote_Intelligence_Data.gs` — 159 routes, 364 records, 24KB from `price_benchmarks.csv`.
-
-**Frontend — dev/index_fit.tripstore.DEV.html:**
-- `renderRouteInputs` widget rewritten — handles both schemas, uses `val !== '' && val !== 0` truthiness so tour counts render.
-- **Fix #1 hotel swap** — escaped `JSON.stringify(h.city)` with `.replace(/"/g,'&quot;')` so `selectHotel(id, idx, "Paris")` parses correctly.
-- **Fix #2a Add tour button** — same escape fix on line 3261 for `openAddTourDirect`.
-- **Fix #2b tour swap (now really swaps)** — ⇌ button passes `instanceId` + `day`; `openSightSwap` sets `window._swapTarget`; `addActivityToDay` detects swap and removes the original sight first; modal auto-closes. Header text "Swap Activity" vs "Manage Activities".
-- **Fix #4 Add Transfer** — city dropdown filters `masterData.transfers` to `selectedRoute` cities.
-- **Fix #5 Add Train** — new searchable route list from `masterData.trains` where from/to matches itinerary; click-to-prefill; manual-entry retained.
-- `closeModal` clears `window._swapTarget` to prevent stale state.
-
-**Deploy infrastructure:**
-- Installed `@google/clasp` globally. DEV project cloned to `~/Desktop/tripstore-pipeline/clasp-dev/`. All `.gs` changes now pushed + deployed via clasp to deployment `AKfycbz3dpv…` — no more copy-paste loop.
-- Current deployment version: **@25** (post-compact: budget caps + hotel nights-weighting + archive tag dedup).
-
-### Post-compact fixes (4 bugs from multi-city Rome/Venice/Dolomites itinerary):
-- **Sightseeing budget overshoot +40%** — fill-pass and premium-swap had no budget cap. Added per-city per-person `cap` = (sightBudget × nights/totalNights) / pax. Frontend doesn't send `sightBudget` separately, so server derives it as 35% of net landBudget (landBudget / (1+markup/100)). Cap applied in main loop, seed pass, fill-pass top-up, and premium-swap delta gate.
-- **Hotel budget uneven across cities** (Rome ₹3L+ 5* vs Venice ₹88k 3* for equal 3N) — `hCapPerCity = hotelBudgetNet / cities.length` replaced with `_hCapFor(nights)` = `hotelBudgetNet × (nights/totalNights)`. Upgrade pass cap changed from `remaining` (full slack) to `cityCap + slack` so one city can't eat everyone else's pot.
-- **Sistine Chapel / Dolomites repeating across days** — `usedAttrTags` was only set when master-matched; archive-path entries skipped registration. Now `cand.i` (identity tag from DAY_PLANS retag) is tracked in `usedAttrTags` on both pre-loop skip check AND commit. Premium-swap also gated on same-family constraint (already in place). Budget-rejected candidates no longer burn `usedMasterInfo`.
-- `_assignSightseeing` signature extended with `sightCapPerPerson` param.
-- Deployed @24 → @25.
-
-### Still Pending
-- Verify all 4 frontend UI fixes after hard-refresh (⌘-Shift-R) of DEV HTML.
-- Decide whether to repopulate LIVE sheet's `City_Intelligence` tab with legacy-schema data (so LIVE widget stops showing empty fields on go-live).
-- Reconcile `Quote_Intelligence_Data.gs` benchmark columns (AE/AF) onto production `Quote_Log` — run `fixQuoteLogComplete()` once after promoting to LIVE.
-- Task 6 (go live) not started: rename Sightseeing → Sightseeing_OLD, rename Sightseeing_v2 → Sightseeing, revert Code.gs, redeploy LIVE.
-- Regenerate `DAY_PLANS_LOOKUP` from latest archive (current file is dated Apr 14; misfiles like Grindelwald under Paris remain).
-- All prior pending items from 2026-04-20 session still open.
-
----
-
-## Session — 2026-04-20 (night)
-
-### Completed — this session
-
-**Comprehensive code review + bug fix pass on `index_fit.tripstore_DEV_New UI.html`:**
-
-**Crash fixes (masterData null guards):**
-- `init()` — added explicit `!masterData.hotels` error throw before accessing `.map()`
-- `openHotelSwap()`, `applyHotelFilters()`, `selectHotel()`, `runOptimizer()` — all `masterData.hotels.filter()` now use `(masterData.hotels || []).filter()`
-- `renderSightModalWrapper()`, `filterSightsInModal()`, `addActivityToDay()`, `renderAddTourList()` — all `masterData.sights.filter/find()` now guarded with `|| []`
-- `optimizeIntercity()` — `ic.from.toLowerCase()` now `(ic.from || '').toLowerCase()`
-- `filterIntercityModal()` — `item.mode/from/to.toLowerCase()` all wrapped with `(field || '')`
-- `openSightSwap()` — added null guard for `route` not found
-
-**Functional bug fixes:**
-- `renderTables()` — `item.hotel`, `item.sights`, `item.dayNotes` now initialized to `{}` / `[]` at top of forEach — prevents `hotel.name = value` crash on empty plan
-- `applyHotelFilters()` — `h.name.toLowerCase()` crash fixed with `(h.name || '').toLowerCase()`; `selectHotel` onclick now uses `JSON.stringify(h.city)` for apostrophe safety
-- `openAddTourDirect` onclick (line ~3237) — `'${item.city}'` changed to `JSON.stringify(item.city)` to prevent broken onclick for cities with apostrophes
-- `removeActivity()` — changed `s.instanceId !== instanceId` to `Number(s.instanceId) !== Number(instanceId)` for type-safe comparison; also guards `route.sights || []`
-- `deleteSightFromDay()` — added `if (!currentPlan[planIdx]) return` guard
-- `confirmAddTour()` — now correctly looks up full sight object from `masterData.sights` when passed a string name (was crashing with `sight.price` undefined)
-- `_spr` registry — cleared at start of `openSightSwap()` and `openAddTourDirect()` to prevent unbounded memory growth
-
-**Security fixes:**
-- `data.reason` from Swiss Pass API — changed from `innerHTML` with template literal to DOM `textContent` to prevent XSS from server response
-- `paxName` in proposal banner pills — HTML-escaped before inserting into `innerHTML`
-- `refreshAdminList` option names — HTML-escaped with `&amp;`/`&lt;`/`&quot;` before `innerHTML`
-
-### Still Pending
-- Visually verify all changes at localhost:8080 (run `python3 -m http.server 8080` in Itinerary-Create folder)
-- Push updated `index_fit.tripstore.html` to GitHub v2 (Generate Quote fix from 2026-04-17 still not pushed)
-- Copy merged `dev-appscript/Code.gs` + `Wallet.gs` into DEV Apps Script and redeploy
-- Run `revertEmptyPriceHotels()` + `markDuplicateInputHotels()` from Apps Script console
-- Copy updated `Pipeline.gs` into live Apps Script
-- Test PDF export in both Agent and Client mode after setPdfMode fix
-- Test page breaks in PDF — sightseeing table was cutting across pages
-
----
-
-## Session — 2026-04-17
-
-### Completed — this session
-
-**Generate Quote critical fix (LIVE + DEV):**
-- `runOptimizer()` was crashing silently — `landBudgetTotal` was undefined (should be `landBudgetNet`). This broke Generate Quote on BOTH live and DEV. Fixed in both `index_fit.tripstore.html` (line 1610) and `dev/index_fit.tripstore.DEV.html` (line 1976).
-
-**City Intelligence rebuild (6 fixes in `build_city_intelligence.py`):**
-- Sightseeing per day was ₹160K instead of ~₹12K — old code attributed entire trip sightseeing to every city. Now parses per-city from `Sightseeing_Used` column, uses median.
-- Land cost: same full-trip attribution bug — now proportional by city nights / total nights
-- Prev/next city: only found first occurrence in route, missed revisited cities — now iterates all with `enumerate`
-- Combo names: showed lowercase "florence + paris" — now uses proper case
-- Hotel cost + transfers: switched from mean to median (outlier resistant)
-- Saved_Itineraries: fixed `selectedRoute: null` crash + `int("2.5")` crash
-
-**Tour dedup fix (DEV):**
-- Colosseum tours appearing on multiple days — bigram dedup missed "Colosseum with Arena" vs "Fast-Track Colosseum" because the word "colosseum" paired with different neighbours. Added `LANDMARK_KEYWORDS` unigram matching for 50+ major EU attractions.
-
-**Wallet.gs hardened (4 fixes):**
-- Added `LockService.getScriptLock()` to `topUpWallet` and `processQuoteDeduction` — prevents double-charge race condition
-- Transaction ID: replaced fragile `getLastRow()` with `Utilities.getUuid()`
-- Counter update moved BEFORE debit — prevents money loss if counter write fails
-- Added null/empty guard on agentId/paxName
-
-**Frontend wallet fix (DEV):**
-- Reversed save flow: save itinerary first, deduct wallet only after save succeeds — prevents money loss on failed saves
-
-**Route merges + syncs:**
-- Merged `dev-appscript/Code.gs` — now has ALL routes: intelligence (3) + wallet (5) + existing (11)
-- Synced `Wallet.gs` to `dev-appscript/`
-- Fixed `renderRouteInputs()` null crash on city intelligence cache
-- City_Intelligence tab rebuilt (321 cities, corrected data)
-
-### Still Pending
-- Push updated `index_fit.tripstore.html` to GitHub v2 (Generate Quote fix is critical for live)
-- Copy merged `dev-appscript/Code.gs` + `Wallet.gs` into DEV Apps Script and redeploy
-- Run `revertEmptyPriceHotels()` + `markDuplicateInputHotels()` from Apps Script console
-- Copy updated `Pipeline.gs` into live Apps Script (server-side price guard)
-
----
-
-## Session — 2026-04-16
-
-### Completed — this session
-- **Wallet + Quote Pricing system** built end-to-end:
-  - `Wallet.gs` — 9 functions: createWalletTabs, getWalletBalance, topUpWallet (with bank ref), calculateQuoteCharge, processQuoteDeduction, updateQuoteCounter_, getAgentDisplayName_, getRecentTransactions, getAgentList
-  - Pricing: ₹99 for quotes 1-3 per PAX, ₹49 per quote from 4+, cap ₹246/client
-  - `Code.gs` — added 5 wallet routes to doGet (3) and doPost (2)
-  - Frontend: wallet badge in nav, admin top-up tab, save-flow deduction gate, bank ref field
-- **Applied wallet to correct DEV file** (`dev/index_fit.tripstore.DEV.html`) after initially applying to wrong file
-- **Fixed [object Object] bug** — `selectedRoute` is objects not strings, now uses `.map(r => r.city).join()`
-- **Fixed PAX name for wallet** — uses clean client name (before versioning) so V1/V2/V3 share one Quote_Counter
-- **CLAUDE.md hardened** with strict file rules: never copy live→DEV, 3-file table, API URL rules, sheet ID rules
-
-### CRITICAL LESSON LEARNED
-- `index_fit_DEV.html` was created by copying from live file (`index_fit.tripstore.html`), which LOST 29 DEV-only features (Swiss Pass, City Intelligence, server-side Auto-Build, custom city dropdown, PDF mode, budget breakdown bar, etc.)
-- The correct DEV file is ALWAYS `dev/index_fit.tripstore.DEV.html` — it has features the live file doesn't
-- **Rule: NEVER copy live → DEV. Always branch from DEV.**
-
-### Still Pending
-- Run `revertEmptyPriceHotels()` from Apps Script console to clean up bad PROCESSED rows
-- Run `markDuplicateInputHotels()` to mark duplicates
-- Copy updated **Pipeline.gs** into Apps Script (server-side price guard)
-- Copy `Wallet.gs` + wallet routes in `Code.gs` into DEV Apps Script project
-- Copy `Quote_Intelligence.gs` into DEV Apps Script project (for Quote Dashboard)
-- Redeploy DEV web app (new version) after pasting updated files
-- Delete deprecated `index_fit_DEV.html` file
-
----
-
-## Session — 2026-04-15
-
-### Completed — this session
-- `markDuplicateInputHotels()` in Temp.gs — standalone Set-lookup function to mark INPUT_Hotels rows as DUPLICATE (amber `#FFF3CD`) if hotel name + city already exists in Hotels master
-- Root-caused empty-price hotels slipping through as PROCESSED: Claude API ignored the "all prices = 0 → valid=false" prompt rule, and pipeline had no server-side guard
-- `Pipeline.gs` — added server-side guard (after Claude returns results): overrides `valid=true` to `valid=false` if all 12 monthly prices in the input row are 0, regardless of what Claude says
-- `revertEmptyPriceHotels()` in Temp.gs — cleanup function to fix existing damage: reverts wrongly-PROCESSED rows (all prices=0) to ERROR in INPUT_Hotels + deletes matching bad rows from Hotels master
-
----
-
-## Session — 2026-04-10 (final)
-
-### Completed — this session
-- `FIX_QUOTELOG` function (Temp.gs) — fixed all Quote_Log display issues in one shot:
-  - Travel Month: set cell format to TEXT before writing string to prevent Sheets auto-converting "Mar-26" → serial
-  - No. of Cities + Markup %: values stored as text with ₹ prefix — rewritten as plain numbers via `num()` helper
-  - Sub Total + Budget Entered: same ₹-text issue — rewritten as plain numbers
-  - Utilisation %: recalculated from clean numeric values, now shows correctly
-  - Budget flag + row colour: recalculated (OVER / ✅ TARGET / NEAR / UNDER / No Budget)
-- Budget Entered root cause fixed in `index_fit.tripstore.html`: removed "Fix 1" block in `loadAndOpen` that was overwriting `hotelBudget` input with actual hotel cost on load
-- Quote_Intelligence.gs: Travel Month format changed to `mmm-yy` (e.g. "Apr-26")
-- Quote_Intelligence.gs full audit: fixed hotel net (missing pricingFactor), sightseeing net + train net (missing paxCount), formatLogRow for column format inheritance, Notes column width
-- index_fit.tripstore.html: added `roomsRequired` and `agentName` to save payload; restored `roomCountInput` on load
-- Utilisation % changed from Sub Total vs Budget → Grand Total vs Budget in both `buildQuoteLogRow` and `fixQuoteLogComplete` (Quote_Intelligence.gs)
-- Backup taken: all 4 key files copied to `/backups/` with timestamp 2026-04-10_1856
-
-### Still Pending (manual — no code changes needed)
-- Copy updated **Code.gs**, **Quote_Intelligence.gs**, **Pipeline.gs** into Apps Script and redeploy
-- Run `fixQuoteLogComplete()` to recompute all historical Util% rows with Grand Total formula
-- Re-save Nitika itinerary to log a fresh correct row
-- Trains master: manually delete rows 638, 639, 640, 642 (bad transfer/invalid route data)
-- Trains master rows 620-621: fix London-Liverpool INR (₹27,630 → ~₹4,400), clear monthly € cols, run `repairTrainMonthlyPrices()`
-- INPUT_Trains: delete rows with blank From City or blank To City
-- INPUT_Transfers: delete rows containing itinerary text (wrong data in wrong sheet)
-- After cleanup: run `resetErrorRows()` → `runMidnightEnrichment()` → `setupTrigger()` (once)
-
----
-
-## Latest Session — 2026-04-09 (evening, continued)
-
-### Completed — this session
-- Data Dashboard rebuilt: 6 new sections (pipeline status, hotel star breakdown, tag diversity, transfer coverage, train routes, gap report, demand gaps)
-- Duplicate "All Cities" full tables removed (were repeating top/bottom 10 data)
-- KPI row expanded to 8 cards (added Trains, Transfers, Coverage Gaps, Demand)
-- Hotel star breakdown: click any city row → expands to show 3★/4★/5★ counts
-- Sightseeing tag diversity: unique tags per city shown in top 10 + separate tag diversity cards
-- Transfer coverage: cities with airport pricing, flags hotel cities missing transfers
-- Train route coverage: route count, covered cities list, flags well-stocked hotel cities with no trains
-- Gap report: cities missing hotels or sightseeing
-- High demand + thin data: most-quoted cities (Quote_Log) with weakest data coverage
-- Pipeline status: PENDING/ERROR/DUP/PROCESSED count for all 4 INPUT sheets
-- Code.gs getMasterInventory: rewrote to return stars, tags, transfers, trains, pipeline, gapCities, demandGaps
-- Dashboard caching: Quote + Data dashboards cache on first load, instant on tab switch
-- Refresh button added to both dashboards with "Last updated X min ago" timestamp
-- Cache clears on logout/page refresh (always fresh data on new session)
-
-### Still Pending
-- Copy updated **Pipeline.gs** into Apps Script (prompt fixes + res.idx fix + 8192 token cap)
-- Copy updated **Code.gs** into Apps Script and redeploy (needed for new dashboard sections to show data)
-- Trains master: manually delete rows 638, 639, 640, 642 (bad transfer/invalid route data)
-- Trains master rows 620-621: fix London-Liverpool INR (₹27,630 → ~₹4,400), clear monthly € cols, run `repairTrainMonthlyPrices()`
-- INPUT_Trains: delete rows with blank From City or blank To City
-- INPUT_Transfers: delete rows containing itinerary text (wrong data in wrong sheet)
-- After cleanup: run `resetErrorRows()` → `runMidnightEnrichment()` → `setupTrigger()` (once)
-- Run `archiveAndClearInput()` after reviewing enrichment results
-
----
-
-## Feature Verification Index
-*These are the exact function/string names the pre-push hook checks.
-If any go missing after a code edit — the push will be blocked automatically.*
-
-| Feature | Proof it exists (grep pattern) |
+## Session 2 — Sightseeing extraction overhaul
+**Date:** 2026-04-11
+**Backup:** extract_archive_backup_20260411.py (in old archive folder)
+
+### What was built
+- **Merge-map fix** — `build_merge_map(ws)` + `mcv()` helper. All extractors now read merged cells correctly. This was the core problem affecting 70-90% of sheets.
+- **Hotel calendar** — `build_hotel_calendar()` builds {date: city} from hotel checkin/checkout. Used as primary city source in sightseeing.
+- **4-step city assignment** in `extract_sightseeing_raw`:
+  1. Calendar date lookup
+  2. c1 text as city (Pratik sir format — merged city label in col A)
+  3. c7 explicit city
+  4. Travel signal ("Arrive at X", "Proceed to X")
+  5. Sticky carry-forward
+  6. Unknown fallback — never discard a tour row
+- **Sticky city on skip** — arrival rows skipped by SKIP_ACTIVITY still seed last_city before being discarded
+- **Expanded section headers** — "tour", "tours", "activities", "service", "tentative tour itinerary" added (exact cell match only)
+- **~$ filter** — temp lock files excluded from scan
+- **FUTURE comment** — Day Pattern Intelligence added at top of file
+
+### Key decisions
+- SEA/Thailand costing template NOT fixed — product focus is Europe only
+- City = "Unknown" rather than dropping the row — manual cleanup later
+- `extract_archive.py` is the only file modified this session
+
+### Final counts (426 files, 1,527 sheets, 0 failures)
+| Output | Rows |
 |---|---|
-| Optimizer | `function runOptimizer` |
-| Render tables | `function renderTables` |
-| Save | `function saveItinerary` |
-| Load saved | `function loadAndOpen` |
-| PDF export | `function downloadPDF` |
-| Excel export | `function downloadExcel` |
-| Hotel swap modal | `function openHotelSwap` |
-| Hotel swap filters | `function applyHotelFilters` |
-| Hotel diff tracking | `_currentHotelCost` |
-| Hotel diff label | `diffLabel` |
-| ±20% grouping | `Within ±20` |
-| Current hotel bar | `currentHotelBar` |
-| Budget hint HTML | `hotelBudgetHint` |
-| Land hint HTML | `sightBudgetHint` |
-| Budget suggest fn | `function suggestBudgets` |
-| Budget apply fn | `function applyBudgetSuggestion` |
-| Admin nav tabs | `tab-itinerary`, `tab-saved`, `tab-quote`, `tab-data` |
-| Admin tab switch | `function switchAdminTab` |
-| My Itineraries | `function loadSavedList` |
-| Version control | `_loadedFromName` |
-| Correct API URL | `AKfycbzAbIgzRoN_MNs377jm3u` |
-| Login | `function launchApp` |
-| Auto-login | `function checkAutoLogin` |
+| input_sightseeing.csv | 6,281 (was 408 at start of session 1) |
+| input_hotels.csv | 1,762 |
+| input_trains.csv | 62 |
+| input_transfers.csv | 188 |
+| input_passes.csv | 17 |
+| input_self_drive.csv | 48 |
+
+### Stopped at
+Step 2 complete. Step 3 (cross_reference.py) not yet run.
 
 ---
 
-## Rules (permanent)
-- **ONE source of truth for HTML**: `/Users/Sumit/Desktop/Itinerary-Create/index_fit.tripstore.html`
-- Worktree copy is always synced FROM the desktop copy, never edited independently
-- Every push must pass the pre-push hook feature check — no bypassing with `--no-verify`
-- When a new feature is added, add its grep pattern to SESSIONS.md AND to the pre-push hook CHECKS array
+## Session 3 — Folder reorganisation
+**Date:** 2026-04-13
+
+### What was done
+Created this clean working folder `/Users/Sumit/Desktop/tripstore-pipeline/` to separate the active pipeline from the legacy archive folder.
+
+**This folder contains:**
+- `extract_archive.py` — `INPUT_DIR` points to absolute path `/Users/Sumit/Desktop/tripstore-itinerary-archive/input-pdfs`
+- `cross_reference.py` — all relative paths (`./output`, `./sheets-credentials.json`)
+- `sheets-credentials.json` — copied from archive
+- `credentials/` — copied from archive
+- `output/` — all 8 CSVs (itinerary-archive, input_hotels, input_sightseeing, input_trains, input_transfers, input_passes, input_self_drive, hotel_costs)
+
+**Original folder `/Users/Sumit/Desktop/tripstore-itinerary-archive/` — untouched:**
+- All old scripts remain as-is
+- `input-pdfs/` (453 source Excel files) stays there — referenced by absolute path from this folder
+- No files deleted or modified
+
+### Key decisions
+- `input-pdfs/` NOT copied — 453 files, stays in archive folder, referenced via absolute path
+- Old folder kept intact as live reference — not renamed or deleted
+
+### Stopped at
+Step 3 (cross_reference.py) not yet run. Run from this folder:
+`cd ~/Desktop/tripstore-pipeline && python3 cross_reference.py`
+
+---
+
+## Session 4 — Wallet + route merge
+**Date:** 2026-04-16 / 2026-04-17
+
+### What was done
+- **Wallet system** built in `Wallet.gs` (9 functions): createWalletTabs, getWalletBalance, topUpWallet, calculateQuoteCharge, processQuoteDeduction, etc.
+- **Pricing model:** ₹99 for quotes 1-3 per PAX, ₹49 from quote 4+, cap ₹246/client
+- **dev-appscript/Code.gs merged** — wallet routes (5) added alongside existing intelligence + autobuild routes (3)
+- **dev-appscript/Wallet.gs** added as single source of truth
+- **Frontend wallet** applied to `index_fit.tripstore.DEV.html` (in Itinerary-Create): nav badge, admin tab, save-flow deduction gate
+- **Bug fixes:** null guard in renderRouteInputs for city intelligence, [object Object] in wallet description
+
+### Key lesson
+- `dev-appscript/Code.gs` is the canonical DEV Code.gs — it has ALL routes (intelligence + autobuild + wallet + standard). Always copy FROM here to Apps Script editor, never the other way.
+- Never create DEV HTML by copying from live — DEV has 29 features live doesn't.
+
+### Files in dev-appscript/ (copy ALL to DEV Apps Script project)
+| File | Routes/functions |
+|------|-----------------|
+| Code.gs | doGet: 14 routes, doPost: 4 routes |
+| Wallet.gs | 9 wallet functions |
+| City_Intelligence.gs | getIntelligenceForRoute |
+| AutoBuild.gs | autoBuild |
+| AutoBuild_Data.gs | day plans data |
+| Pipeline.gs | enrichment pipeline |
+| Quote_Intelligence.gs | quote logging |
+
+---
+
+## Build Sequence (7 Steps)
+1. extract_archive.py — build, test --dry-run on 5 files  ✅ COMPLETE
+2. Full run on all files — review output CSVs and counts  ✅ COMPLETE
+3. cross_reference.py — run to queue new PENDING rows  ✅ COMPLETE (run 5, 2026-04-15)
+4. Create Swiss_Pass_Config + City_Intelligence tabs in Google Sheet  ✅ COMPLETE (in DEV sheet)
+5. build_city_intelligence.py — build, run, verify City_Intelligence tab  ✅ COMPLETE
+6. Apps Script — add getIntelligenceForRoute + getSwissPassOptions + autoBuild + wallet  ✅ COMPLETE (in dev-appscript/)
+7. Frontend — intelligence banner + Swiss Pass toggle + PDF toggle + wallet  ✅ COMPLETE (in index_fit.tripstore.DEV.html)
+
+---
+
+## Session — 2026-05-04 (Tag taxonomy v1 + PDF-intelligence audit)
+
+### What was done
+- **Tag taxonomy v1 dropped into pipeline** (built in chat session). Files moved to `~/Desktop/tripstore-pipeline/`:
+  - `build_tag_taxonomy.py` (50K)
+  - `retag_sightseeing.py` (9.7K)
+  - `tag_taxonomy.json` (1.0M)
+  - `sightseeing_v2_tagged.csv` (580K — header has 12+ trailing empty cols, strip before any Sheet write)
+  - `TAXONOMY_REPORT.md` (5K, bonus)
+- **Eyeball QA on 60 random tagged rows** (20 Paris + 20 Rome + 20 Amsterdam). Verdict: usable but noisy. 5 issues to fix in v2 (brief from user pending). Examples of noise: apostrophe-fragments (`d'orsay`, `'hollandsche`), Italian-language tags (`roma`, `spettri`, `alchimisti`), generic `1hr` as a tag, over-splitting one Colosseum tour into `colosseum-floor` / `colosseum-forum` / `colosseum-palatine` / `colosseum-roman`.
+- **PDF-intelligence pipeline audit** (existing Apr-16 run at `~/Desktop/TripStore/intelligence/`):
+  - `city_tour_patterns.csv` — 1,298 rows; `Archive_Avg_Price_INR` empty on **100% of 1,284 tour rows**. Cross-reference to Excel-side prices never landed.
+  - `manual_check.csv` — 217 rows, **all flagged Needs_Action=YES**. None triaged since Apr 16.
+  - `tripstore_intelligence_master.json` — 689K, valid JSON, but inherits the empty-price problem.
+- **Schema gap mapped between Excel & PDF day-pattern outputs:**
+  - Excel `output_v2/day_patterns_dated.csv` (10,160 rows) — raw observations, pipe-separated `Tour_Names_List` per day, has cost data.
+  - PDF `intelligence/csv_output/city_tour_patterns.csv` (1,298 rows) — aggregated, one row per (City, Nights, Day, Tour), has Frequency + Day_Type + Time_Of_Day + Combined_With.
+  - **Bridge to build:** explode Excel → fuzzy-match tour names → re-aggregate into PDF schema → backfill `Archive_Avg_Price_INR`.
+
+### Key decisions
+- Hold Google Sheet push of tagged sightseeing data until tag taxonomy v2 ships.
+- Hold all `ItineraryEngine.gs` edits until tag v2 lands.
+- Reuse Apr-16 PDF-intelligence output as baseline; fix the cross-reference bridge instead of re-extracting.
+
+### Stopped at
+- Waiting on user's "5 noise issues" cleanup brief for tag taxonomy v2.
+- After v2: push to Google Sheet, then move on to the Excel↔PDF day-pattern merge.
+
+
+## Session — 2026-05-04 → 05 (v3-beta-semantic dedup wired & field-tested — DEV only)
+
+**Date:** 2026-05-04 evening → 2026-05-05 12:56
+**Outcome:** v3 implementation complete and reachable in DEV. Field tests show v3 produces byte-identical picks to v2.2. v2.2's existing 3-layer dedup is sufficient; v3's semantic pass has nothing to catch. No promotion. Awaiting disposition decision (A: drop / B: opt-in beta / C: pivot infrastructure to editorial dedup or semantic search).
+
+### What was built / changed in `tripstore-pipeline/`
+- **`clasp-dev/` initialised as git repo** (`main` branch). `.gitignore` excludes `.backups/`. 5 commits for the v3 work: baseline → gitignore → revert heuristic v3 (−371 lines) → rewrite v3 against real v2.2 architecture (+481 lines) → dispatcher branch (+4 lines).
+- **`clasp-dev/ItineraryEngine.gs`** — heuristic v3 removed (6 blocks, ~370 lines). Semantic v3 added: `V3_SIM_THRESHOLD = 0.85`, `V3_DROPPED_PER_CITY_CAP = 10`, `V3_EMB_TAB`, 5 regex constants, 7 helpers (`v3_normKey`, `v3_extractTimes`, `v3_extractMatches`, `v3_setsEqual`, `v3_isDuplicate`, `v3_parseEmbedding`, `v3_cosine`), `v3_loadEmbeddings()`, `applyV3SemanticDedup_(state, ctx, embMap)`, `computeItinerary_v3(params)` (mirrors v2.2 exactly + dedup pass between cascade_v22 and validate), `testV3SemanticDedup` smoke harness, `diagWhichSpreadsheet` (editor-only diag, not deployed). Dispatcher gained `v3 / v3-beta / v3-beta-semantic` branch placed before v2.2.
+- **`compute_embeddings.py`** — SBERT (`all-MiniLM-L6-v2`) embeddings populator. Idempotent. Reads Sightseeing_v2 col A (City) + col B (Tour Name), writes JSON-encoded 384-float L2-normalised arrays into `Embeddings_Sightseeing` col C. Uses gspread + service account. SHEET_ID currently points at DEV (`1iENrNwWTtU9...`).
+- **`create_embeddings_tab.py`** — idempotent tab creator (3 cols: City | Tour Name | Embedding). Run once per sheet.
+- **`run_field_test.py`** — POST 3 quotes (v1, v2.2, v3-beta-semantic) to DEV web-app URL with `{action: "computeItinerary", params: {...}}` shape. Saves responses + summary JSON to `field_test_output/`.
+- **`analyze_field_test.py`** — side-by-side comparison report (cost, tour counts, repetition, dedupLog, warning flags).
+- **`verify_v3_endpoint.py`** — single-shot smoke verifier (Paris-only, returns algorithm + dedupLog + warnings).
+- **`field_test_output/`** — `response_v1.json`, `response_v2_2.json`, `response_v3_beta_semantic.json`, `field_test_summary.json`, `comparison_report.txt`.
+
+### What was changed in DEV Sheet (`1iENrNwWTtU9...`)
+- New tab `Embeddings_Sightseeing`, 2,217 rows × 3 cols. Idempotently regenerable. NOT a hand-edited tab.
+
+### What was deployed
+- `clasp push` ran 3× this session (always to DEV scriptId `1Mr-dMvu1roz...`).
+- `clasp deploy --deploymentId AKfycbxrC4tULOlFLPvTIDt8HpJtmsiuueF2gurUxaoaiHQzns_fxeLyMoKP2WZrt6OhalWkPQ` ran 2×, bumping the DEV public deployment @18 → @19 → @20. Same deployment ID, same URL — version number increments.
+- LIVE deployment ID `AKfycbzAbIgzRoN_MNs377jm3u` NOT touched.
+- DEV HTML `API_URL` already pointed at the right deployment ID (matches @19/@20).
+
+### Discoveries / lessons
+- **Sheet binding bug.** First populate run wrote 1,911 embeddings to LIVE sheet because `compute_embeddings.py` had LIVE's SHEET_ID. The DEV Apps Script project is container-bound to DEV sheet, so `getActiveSpreadsheet()` inside `applyV3SemanticDedup_` returned DEV — where `Embeddings_Sightseeing` didn't exist. `dedupLog.withEmbedding = 0` on every quote despite a populated tab. Smoke test from Apps Script editor reported `1911 loaded` because *that* execution context also returned LIVE — the bug was invisible from the editor. **Generalised lesson:** any Sheet-writing script meant for code-side consumption must point at the same Sheet ID that `getActiveSpreadsheet()` will return at runtime, and a smoke test that doesn't go through the production code path can lie.
+- **v2.2's pickTours_v2.tryAdd is already a 3-layer dedup**: `usedTags[c][tag]` (exact experience_id) + `_slugContains` (slug-substring) + `_nameKey` (name-prefix). It produces zero near-text duplicates in real quotes. v3's semantic pass has nothing to catch.
+- **Max same-city semantic similarity in real picks = 0.632.** Far below the 0.85 threshold. The closest "looks-like-same-attraction" pair (St. Peter's Basilica tickets vs Vatican Dome Climb tour) scores 0.586. SBERT correctly distinguishes ticket-only from guided-experience packages.
+- **The original v3 brief's 5.1% repetition figure was simulation-only.** It didn't account for v2.2's tryAdd dedup. In production, the rate is effectively 0%.
+- **doPost contract** is `{action: "computeItinerary", params: {...}}`. Flat payload returns `Invalid action`. First time the web-app endpoint was exercised externally (frontend uses `google.script.run` for v2.2 calls).
+
+### Still pending
+- **v3 disposition decision** (A: drop, B: opt-in beta only, C: pivot embeddings to a feature that moves the needle — editorial dedup at master ingestion, semantic search, agent-archive matching).
+- **Stale 1,911-row `Embeddings_Sightseeing` tab on LIVE sheet** from the mis-pointed first run. Delete if v3 is dropped.
+- **Diagnostic clutter** if v3 is closed: `diagWhichSpreadsheet`, `[v3 DEBUG]` Logger.log inside `applyV3SemanticDedup_`. Push-only, in deployment @20.
+- **`run_field_test.py` header text** still says "Paris/Rome/Barcelona" after Paris-only stress patch (cosmetic).
+- **`analyze_field_test.py` parser** walks `route[i].days[j].tours` but real shape is `route[i].tours` — TOURS PER CITY column always 0 (cosmetic, dedupLog itself is fine).
+
+### Key decisions
+- All v3 work in `clasp-dev/` only. `clasp-live/` untouched.
+- `promote_to_live.sh` NOT run.
+- Embeddings live on DEV sheet only.
+- v3 dispatcher branch placed before v2.2 (explicit-version-wins ordering).
+- `clasp-dev/` placed under git this session — first time the folder has version control.
+
+### Stopped at
+- Awaiting Sumit's v3 disposition decision (A / B / C). No further engine work until that's decided.
+
+
+## Session — 2026-05-07 — Brief 4: Sheet ID + deployment hygiene + LIVE API_URL leak fix
+
+**Outcome:** Customer signup/save/quote-log leak to DEV Sheet (open since 2026-05-06 19:17) is closed. Verified end-to-end by smoketest signup landing in LIVE Users, absent from DEV Users.
+
+### What was changed
+- **Phase 1 audit** (read-only): `AUDIT_2026-05-07.md`, `RECONCILE_2026-05-07.md`, `CLEANUP_2026-05-07.md`. Bucket A=0 (no LIVE-app→DEV-Sheet violations); Bucket F=0 (no 5th unknown Sheet ID); 9 `_OLD` (`1cdI1Gz…`) refs in active code; 2 LIVE HTML deployment-ID violations.
+- **Bucket B routing (8 in-place SPREADSHEET_ID swaps + 1 file deletion):**
+  - `cross_reference.py:24` + `build_city_intelligence.py:36` → LIVE
+  - `test_intelligence.py:26` + `dev-appscript/{build_experience_ids,dump_experience_review,audit_remaining,build_tier_classification,cluster_experiences}.py` → DEV
+  - `dev-appscript/build_city_intelligence.py` deleted (duplicate)
+- **Cosmetic:** HTML header comments + `CLAUDE.md` DEV Sheet ID + `CLAUDE.md` DEV deploy ID corrected.
+- **Bucket C — LIVE HTML API_URL fix:** initial promote (`b72e2d1`) hit `promote_to_live.sh` URL-detection bug — script's grep+sort+head heuristic captured a truncated 12-char comment fragment and silently sed-swapped a non-existent string in LIVE HTML. Fix-forward via direct sed (`8dd7e34`) corrected `index.html` and `index_fit.tripstore.html` L1471 to `LIVE_DEPLOY_ID` (`AKfycbwP9KQH…`).
+- **clasp-live deployments:** `LIVE_DEPLOY_ID` @78 + `LIVE_BF_DEPLOY_ID` @79 ("promote 2026-05-07_1635"). Only functional `.gs` change: `ItineraryEngine.gs` gained `_v31DayClusters` helper from prior DEV work.
+- **GitHub Pages:** `ce60846` (housekeeping) → `b72e2d1` (promote, leak still active) → `8dd7e34` (leak closed) on `v2`.
+- **Smoke verified:** `smoketest_2026_05_07_brief4` registered 17:43:30 → row in LIVE Users (17 rows total), absent from DEV Users (16). Leak fully closed.
+
+### Discoveries / lessons
+- **`promote_to_live.sh` URL-detection heuristic is broken** (lines 113–128). `grep -oE 'AKfycb[A-Za-z0-9_-]+' | sort -u | head -1` truncates on `.` (HTML comment ellipsis like `prev pinned @5 AKfycbwRr9k5...)`); truncated fragments may sort alphabetically before the actual full URL. Fix sketch: anchor regex to `macros/s/AKfycb[A-Za-z0-9_-]+/exec`. **Severity: silent customer-visible failure.** Until fixed, every promote risks the same leak.
+- **Pipeline.gs in `~/Desktop/Itinerary-Create/` is part of the pre-push validation chain** (read by `check_pipeline.py` GUARD 6). 4 orphan `.gs` files + 2 validator scripts in that folder are pre-clasp-split mirrors. Cleanup deferred to a session that audits all 6 together.
+- **Bucket A=0 — Rule 2 already complies in clasp-live.** All `openById()` go to `LIVE_SHEET_ID`. `DEV_SHEET_ID` constant at L1745 is dead code. `_pipeline_map.md` rumour about `getSightseeingForCity`/`getIntelligenceForRoute`/`getSwissPassOptions` reading DEV Sheet was out of date.
+- **`Sightseeing` migration (TRUTH.md UNRESOLVED BLOCKERS row 5) silently resolved.** LIVE's `Sightseeing_v2` tab no longer exists; legacy `Sightseeing` carries the 15-col schema (1655 rows). Pipeline.gs writes and Code.gs reads agree on `'Sightseeing'`. Mark blocker resolved in TRUTH.md.
+- **2 unknown DEV-style deployment IDs found** but not load-bearing: `AKfycbz3dpvT…` (DEV HTML L6 stale comment) + `AKfycbwI0EK…` (was CLAUDE.md L38, now removed).
+
+### Pending
+1. **Sumit-manual:** delete `smoketest_2026_05_07_brief4` from LIVE Users; revoke service-account write on `_OLD` Sheet; confirm Drive rename to `_OLD_ARCHIVED_2026_05_07_DO_NOT_USE`.
+2. `promote_to_live.sh` URL-regex patch + unit test (high priority — blocks safe future promotes).
+3. Orphan cleanup session: 4 `.gs` + 2 validator scripts in `Itinerary-Create/`.
+4. DEV deployment hygiene (`DEV_DEPLOY_ID` auth-required vs anonymous).
+5. Cosmetic: stale `AKfycbz3dpvT…` line in DEV HTML; "DEV FILE" misleading header in LIVE HTML.
+
+### Stopped at
+- Brief 4 complete. Holding for next instruction.
+
+
+## Session — 2026-05-07 evening — Brief 6 series: hygiene + tooling cleanup
+
+**Outcome:** All 5 sub-briefs (6A→6E) landed cleanly. Customer impact: zero. Repo + tooling are in their cleanest state since the clasp split.
+
+### Brief 6A — `promote_to_live.sh` URL-detection heuristic fixed
+- L113-128 (broken `grep + sort + head` heuristic) replaced with hardened `extract_api_deploy_id()` helper: anchored to `^const API_URL =` line, requires deployment ID ≥40 chars after `AKfycb`, fail-loud on 0/2+ matches, post-swap verification.
+- 4 dry-run tests passed (today's bug repro, no-op match, zero matches, two matches).
+- Backup: `~/Desktop/tripstore-pipeline/promote_to_live.sh.backup_2026-05-07` (220 lines, original buggy version).
+- Patched script: 261 lines, `bash -n` clean.
+
+### Brief 6B — Apps Script deployments cull
+- `~/Desktop/tripstore-pipeline/DEPLOYMENTS_AUDIT_2026-05-07.md` produced (13 deployment inventory + Sumit-side delete checklist).
+- Sumit archived 7 deployments via Apps Script UI: 6 LIVE (`AKfycbyzjC… @14`, `AKfycbwsHh… @4`, `AKfycbyEKH… @43 "Phase 8 launch"`, `AKfycby8KK… @8 "Updated_31 Mar"`, `AKfycbz2zQ… @12`, `AKfycbxfFT… @3`) + 1 DEV (`AKfycbwRr9k5… @17 "Step 7 wallet column"`).
+- 8th item (LIVE `AKfycbxtpC… @HEAD`) is un-archivable by Apps Script design — @HEAD entries are auto-generated and don't appear in Manage Deployments UI. Same for DEV's `AKfycbzFTBG… @HEAD` (`DEV_DEPLOY_ID`, intentionally KEPT).
+- Final state: LIVE script 3 entries (un-archivable @HEAD + LIVE_DEPLOY_ID @78 + LIVE_BF_DEPLOY_ID @79); DEV script 2 entries (un-archivable @HEAD + DEV_PINNED_DEPLOY_ID @30).
+
+### Brief 6C — `.deployment_ids` documents reality + `dev_push.sh` wrapper
+- `.deployment_ids` rewritten with 4 entries (added `DEV_PINNED_DEPLOY_ID=AKfycbxrC4tULOl…` documenting what DEV HTML actually reads). Old `DEV_DEPLOY_ID` value preserved verbatim.
+- New `~/Desktop/tripstore-pipeline/dev_push.sh` (53 lines, executable). Wraps `clasp push -f` + `clasp deploy --deploymentId DEV_PINNED_DEPLOY_ID`. Pre-push sanity check warns on DEV HTML drift; post-push HTML reminder.
+- `~/Desktop/Itinerary-Create/CLAUDE.md` gained "## DEV deployment workflow" section. Same commit folded in 2 stale-CLAUDE.md fixes from Brief 4 (DEV Sheet ID + DEV API URL).
+- Committed at `182b8c5` "docs: fix stale deployment ID + Sheet ID, add DEV deployment workflow". Pushed `8dd7e34..182b8c5`.
+- Backup: `~/Desktop/tripstore-pipeline/.deployment_ids.backup_2026-05-07` (546 bytes).
+
+### Brief 6D — 4 orphan `.gs` archived + validator rewired + Hotels.Meals schema drift caught
+- Archived to `~/Desktop/Itinerary-Create/_archived_orphans_2026-05-07/`: Pipeline.gs (61 KB), Automation.gs (28 KB), Code.gs (35 KB), Quote_Intelligence.gs (29 KB).
+- `check_pipeline.py` rewired to read canonical `clasp-live/` (Option α — single ROOT path swap + fail-loud check + Automation.gs graceful skip).
+- **Caught real schema drift on first run.** clasp-live/Pipeline.gs HC.TOTAL=26, but `KNOWN_HEADERS['Hotels']` had 25 entries. Investigation: `'Meals'` column added at position 7 (between 'Room Type' and 'Jan'). One-line fix to validator. Sister tabs (SC/TC/XC) all aligned — only Hotels had drifted.
+- Committed at `bbf002b` "cleanup: archive 4 orphan .gs files + update validator to clasp-live, fold SESSIONS.md update". Pushed `182b8c5..bbf002b`.
+- Backup: `~/Desktop/Itinerary-Create/check_pipeline.py.backup_2026-05-07` (256 lines).
+
+### Brief 6E — last 2 orphan `.gs` + 3 untracked artifacts cleaned up
+- 2 more orphans archived: `Temp.gs` (3.4 KB, single-fn pre-clasp version), `Wallet.gs` (12 KB, pre-cap-removal stale).
+- 3 untracked artifacts moved to `~/Desktop/notes/`: `CLAUDE_CODE_BRIEF_NewUI.md` (7 KB), `experience_id_review.md` (95 KB), `day_plans_lookup.json` (128 KB — canonical lives at `~/Desktop/tripstore-pipeline/dev-appscript/day_plans_lookup.json`).
+- Committed at `c77ce2e` "cleanup: archive last 2 orphan .gs files + mv untracked notes/artifacts out of repo". Pushed `bbf002b..c77ce2e`.
+
+### Discoveries / lessons
+- **Apps Script @HEAD deployments are un-archivable by design.** They don't appear in the Manage Deployments UI; only `clasp deployments` shows them. Treat them as expected noise — they're auto-regenerated and not pinnable for customer URLs.
+- **Validator silence is more dangerous than validator failure.** check_pipeline.py was passing for months by validating its own outdated companion file (Itinerary-Create/Pipeline.gs which co-evolved with the validator). Pointing it at canonical clasp-live caught the Hotels.Meals drift immediately. Lesson: a passing validator that validates a stale mirror is a placebo.
+- **Brief 4's "deleting Pipeline.gs broke pre-push hook" incident had a deeper cause than identified.** The fix wasn't "restore Pipeline.gs"; it was "rewire the validator to read canonical code." Brief 6D handled the real fix.
+- **promote_to_live.sh's URL-preservation logic was structurally fragile.** A grep regex stopping at `.` in HTML comments combined with alphabetical sort created a silent data-correctness failure (today's leak). The fix anchors the regex to the actual `const API_URL =` line and verifies the post-swap result. Generalisable: any text-extraction heuristic operating on free-form HTML/JS comments should be anchored to a known structural element, not just regex-matched anywhere in the file.
+
+### Stopped at
+- Brief 6 series complete. Bug #7 (date edit) and Bug #8 (GYG/Viator links) are next session targets — verification report already in hand from Brief 5A. Holding.
+
+
+## Session — 2026-05-08 13:16–14:00 — Brief 1A: Coverage Dashboard → LIVE (HTML-only)
+
+**Outcome:** Coverage Dashboard tab is no longer a placeholder. Live for ADMIN / MANAGER / DATA_MANAGER on fit.tripstoreholidays.com.
+
+### What was built / changed
+- **`dev/index_fit.tripstore.DEV.html`** — `tab-coverage` stub (6 lines, "Coverage Dashboard content coming in next session.") replaced with full content from `~/Desktop/tripstore-pipeline/coverage_dashboard.html`. File grew 392,908 → 829,434 bytes (8,063 lines).
+- **`/tmp/inject_coverage.py`** — one-shot scoping script. Reads `coverage_dashboard.html`, renames all 17 `--xxx` CSS vars to `--cov-xxx` (defs + var() refs), prefixes every CSS selector with `.coverage-dash` ancestor (handles `:root`, `body`, `*`, comma-separated lists, nested `@media`/`@supports`; preserves `@keyframes`/`@font-face` unscoped per spec), wraps body in `<div class="coverage-dash">`. Output `/tmp/coverage_block.html` then `python3 -c` injection into DEV HTML.
+- **3 manual JS scope patches** (post-injection): `document.querySelectorAll('.tab')` × 2 + `document.querySelectorAll('.view-pane')` × 1 → `.coverage-dash .tab/.view-pane`. Without these, `bindTabs()` would have hijacked the host's 7 unrelated `.tab` elements.
+
+### Promotion
+- `bash ~/Desktop/tripstore-pipeline/promote_to_live.sh` (auto-confirmed via `echo yes |`).
+- All 7 `.gs` files reported **NO CHANGE** (HTML-only promote).
+- LIVE Apps Script redeployed: `LIVE_DEPLOY_ID` @78→@82, `LIVE_BF_DEPLOY_ID` @79→@83 ("promote 2026-05-08_1341").
+- HTML promote: DEV → `index_fit.tripstore.html` + mirrored to `index.html`. **New URL-preservation helper from Brief 6A worked correctly** — verified LIVE HTML still pinned at `AKfycbwP9KQH…` post-swap (the previous broken heuristic would have leaked DEV's deployment ID). Phase 8 hide-CSS re-injected automatically.
+- Local commit `aa2fee7`. `git push origin v2` rejected — remote had `7645298` (daily auto-review bot) ahead. Stashed dirty SESSIONS.md (pre-existing Brief 6 edits), `git pull --rebase origin v2` → rebased commit `ae5b1c9`, push clean. Stash popped, SESSIONS.md back to dirty state for separate commit.
+- All 6 pre-push guards green. fit.tripstoreholidays.com last-modified 08:14:17 GMT. `curl -s` confirms 120 markers (EMBEDDED_REPORT + .coverage-dash + --cov-cream).
+
+### Verification
+- 0 unprefixed `--xxx` declarations or `var(--xxx)` refs remain in coverage CSS post-rename.
+- 0 unscoped top-level CSS selectors after the scoping pass.
+- `id="tab-coverage"` count = 1; 13 dashboard IDs (meta-date, stats-grid, gaps-chart, priority-tbody, detail-panel, matrix-tbody, matrix-search, matrix-sort, all-search, all-cities-tbody, alert-title, alert-sub, meta-tours, lead-alert) all unique vs host.
+- 4 `data-view` attrs all live in injected block. No host clash on `.tab` (host has 7 class instances but 0 CSS rules for `.tab`).
+- LIVE smoke (Sumit, post-promote): ADMIN / MANAGER / DATA_MANAGER see Coverage tab and dashboard renders cleanly; AGENT does not. Other tabs continue working. No console errors.
+
+### Discoveries / lessons
+- **CSS-var rename approach is the safest scoping pattern when host shares variable names.** 3 actual clashes (`--cream`, `--ink`, `--red`) — host versions and coverage versions had different hex values, so unscoped vars would have silently shifted dashboard colours. Renaming all 17 to `--cov-*` is overkill defensively but cheap, and removes the question entirely.
+- **Coverage dashboard is fully self-contained — no `fetch()`, no `API_URL`, no `google.script.run`.** Embedded `REPORT_DATA` snapshot dated 2026-05-03T17:03:58Z (4,541 tours, 114 cities). For "live" data the snapshot needs a regenerator script — out of scope for 1A.
+- **`bindTabs()` wired event listeners on `document.querySelectorAll('.tab')` globally.** Host has 7 `.tab` elements (no styles, just classnames). Unscoped, every host `.tab` would have gained a listener that called `bindTabs`'s handler, blowing up on `t.dataset.view` being undefined. Caught + patched before injection landed.
+- **The 6A URL-preservation fix paid off immediately on its second real promote.** Today's promote went through the new anchored-regex helper without drama; the previous (5/7) leak that took manual sed to fix would have re-fired here.
+
+### Pending
+- Bug #7 (date edit on loaded itinerary) + Bug #8 (GYG/Viator links not returned by `getSights`) — still next-up per Brief 5A.
+- Coverage dashboard data freshness: build a regenerator script to refresh `EMBEDDED_REPORT` from current Sheet on a cadence (manual rerun is fine for now).
+- Sumit-manual: delete `smoketest_2026_05_07_brief4` row from LIVE Users (long-pending from Brief 4); revoke service-account write on `_OLD` Sheet; re-protect LIVE Quote_Log + Saved_Itineraries with service-account whitelisted (long-pending from Step 3/5).
+- The pre-existing dirty `SESSIONS.md` in `~/Desktop/Itinerary-Create/` (Brief 6 series session-end update from 2026-05-07 evening) was stashed during the rebase and restored — still uncommitted. Decide separately whether to commit that block forward.
+
+### Backups
+- `~/Desktop/Itinerary-Create/dev/index_fit.tripstore.DEV.html.pre_1A_131609.bak`
+- `~/Desktop/tripstore-pipeline/clasp-live.backup_20260508_133937/`
+
+### Stopped at
+- Brief 1A complete and visible to ADMIN/MANAGER/DATA_MANAGER on fit.tripstoreholidays.com. Holding.
+
+
+## Session — 2026-05-08 14:00–17:00 — Briefs 2A → 2C: tag taxonomy noise fixes + shared tagger + dashboard refresh
+
+**Outcome:** All 5 noise issues fixed at code level. Live `Sightseeing` tab fully retagged (twice — first 1593 rows, then 626 deltas after taxonomy rebuild). Coverage Dashboard now serves a 2026-05-08 snapshot from a freshly rebuilt taxonomy. xlsx dependency in `12files/` is dead (gspread switch landed in both `coverage_auditor.py` and `build_tag_taxonomy.py`). Tagger logic deduplicated into a shared `tagger.py` module — three callers were carrying triplicate copies, now zero.
+
+### What was built / changed in `12files/`
+- **`tagger.py`** (new, 256 lines) — single source of truth for tagging. Carries Brief 2A Fixes 1-5, Brief 2B Option B suffix-strip, and Brief 2C `EXTRA_KEYWORDS` (escape-room, immersive, comedy-show, nightlife, simulator, sports-event, ski, adventure, cooking-class, gaming, adult-only, disney). Auto-merges EXTRA_KEYWORDS into taxonomy at `load_taxonomy()` time so they apply across all callers without rebuild.
+- **`build_tag_taxonomy.py`** — apostrophe-collapse in `norm_name()`, foreign noise added to `GENERIC_TAG_TOKENS`, `_hr_to_tag` floor at 0.75h, `SUBSUMING_UNIGRAMS` set for landmark over-split. xlsx loader replaced with gspread reader over 5 source tabs + Day_Plans_Lookup. Old MASTER_XLSX constant removed.
+- **`retag_sightseeing.py`** — refactored to import from `tagger.py` (320 → 131 lines).
+- **`retag_live.py`** — refactored to import from `tagger.py` (332 → 178 lines). New file built earlier in 2B.
+- **`coverage_auditor.py`** — refactored to import from `tagger.py`; xlsx loader replaced with gspread reader over `Sightseeing` + `DONE_Sightseeing` + `Day_Plans_Lookup`. Old MASTER_XLSX constant + openpyxl import removed.
+- **`tag_taxonomy.json`** — rebuilt against LIVE (5 source tabs + Day_Plans_Lookup). Backup at `tag_taxonomy.json.pre_2A_152244.bak`.
+- **`coverage_report.json` + `.md`** — regenerated 2026-05-08 10:53Z (2,920 tours / 111 cities / 130 audits).
+- **Backups:** `build_tag_taxonomy.py.pre_2A_152244.bak` + `tag_taxonomy.json.pre_2A_152244.bak`.
+
+### LIVE writes
+- **Sheet `Sightseeing` col K (Attraction Tags):** two retag passes via `retag_live.py`.
+  - First pass (Brief 2B, with old taxonomy + Option B): 1,593/1,605 rows updated, 0 errors.
+  - Second pass (Brief 2C, after taxonomy rebuild + EXTRA_KEYWORDS merge): 626/1,605 rows updated, 0 errors.
+- **HTML promote (Brief 2C Step 8):** `dev/index_fit.tripstore.DEV.html` + `coverage_dashboard.html` template received fresh `EMBEDDED_REPORT` (368 KB JSON inline). `bash promote_to_live.sh` ran clean. All 7 .gs NO CHANGE. LIVE Apps Script `LIVE_DEPLOY_ID` @82→@84, `LIVE_BF_DEPLOY_ID` @83→@85. Commit `be43215` on `v2`. fit.tripstoreholidays.com last-modified 2026-05-08 11:01:39 GMT.
+- **End-to-end verified:** `curl -s` of LIVE URL returns dashboard with `tours_analyzed: 2920`, `cities_audited: 111`, `generated_at: 2026-05-08T10:53:41Z`.
+
+### Discoveries / lessons
+- **Triplicated tagger logic was a real maintainability landmine.** Brief 2A fixed `_hr_to_tag` and `detect_keyword_tags` in two of three places; coverage_auditor.py carried stale copies that would have re-emitted `1hr` artifacts and `-subject`/`-format`/`-mode` malformed tags on every audit run. Brief 2C unified them. New rule: any fix to tagger logic goes in `tagger.py` only.
+- **`tag_to_keywords` had a long-standing prefix-as-suffix bug.** 12 keys like `subject:underground-subject`, `format:guided-tour-format`, `mode:hot-air-balloon-mode` were emitting tags with the dimension suffix baked in. Option B strip in `detect_keyword_tags` is a defensive fix at the consumer; the upstream key-constructor in `build_tag_taxonomy.py` still produces them. Patching the constructor too is a future cleanup item — the runtime stripping makes it cosmetic.
+- **`legends-theme` looks like the bug above but isn't.** It's a legitimate Antalya attraction bigram from "Land of Legends Theme Park" tour names — it's an attraction-vocab entry, not a `theme:`-dimension keyword leak. Distinction matters when grepping for malformed tags.
+- **`city` is leaking as a top-emitted tag.** Post-rebuild, `city` shows up 95× as the #1 attraction tag — coming from "Paris City Tour"-style names. Should be added to `STOPWORDS` in the next noise-fix pass; not blocking for current dashboard refresh.
+- **27 cities have <5 attraction tags including 2 with junk in the City column** — `San Francisco: Muir Woods... | GetYourGuide` (tour name in city column) and `https://www.getyourguide.com/...` (URL in city column). Source-data hygiene issue; flag for sheet-side cleanup.
+- **`Sightseeing_LEGACY` (2,114r) and `Copy of Sightseeing_v2` (2,329r) tabs surfaced** during Brief 2C tab audit — neither is in TRUTH.md or DECISIONS.md. Likely Drive housekeeping debt. Excluded from corpus per Decision B; logged as UNRESOLVED BLOCKERS rows 10 + 11 in TRUTH.md for future cleanup.
+- **CDN propagation took ~30 sec** between push and `last-modified` flip for fit.tripstoreholidays.com (verified via `until ... do sleep` loop). Earlier briefs assumed up to 2-3 min — actual is much faster.
+
+### Pending follow-ups
+- Patch `build_tag_taxonomy.py`'s key constructor to stop emitting `dimension:tag-dimension` malformed keys.
+- Add `city` and a few siblings to STOPWORDS in next noise-fix pass.
+- Sheet-side cleanup: junk City-column values flagged in audit; Sumit-side decisions on `Sightseeing_LEGACY` and `Copy of Sightseeing_v2` (archive vs delete).
+- Carryover from prior sessions: Bug #7 (date edit), Bug #8 (GYG/Viator links), v3.1 LIVE promotion, Anthropic API key rotation.
+
+### Backups
+- `~/Desktop/tripstore-pipeline/clasp-live.backup_20260508_163029/`
+- `~/Desktop/tripstore-pipeline/12files/{build_tag_taxonomy.py,tag_taxonomy.json}.pre_2A_152244.bak`
+
+### Stopped at
+- Brief 2C series complete and live. Holding for next instruction.
+
+
+## Session — 2026-05-08 evening → 2026-05-09 ~02:30 — Briefs 2I + 2J: V3.1 dedup overhaul
+
+**Outcome:** Versailles-twice customer bug root-caused and fixed. Two-layer dedup now in place — per-city cluster lock (LIVE @92/@93) plus per-city canonical-landmark lock (DEV-only, held). T1 landmark repeats: 18/18 PASS on DEV harness, every customer-reported class of duplicate cleared.
+
+### What was built / changed in `clasp-dev/ItineraryEngine.gs`
+
+**Brief 2I (shipped to LIVE):**
+- `_v31CityClusters(tourPicks, excludePickIdx, ctx)` — sibling to `_v31DayClusters`, walks all city picks (no day filter) to compute the set of cluster IDs already in use.
+- Per-city cluster check added at 3 sites: picker cascade in `pickTours_byBucket` (uses existing `usedClusterCity[c][cid]` counter as lock), `tryAddTour` (cascade backfill), `tryTourUpgrade` (cascade upgrade — uses cityClustersExclCur to allow same-cluster swap of cur).
+- `_v31ClusterIdOf` reordered to prefer `ctx.nameToCluster` lookup over `tour._clusterId`. The latter is set via `Master_Row_Index` from Sightseeing_Clusters tab — which turned out to be the row index in `Embeddings_Sightseeing` tab, NOT `Sightseeing` master tab → off-by-N → scrambled `_clusterId` values across tours. Name-keyed lookup is the source of truth.
+- `getMasterClusters_v3` + `getNameToClusterMap_v3` accept either `Sightseeing_Clusters` (LIVE post-2F rename) or `Sightseeing_v2_Clusters` (DEV legacy from 2E B2). DEV testing now meaningful — previously the cluster map loaded empty on DEV because the engine looked only for the LIVE name.
+
+**Brief 2J (DEV-only, NOT promoted):**
+- New sheet tab `Canonical_Landmarks` (City | Keyword | Canonical_ID): 60 rows seeded across 17 cities. Multiple keywords can share a canonical (e.g. `parthenon` and `acropolis museum` both → `ATHENS_ACROPOLIS`).
+- Engine helpers: `_loadCanonicalLandmarks_(ss)` (returns Map<city, [{keyword, canonicalId}]>), `_v31LandmarkLocked_(name, city, used, map)` (substring check; returns true if any keyword in name maps to a canonical already in `used[city]`), `_v31RecordLandmark_(name, city, used, map)` (mark all canonicals hit by this pick).
+- Wired at same 3 sites as 2I. tryTourUpgrade rebuilds `usedCanonicals[c]` from current `tourPicks` after each successful swap (since cur is replaced by t — surgical removal of cur's contributions and addition of t's would be more efficient but error-prone).
+- `pickTours_byBucket` returns `usedCanonicals` so orchestrator can seed `ctx.usedCanonicals` for the cascade pass. `landmarkMap` loaded once and threaded through.
+
+### LIVE writes (during this session)
+- `Canonical_Landmarks` tab created on LIVE Sheet `1U3f6Ph…` (60 rows, header + 59 data).
+- LIVE Apps Script: `LIVE_DEPLOY_ID` @90→@92, `LIVE_BF_DEPLOY_ID` @91→@93 (Brief 2I + a dev push of 2J was made earlier as @94→@90 BF…). Per `clasp-live` is on @92/@93 (2I final). 2J in `clasp-dev` only — not promoted.
+- DEV Apps Script (`1Mr-dMvu…`): pushed multiple times during 2I + 2J iteration (DEV @40 → @43 → newer 2J variants). Latest DEV deploy is the 2J build.
+
+### Discoveries / lessons
+- **Per-day cluster cap was a placebo on DEV for months.** The cluster tab had been renamed `Sightseeing_v2_Clusters → Sightseeing_Clusters` on LIVE during 2F but DEV's tab kept the legacy name. Engine code only looked for `Sightseeing_Clusters` → got empty map on DEV → all cluster checks silently no-op'd. Brief 2E B2 testing thought the cap was working; it was just not running. Tab-name fallback in 2I closes this loop.
+- **`Master_Row_Index` is row-in-Embeddings_Sightseeing, not row-in-Sightseeing.** The `_bucket_compute_step1.py` script enumerates the Embeddings tab and writes that row number. The engine's `getMasterClusters_v3` treats it as offset into `sightsMaster` (which comes from `Sightseeing` tab). Two different orderings + different row counts → systematic mis-assignment of `_clusterId` to wrong master tours. Name-keyed fallback is the only correct path. Future: rebuild `_bucket_compute_step1.py` to write the correct master-tab row index, OR drop masterIdx entirely (downstream code can use name-keyed lookup).
+- **The cluster system isn't always wrong about splits.** Athens Acropolis is genuinely split into 3 clusters (Athens_1 ticket-only, Athens_2 guided museum, Athens_3 private) because they're different products. Brief 2J handles this by making the editorial layer (`Canonical_Landmarks`) claim them all as ATHENS_ACROPOLIS regardless of cluster — shifting the dedup decision from data-driven to editorial.
+- **Substring landmark detection is too greedy at the margins.** Disneyland Express Shuttle's name "...from Eiffel Tower Area Pickup" claims PARIS_EIFFEL canonical because it contains "eiffel". This blocks the real Eiffel Summit tour. Word-boundary matching with first-N-chars scope (subject vs descriptive text) would help. Held LIVE promote pending this decision.
+
+### Backups
+- `~/Desktop/tripstore-pipeline/clasp-dev/_backups/ItineraryEngine.gs.pre_2I_233004.bak`
+- `~/Desktop/tripstore-pipeline/clasp-dev/_backups/ItineraryEngine.gs.pre_2J_003847.bak`
+- `~/Desktop/tripstore-pipeline/clasp-live.backup_20260509_*` (from 2I promote)
+
+### Pending
+- **2J LIVE promote decision** — refine substring-match (b/c) or accept conservative-block (a). Currently the Disneyland Shuttle would consume PARIS_EIFFEL and block Eiffel Summit on Paris itineraries.
+- **Master_Row_Index correction** — long-term fix in `_bucket_compute_step1.py`. Currently masked by name-keyed fallback so not blocking.
+- **Sightseeing_v2_Clusters cleanup** — DEV has the legacy tab AND now also has Canonical_Landmarks. Eventually rename DEV's `Sightseeing_v2_Clusters` → `Sightseeing_Clusters` to match LIVE convention; remove the engine-side fallback.
+- **Carry-overs:** Bug #7 (date edit on loaded itinerary), Bug #8 (GYG/Viator links not returned by getSights). Sumit-manual: smoketest_2026_05_07_brief4 row deletion from LIVE Users; service-account write revoke on _OLD Sheet; protect LIVE Quote_Log + Saved_Itineraries.
+
+### Stopped at
+- 2J built and verified on DEV. LIVE has 2I (@92/@93). Holding for substring-match decision.
+
+
+## Session — 2026-05-09 (PM) — Briefs 2K + 2L: Canonical_ID population + (canonical, day_slot) dedup wired into v3.1
+
+**Outcome:** Sightseeing master gained 4 new columns (P–S: Canonical_ID, Day_Slot, Duration, Tour_Type) populated for all 1,602 LIVE rows via a two-tier classifier (Claude API for landmarks, col-K tags for the rest). Engine-side, v3.1 picker gained a `(canonical_id, day_slot)` dedup gate (Brief 2L) wired at all 3 pick sites, pushed to DEV @47. DEV 60-city sweep dropped cross-cluster repeats 18 → 0 (target was <5). LIVE promote HELD on a Paris-luxury-7N regression (-7.8pp util).
+
+### Brief 2K — populate Canonical_ID + 3 dimension cols (LIVE Sightseeing)
+- New script `assign_canonical_ids.py` (two-tier): Claude API (`claude-sonnet-4-6`) for the ~17-city landmark set; col-K tag-stream fallback for the long tail. Writes col P (Canonical_ID), Q (Day_Slot), R (Duration), S (Tour_Type).
+- 50-row spot check (v1, Claude-only): 0 errors, 24 distinct IDs — but weak tag-stream IDs flagged on follow-up audit. Held for v2 redesign.
+- 50-row spot check (v2, two-tier): 0 errors, 0 `EXPERIENCE` placeholder, 0 duration leaks. Approved → full run.
+- Full run: 1,602 rows written. Post-run normalization pass had a `_TOWER$` regex bug that incorrectly collapsed 7 non-Paris tower IDs (Belém, Pisa, etc.); rolled back and rerun cleanly.
+- Final state on LIVE: col P populated with **1,163 distinct Canonical_IDs**, 0 `EXPERIENCE`, 0 duration leaks. Cols Q/R/S also populated.
+- Old col S/T content (legacy junk) noted as housekeeping debt — separate pass.
+
+### Brief 2L — wire (Canonical_ID, Day_Slot) dedup into v3.1 picker (DEV @47, HELD for LIVE)
+- New per-quote tracker `usedCanonicalSlots[city][canonical|slot]`; engine helper `_v31CanonSlotLocked_` rejects if pair already claimed in same city.
+- Wired at all 3 v3.1 pick sites (bucket cascade, `tryAddTour`, `tryTourUpgrade`). All gated on `ctx.bucketAware` so v2.2 byte-equivalent. tryTourUpgrade refresh rebuilds the tracker post-swap.
+- Pushed to DEV via `dev_push.sh "Brief 2L"` → DEV pinned @47.
+- **DEV 60-city sweep results (pre-2L LIVE vs post-2L DEV):**
+
+| Metric | Pre-2L (LIVE) | Post-2L (DEV) |
+|--------|---------------|---------------|
+| Cities OK | 55/60 | 56/60 |
+| Total tours picked | 380 | 351 |
+| OLD keyword repeats | 4 | 0 |
+| CAN repeats (canonical-only) | 21 | 3 |
+| CAN+SLOT repeats | 18 | **0 ✓** |
+
+- The 3 remaining CAN-only flags (Lisbon, Budapest, Chamonix) are same-canonical-different-day_slot pairs — exactly what 2L's design intentionally permits.
+- 4 timeouts (Interlaken, Split, Gothenburg, Madeira) — Apps Script 60s ceiling, pre-existing, not 2L-caused.
+
+- **Adversarial harness (3 routes, 76s wall):**
+
+| Route | v2.2 util | v3.1+2L util | Δ tours | Verdict |
+|-------|-----------|--------------|---------|---------|
+| A — Paris 7N luxury ₹600K | 85.0% | 77.2% | +1 (+1 empty day) | v2.2 better (-7.8pp) |
+| B — Berlin/Prague/Vienna 12N ₹350K | 99.7% | 99.3% | +8 | v3.1 better |
+| C — Rome 5N budget ₹180K | 99.6% | 96.5% | +2 | v3.1 better |
+
+### Discoveries / lessons
+- The two-tier classifier (Claude for landmarks, tags for long tail) is the right shape: pure-Claude v1 had no anchor for non-landmark tours; pure-tag-stream had weak IDs. Two-tier passes both clean.
+- Post-normalize regex `_TOWER$` was too broad — caught Belém / Pisa / Galata. Lesson: any global canonical normalizer must be tested against the full distinct-ID set before write, not after.
+- B + C routes confirm 2L isn't blocking — it's letting the picker fill empty days the keyword-only system left open. A is the only single-city dense-luxury regression.
+
+### Backups
+- `~/Desktop/tripstore-pipeline/clasp-dev/ItineraryEngine.gs.pre_2L_*`
+- `~/Desktop/tripstore-pipeline/12files/assign_canonical_ids.py.pre_v2_*` and `.pre_TOWER_rollback_*`
+- LIVE Sightseeing col-P pre-write snapshot saved in `_2K_pre_write_backup_*.csv`
+
+### Pending
+- **2L LIVE promote HELD** pending Sumit decision on Paris 7N luxury regression. Three paths offered: (A) accept — 77.2% still above warning threshold, dedup win across 56 cities outweighs single-route 7-pt drop; (B) investigate — read `~/Desktop/Itinerary-Create/dev/V31_ADVERSARIAL_REPORT.md`, check whether 2L is double-blocking what 2I/2J already caught and reorder gates; (C) soften — make 2L non-blocking when other dedup gates already filtered.
+- User picked **(B) investigate** at session end. Specific questions queued: which Paris slots went empty post-2L; what Canonical_IDs the gate rejected; whether 2I/2J already covered those rejections; how many unique Canonical_IDs Paris has in the master (capacity check).
+- 2J substring-match aggression decision still pending from prior session.
+
+### Stopped at
+- DEV pinned @47 with 2L wired. LIVE still on 2I (@92/@93). User chose Option B; investigation queued before any LIVE promote of 2L.
+
+
+## Session — 2026-05-10 → 2026-05-11 02:30 — Briefs 2M + 2N: diversity sort, pass-2 upgrader, UC1-vs-UC2 proof, v4 engine on DEV
+
+**Outcome:** Diversity gap quantified across 5 cities (12-27% category coverage). Brief 2M Part 1 (cluster-diversity sort) shown to be a no-op against 2I and dropped. Brief 2M Part 2 (pass-2 upgrader) wired, debugged through two placement bugs, and run on a 60-city DEV matrix. UC1 algorithm (from `test_optimizer_intel.html runUltimate()` in Itinerary-Create) ran head-to-head vs current UC2 and won 14/14 with +20pp mean util. Brief 2N implemented user's 3-step spec end-to-end as a new engine variant — v4-premium and v4-balanced — pushed to DEV @54 with HTML radios wired. No LIVE promotes this session.
+
+### Diversity gap diagnostic (Paris / Budapest / Barcelona / Rome / Amsterdam, 4N each)
+
+| City | Master tours | Categories in master | Picked | Categories covered | Missed | Coverage |
+|------|--------------|----------------------|--------|--------------------|--------|----------|
+| Paris | 45 | 33 | 4 | 4 | 29 | 12% |
+| Budapest | 53 | 37 | 9 | 9 | 28 | 24% |
+| Barcelona | 51 | 37 | 10 | 10 | 27 | 27% |
+| Rome | 58 | 46 | 9 | 9 | 37 | 20% |
+| Amsterdam | 52 | 38 | 10 | 9 | 29 | 24% |
+
+Long-tail experiences are invisible. Even cities filling 9-10 slots cover only ~25% of available categories. Caveats: 4N quote has only ~11 slot capacity (~33% theoretical max), some "categories" are noise tags (`service`, `cart`, `access` → tag taxonomy cleanup is a precondition).
+
+### Brief 2M Part 1 — diversity-first cluster sort (DROPPED)
+
+- Sort change at `pickTours_byBucket` L4267: cluster ordering by (1) uncovered first, (2) Day Plans preferred among equal-coverage, (3) round-robin within bucket.
+- Pre-edit DEV baseline (Paris 4N): 11 picks / 11 categories / 85.49% util.
+- Post-edit: byte-identical picks. **Part 1 is a no-op** — Brief 2I's per-city cluster lock (L4291) already enforces 1 pick per cluster per city, so picks are already maximally cluster-diverse. The gap is at finer dimensions (canonical_id / primary_tag) and at slot capacity, not at cluster granularity.
+- Reverted L4267 to the original 4-line round-robin sort. Brief updated to document Part 1 as dropped.
+
+### Brief 2M Part 2 — pass-2 upgrader (wired, ran, then revealed picker-no-op problem)
+
+- New constants `V31_PASS2_*` and functions `_v31Pass2_*` added; wired into `computeItinerary_v31` between picker and cascade_v22.
+- First push: `pass2Log: []` for every city. Diagnostic `skip` traces added.
+- Second push: every city reports `skip: "no_picks"` — `state.tourPicks[city]` is empty when pass-2 runs. **Finding: `pickTours_byBucket` is effectively a no-op in DEV; cascade_v22 does ALL the picking.** Pass-2 was running before the actual picks existed.
+- Third push: pass-2 moved to run AFTER cascade_v22. Re-ran 60-city DEV matrix with pass-2 active and `utilBefore`/`spentBefore` exposed in `pass2Log`.
+- DEV matrix completed (60 cities, exit 0). Numbers captured in `_ab_matrix_dev_pass2.log` / `_ab_matrix_dev_raw/`.
+
+### UC1 vs UC2 head-to-head — UC1 wins 14/14
+
+- Ported `runUltimate()` JS algorithm (`~/Desktop/Itinerary-Create/test_optimizer_intel.html` L555-710) into a Python harness `_uc1_vs_uc2.py`.
+- Matrix: 14 cities × `runUltimate()` (UC1) vs current engine (UC2).
+- **UC1 wins 14/14. +20pp mean util. 10/14 cities >80%.**
+- User verdict: "Data is proven. UC1 wins 14/14." → became the basis for Brief 2N's 3-step spec.
+
+### 3-step spec iteration (Python-side validation before engine port)
+
+Multiple smoke runs (`/tmp/spec_test_v2.py`, `/tmp/final_25_test.py`, `/tmp/spec_abc.py`) testing user's spec:
+- Step 1: Day Plans freq-DESC + fuzzy match with JUNK_TAGS filter (`service, access, full, cart, ...`).
+- Step 2: fill remaining slots with diversity (3 sort variants tested: A=rating-DESC, B=canonical-only diversity, C=price-DESC, then later D=rank-hybrid).
+- Step 3: if city-util <80%, upgrade pass.
+- Cap-policy decision (fairness): UC2 results where util>95% (cap fired) re-scored as automatic SPEC win, since UC2 only "won" by overspending its city sight budget.
+- Final 25-city matrix (cap-respecting): 5/8 cities cross 80% on spec. Vienna canonical-fallback edge case noted (canonical_id empty for long tail → diversity signal disappears).
+- A/B/D head-to-head on 25 cities settled the Step 2 sort: rank-hybrid (D) and price-DESC (C) both viable — productised as v4-balanced and v4-premium.
+
+### Brief 2N — v4 engine wired into DEV (HELD, no LIVE promote)
+
+**Engine (`clasp-dev/ItineraryEngine.gs`, ~330 new lines):**
+- New constants for v4 spec (JUNK_TAGS, primary-tag helper, fuzzy match threshold).
+- 3 new step functions (`_v4Step1_dayPlansFuzzy_`, `_v4Step2_diversity_`, `_v4Step3_upgrade_`).
+- New orchestrator `computeItinerary_v4(params, step2Mode)` accepting `'price'` or `'rank_hybrid'`.
+- Dispatcher branches added: `algo === 'v4-premium' | 'v4_premium' | 'v4premium'` → `computeItinerary_v4(params, 'price')`; `'v4-balanced' | 'v4_balanced' | 'v4balanced'` → `computeItinerary_v4(params, 'rank_hybrid')`.
+- v3.1 / v3-beta-semantic / v2.2 / v1 untouched (additive change).
+
+**DEV HTML (`Itinerary-Create/dev/index_fit.tripstore.DEV.html`):**
+- 2 new algorithm radios: `algoV4Premium` (`v4-premium`), `algoV4Balanced` (`v4-balanced`). NEW badge styling matches v3.1 row.
+- `DOMContentLoaded` restore-from-localStorage updated to recognise v4-premium / v4-balanced.
+
+**DEV deploy:**
+- `bash dev_push.sh "Brief 2N v4-premium + v4-balanced (3-step spec)"` → DEV pinned deploy advanced to `@54` (deployment ID `AKfycbxrC4tULOlFLPvTIDt8HpJtmsiuueF2gurUxaoaiHQzns_fxeLyMoKP2WZrt6OhalWkPQ`).
+
+**Smoke (3 cities × 2 modes, 4N, budgetPerPerson=700K × 2 pax, city-budget=₹362,851):**
+
+| City | Algo | Tours | Trip-Util | S1 | S2 | S3 | Cats | City-Util |
+|------|------|-------|-----------|----|----|----|------|-----------|
+| Paris | v4-premium | 11 | 62.5% | 4 | 8 | 0 | 10 | 83.7% |
+| Paris | v4-balanced | 11 | 62.0% | 4 | 8 | 0 | 10 | 77.5% |
+| Amsterdam | v4-premium | 12 | 68.4% | 4 | 9 | 0 | 10 | 76.9% |
+| Amsterdam | v4-balanced | 15 | 69.3% | 4 | 11 | 0 | 13 | 78.5% |
+| Madrid | v4-premium | 8 | 55.7% | 3 | 5 | 0 | 8 | 38.5% |
+| Madrid | v4-balanced | 10 | 52.5% | 3 | 7 | 0 | 10 | 27.6% |
+
+**Verified:**
+- Both algorithms route correctly (response `algorithm` field matches).
+- `v4Log` populates with per-city S1/S2/S3 counts, budget, util.
+- S1 (Day Plans fuzzy) firing — 4 picks/day in Paris+Amsterdam, 3 in Madrid.
+- S2 firing differently per variant — Amsterdam balanced 11 vs premium 9 (matches Python validation).
+- S3 = 0 every city — city-util ≥80% trigger met, by design.
+- HTML radios surface in the algo row.
+
+**Trip-util gap explained:** v4 trip-util 62-68% vs v3.1's typical 80-85% because v4 has no cascade_v22 — it strictly respects the city sight cap. v3.1's cascade was effectively leaking the cap by spending global residual on more sights. Cap-fairness behaviour we discussed lands here as "lower-but-honest" util.
+
+**Madrid v4-balanced anomaly:** 10 picks but only 27.6% city-util — implies sub-₹10K average tour price under rank-hybrid sort. Premium got 38.5% with only 8 picks. Worth eyeballing the Madrid pick mix.
+
+### Backups (this session)
+
+- `~/Desktop/tripstore-pipeline/clasp-dev/ItineraryEngine.gs.pre_2N_20260510_224345`
+- `~/Desktop/Itinerary-Create/dev/index_fit.tripstore.DEV.pre_2N_20260510_224345.html`
+- Brief 2M intermediate backups via `dev_push.sh` (4 DEV deploys during 2M iteration).
+
+### Pending
+
+- **2N LIVE promote decision** — held pending Sumit review. Open questions: (a) is "lower-but-honest" trip-util acceptable, or does v4 need a residual-redistribution pass (a v4 cascade) for trip-util parity with v3.1; (b) investigate Madrid v4-balanced 27.6% city-util anomaly; (c) eyeball Paris pick mix for sanity.
+- **Picker (`pickTours_byBucket`) is effectively a no-op on DEV** — cascade_v22 does all picking. This is a systemic finding from 2M Part 2 diagnostics, not specific to one city. Not blocking v4 (v4 doesn't use cascade_v22) but worth a deliberate audit of v3.1's intended picker behaviour.
+- Tag taxonomy junk-word cleanup (`service`, `access`, `cart`, `full`, etc.) as precondition for any tag-axis diversity work — surfaced multiple times across this session.
+- 2J (canonical-landmark substring-match aggression) still pending from prior session.
+- Carry-overs unchanged: Bug #7 (date edit), Bug #8 (GYG/Viator links), Anthropic key rotation, GitHub PAT rotation.
+
+### Where we stopped
+
+DEV pinned @54 serving v4-premium + v4-balanced. DEV HTML has the radios. DEV vs LIVE drift on `ItineraryEngine.gs` is expected and intentional — 2N is held, awaiting your review before any promote.
+
+---
+
+## 2026-05-11 — Brief 2N + 2O LIVE promote + post-promote v4 fixes + 2O Pass B redesign
+
+### Context
+
+Brief 2N (v4 algorithms) and Brief 2O (unspent redistribution) had been built on DEV in the prior session, held pending review. Today: shipped both to LIVE, then surfaced four bugs in post-promote testing and built fixes through three additional DEV cycles. Final state: LIVE running v4 with three patches; DEV has additional 2O Pass B / Step 1 fallback held pending sign-off on a Zaanse Schans diagnosis.
+
+### Sequence
+
+**1. Initial LIVE promote (Brief 2M + 2N + 2O original):**
+- Sightseeing tab schema audit: LIVE 19 cols, DEV 11 cols (Canonical_ID/Day_Slot/Tour_Type/etc absent on DEV). DEV smoke ran with dedup degraded.
+- Mirror LIVE Sightseeing → DEV attempted, blocked by tab-level protection on Google Sheets — DEV backup saved at `_backups/DEV_Sightseeing_pre_mirror_20260511_141331.csv`, no DEV writes made.
+- `promote_to_live.sh` confirmed diff direction is DEV → LIVE (script does `diff "$dev_file" "$live_file"` → `<` = DEV, `>` = LIVE). DEV had 680 lines of BRIEF 2M that LIVE didn't → promote ADDS, no destructive drift.
+- `yes yes |` piped to handle the literal "yes" confirmation prompt (plain `yes` outputs single `y`, doesn't match).
+- Promoted LIVE @98 / LIVE_BF @99 — Brief 2M + 2N v4-premium/balanced + 2O.
+
+**2. Step 1 canonical-dedup bug found:**
+- User flagged two Disneyland-canonical tours appearing in the same LIVE quote.
+- Investigation: `fillDaysFromIntelligence_v4` (line 2050) WRITES `used.canonicals[match.canonical] = 1` after picking but NEVER reads it before. Only Step 2 and Step 3 check canonical dedup. So Step 1 + day_plans could double-pick same-canonical variants.
+- Fix: one line at line 2041 — `if (match.canonical && used.canonicals[match.canonical]) continue;` after `if (!match) continue;`.
+- DEV smoke (Paris 5N, 7N v4-premium + v4-balanced) all showed 1 Disney/trip post-fix. DEV can't prove the FIX itself because DEV has no canonical_id values, but no-crash + correct shape verified.
+- Promoted LIVE @100 / LIVE_BF @101.
+
+**3. v4 util audit on three logged quotes (Q-96078393/Q-96777163/Q-97291946):**
+- All Paris+Amsterdam 9-10N quotes, 2pax, ₹800K budget. All showed ~78% trip util. Hotel/transfer/rail near-identical across v4 vs v4-premium vs v4-balanced. Sightseeing ±₹2.5K spread.
+- Quote_Log schema (32 cols) has no per-tour breakdown column, no algorithm field — only summary totals + Pax Name string carrying the algorithm label.
+
+**4. Root cause of low v4 util — multi-step diagnosis:**
+- a. v4 reads ALL 8 LIVE-only Sightseeing columns (canonical_id, day_slot, tour_type, experience_id, etc) via `getSights` (Code.gs line 305) and uses them across the engine (30+ hits).
+- b. DEV Sightseeing is content-drifted (only 41% row overlap with LIVE) AND schema-drifted (no canonicals). Mirror blocked by protection. DEV smokes therefore measured v4 with dedup running through the name-prefix fallback path, not the experience_id path.
+- c. On the engine itself: Step 2 (`fillDifferentExperiences_v4`) had a hard `if (!t.canonical) continue;` gate that skipped every non-canonical tour. On LIVE (canonicals populated) Step 2 still skipped tours with empty canonical_id rows; on DEV (canonicals all empty) Step 2 skipped EVERYTHING. Pre-fix: Step 2 picked 1 tour/city. Post-fix: 2 tours/city.
+- d. Arrival days were over the intended 4h cap — Paris Day 0 was 4.5h (Cruise 1h + Versailles 1.5h + Golf Cart 2h). v4 had a single 10h `V4_DAY_HOURS_CAP` for all days; no special-case for Day 0.
+
+**5. Fix 1 (arrival 4h cap) + Fix 2 (canonical gate loosening):**
+- Fix 1: `var dayHoursCap = (d === 0) ? 4 : V4_DAY_HOURS_CAP;` added inside both `fillDaysFromIntelligence_v4` and `fillDifferentExperiences_v4` day loops. Per-city Day 0 = 4h max.
+- Fix 2: `if (!t.canonical) continue;` → `if (t.canonical && used.canonicals[t.canonical]) continue;` in Step 2.
+- DEV smoke Paris+Amsterdam 9N v4-premium post-fix: trip util 77.73% → 77.86% (small), Paris Day 0 4.5h → 4.0h, Step 2 picks 1 → 3 per city. Paris Day 3 still empty (budget exhausted at 94% sight cap).
+- Promoted LIVE @102 / LIVE_BF @103.
+
+**6. 78% ceiling diagnosis — `cascade_v22` analog missing from v4:**
+- Grep'd `cascade_v22` usage: called from v2.2 + v3.1 paths (lines 3298, 4499, 5254). v4 has no equivalent. Line 2396 comment: *"v4 has no cascade_v22 — Step 3 is the spec's own upgrade pass."*
+- Step 3 (`cascadeUpgrade_v4`) only does per-city same-canonical upsell, gated on `util < 80%`. Trip-level residual sits on the table.
+- 2O original was supposed to be the v4 analog but only consumed unspent SIGHT (~₹2K, since sight is saturated). Real trip residual is ~₹155K, untouched.
+
+**7. 2O retarget + Pass B insertion (DEV only):**
+- Change 1: replaced `for each city, sum unspent sight` with `var totalUnspent = state.netBudget - totalSpent(state);`. Now sees real residual.
+- Change 2 (Pass B): new pass inserted between transfer-upgrade and hotel-upgrade. For each city, for each day with hours remaining, picks from city pool (sorted price DESC, deduped by name + canonical, 4h cap on Day 0, junk-tag filter). Uses residual budget directly. Source tagged `v4_2O_passB`.
+- Change 3 (Step 1 fallback): inside `fillDaysFromIntelligence_v4`, when day_plans walk produces no pick for a day, fall back to highest-rated unused tour from master pool. Source tagged `v4_s1_fallback`.
+
+**8. DEV smoke Paris+Amsterdam 9N v4-premium post-retarget+PassB:**
+- Trip util **77.86% → 99.86%**.
+- Pass B added 5 tours, ₹127,476 spent:
+  - Paris Day 1: Moulin Rouge Cabaret (₹37,700)
+  - Paris Day 3: Golf Cart Tours (₹30,480) — Day 3 was previously empty
+  - Paris Day 4: Lunch Cruise (₹29,932)
+  - Paris Day 1: Seine River Dinner Cruise (₹25,500)
+  - Amsterdam Day 1: Art Zoo Museum (₹3,864)
+- Transfer (Pass A): 2 upgrades (Paris arrival + Amsterdam departure both Economy→Executive Sedan, ₹26,689 total).
+- Hotel (Pass C): 0 upgrades — Pass B consumed nearly all residual, only ₹961 left.
+- Side note: Amsterdam hotel came back 4★ NH Caransa ₹130K on this run vs 5★ NH Collection Barbizon Palace ₹158K on prior run — same params. `pickHotels_v2` has non-determinism (or input-sensitivity beyond what's captured in params).
+
+**9. Zaanse Schans diagnosis (in progress, not closed):**
+- User noted top-booked Amsterdam tour (Zaanse Schans) missing from picks.
+- Master sheet has 4 Zaanse variants (₹4,350 - ₹52,661), all canonical-tagged.
+- Day_Plans_Lookup has 14 Zaanse entries for Amsterdam (freq=7 for top entry on N=3 and N=5).
+- For 4N Amsterdam Day 2, rank-1 day_plans entry is "From Amsterdam: Zaanse Schans, Volendam, and Marken Day Trip - All Inclusive" — the master row is the same name MINUS " - All Inclusive". Fuzzy match likely rejecting due to suffix delta.
+- Open: pull master Duration values + V4_JUNK_TAGS contents to confirm fuzzy-match is the cause vs duration/tag rejection.
+
+### Promoted to LIVE (today)
+- @98/@99: BRIEF 2M (v3.1 pass-2) + Brief 2N (v4-premium, v4-balanced) + Brief 2O (sight-only)
+- @100/@101: Step 1 canonical dedup fix
+- @102/@103: Fix 1 (arrival 4h cap) + Fix 2 (canonical gate loosening)
+
+### NOT promoted (DEV @58, held)
+- 2O retarget (sight → trip residual)
+- 2O Pass B (residual → day-fill tour adds)
+- Step 1 master-pool fallback
+
+### Backups (this session)
+- DEV engine: pre_2O_131221, pre_step1canonfix_154243, pre_fix2canongate_172720, pre_fix1arrivalcap_*, pre_2Otripresidual_181932, pre_2OpassB_*
+- LIVE engine: clasp-live.backup_20260511_{151136, 160542, 173715}
+- DEV Sightseeing CSV: _backups/DEV_Sightseeing_pre_mirror_20260511_141331.csv
+
+### Where we stopped
+LIVE @102/@103 serving v3.1 (default) + v4-premium + v4-balanced with Step 1 canonical fix + Fix 1 + Fix 2. DEV pinned @58 holding 2O retarget + Pass B + Step 1 fallback. Last DEV smoke (Paris+Amsterdam 9N v4-premium) shows 99.86% trip util with all days filled. Zaanse Schans diagnosis pending duration + junk-tags dump before deciding on a fuzzy-match adjustment.
+
+### Pending
+- Zaanse Schans pick failure root cause (suspected fuzzy-match suffix rejection)
+- `pickHotels_v2` non-determinism on identical params
+- Promote DEV @58 (2O retarget + Pass B + Step 1 fallback) once Zaanse pinned down
+- DEV Sightseeing tab unprotect + mirror — currently DEV smoke is structurally degraded
+- Quote_Log: add `algorithm` + per-tour JSON cols for future auditability
+- Carry-overs: Bug #7 (date edit), Bug #8 (GYG/Viator links), Anthropic key rotation, GitHub PAT rotation, Madrid v4-balanced 27.6% city-util anomaly
