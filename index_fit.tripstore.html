@@ -52,43 +52,44 @@ html{height:100%;overflow:hidden;}body{height:100%;font-family:var(--sans);backg
 /* ── NAV ── */
 .ts-nav{
   height:52px;flex-shrink:0;
-  background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);
-  border-bottom:2px solid rgba(59,110,165,0.5);
-  box-shadow:0 2px 12px rgba(0,0,0,.35);
+  background:linear-gradient(135deg,#fbf7ef 0%,#f5ede0 100%);
+  border-bottom:2px solid rgba(184,92,56,0.2);
+  box-shadow:0 2px 8px rgba(184,92,56,.08);
   display:flex;align-items:center;padding:0 20px;gap:0;
   position:relative;
 }
 .ts-nav-role{
   font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;
-  color:rgba(255,255,255,.4);padding:0 16px 0 0;
-  border-right:1px solid rgba(255,255,255,.1);margin-right:4px;
+  color:#b85c38;padding:0 16px 0 0;
+  border-right:1px solid rgba(184,92,56,0.2);margin-right:4px;
   white-space:nowrap;
 }
 .ts-nav-btn{
-  color:rgba(255,255,255,.55);font-size:11px;font-weight:700;
+  color:#5c5048;font-size:11px;font-weight:700;
   padding:0 16px;height:52px;display:flex;align-items:center;
   border:none;background:none;cursor:pointer;
   border-bottom:3px solid transparent;
   letter-spacing:.4px;transition:all .2s;white-space:nowrap;
   font-family:var(--sans);
 }
-.ts-nav-btn:hover{color:rgba(255,255,255,.9);background:rgba(255,255,255,.04);}
+.ts-nav-btn:hover{color:#b85c38;background:rgba(184,92,56,0.07);}
 .ts-nav-btn.active{
-  color:#fff;border-bottom-color:var(--terra);
-  background:rgba(255,255,255,.06);
+  color:#b85c38;border-bottom-color:#b85c38;
+  background:rgba(184,92,56,0.07);
 }
 .ts-nav-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
 .ts-agent-logo{
-  width:110px;height:32px;border:1px dashed rgba(255,255,255,.25);
-  border-radius:6px;background:rgba(255,255,255,.07);
+  width:110px;height:32px;border:1px dashed rgba(184,92,56,0.2);
+  border-radius:6px;background:rgba(184,92,56,0.07);
   display:flex;align-items:center;justify-content:center;
-  font-size:9px;color:rgba(255,255,255,.3);font-weight:700;
+  font-size:9px;color:#b85c38;font-weight:700;
   text-transform:uppercase;letter-spacing:.5px;
 }
 #walletBadge{
-  cursor:pointer;background:rgba(255,255,255,.1);
-  border:1px solid rgba(255,255,255,.15);border-radius:8px;
+  cursor:pointer;background:rgba(184,92,56,0.12);
+  border:1px solid rgba(184,92,56,0.2);border-radius:8px;
   padding:5px 12px;display:none;align-items:center;gap:6px;
+  color:#b85c38;
 }
 #walletDropdown{
   display:none;position:absolute;right:20px;top:54px;
@@ -455,8 +456,9 @@ textarea.pdf-input{
   font-weight:700;font-family:var(--serif);
   font-size:12px;color:var(--ink);
   white-space:nowrap;vertical-align:top;
-  padding-top:12px;
+  padding-top:8px;
 }
+.day-row td{padding-top:6px !important;padding-bottom:4px !important;}
 .day-city-badge{
   font-size:10px;text-transform:uppercase;
   letter-spacing:.08em;color:var(--terra);font-weight:700;
@@ -468,21 +470,21 @@ textarea.pdf-input{
   font-size:12px;color:var(--terra);font-style:italic;
   padding:3px 8px;background:var(--terra-bg);
   border-left:3px solid var(--terra);border-radius:0 5px 5px 0;
-  margin-bottom:3px;
+  margin-bottom:1px;
 }
 .day-note-depart{
   font-size:12px;color:var(--sage);font-style:italic;
   padding:3px 8px;background:var(--sage-bg);
   border-left:3px solid var(--sage);border-radius:0 5px 5px 0;
-  margin-bottom:3px;
+  margin-bottom:1px;
 }
 
 /* Activity rows */
 .act-wrap{
   display:flex;align-items:center;gap:6px;
-  padding:5px 8px;border-radius:7px;
+  padding:3px 8px;border-radius:7px;
   background:var(--cream);border:1px solid var(--border);
-  margin-bottom:3px;transition:all .15s;
+  margin-bottom:1px;transition:all .15s;
 }
 .act-wrap:hover{border-color:var(--sand);}
 .act-dot{
@@ -855,15 +857,15 @@ thead{display:table-header-group;}
   <button id="navBtn-agents" class="ts-nav-btn admin-only-tab" style="display:none;" onclick="switchAdminTab('agents')">🏢 Agents</button>
   <div class="ts-nav-right">
     <div id="walletBadge" onclick="toggleWalletDropdown()">
-      <span style="color:rgba(255,255,255,.5);font-size:10px;font-weight:700;">WALLET</span>
-      <span id="walletBalanceDisplay" style="color:#4ade80;font-size:13px;font-weight:800;">₹0</span>
+      <span style="color:#b85c38;font-size:10px;font-weight:700;opacity:.7;">WALLET</span>
+      <span id="walletBalanceDisplay" style="color:#16a34a;font-size:13px;font-weight:800;">₹0</span>
     </div>
     <div id="walletDropdown">
       <div style="background:#0f172a;color:#fff;padding:12px 16px;font-size:11px;font-weight:700;">Recent Transactions</div>
       <div id="walletTxnList" style="padding:8px;max-height:250px;overflow-y:auto;font-size:11px;"></div>
     </div>
-    <span style="color:rgba(255,255,255,.4);font-size:10px;" id="navUserLabel"></span>
-    <button onclick="handleLogout()" style="font-size:9px;font-weight:700;color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);padding:4px 12px;border-radius:5px;cursor:pointer;text-transform:uppercase;font-family:var(--sans);white-space:nowrap;">Logout ⎋</button>
+    <span style="color:#8a7d72;font-size:10px;" id="navUserLabel"></span>
+    <button onclick="handleLogout()" style="font-size:9px;font-weight:700;color:#5c5048;border:1px solid rgba(184,92,56,0.2);background:rgba(184,92,56,0.07);padding:4px 12px;border-radius:5px;cursor:pointer;text-transform:uppercase;font-family:var(--sans);white-space:nowrap;">Logout ⎋</button>
   </div>
 </nav>
 
@@ -1097,7 +1099,7 @@ thead{display:table-header-group;}
       </div>
 
       <!-- SUMMARY TABLE -->
-      <div style="display:grid;grid-template-columns:1fr 1.4fr 1fr 1fr 1.2fr;border:1px solid var(--border);border-top:none;">
+      <div id="resSummaryGrid" style="display:grid;grid-template-columns:1fr 1.4fr 1fr 1.2fr;border:1px solid var(--border);border-top:none;">
         <div style="padding:12px 16px;border-right:1px solid var(--border);">
           <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--terra);margin-bottom:5px;">Name of Pax</div>
           <div id="resPaxName" style="font-size:13px;font-weight:700;color:var(--ink);">---</div>
@@ -3806,7 +3808,27 @@ async function fetchCityIntelligence(city) {
     try {
         const res  = await fetch(`${API_URL}?action=getIntelligenceForRoute&cities=${encodeURIComponent(city)}`);
         const data = await res.json();
-        if (data && data[0]) cityIntelligenceCache[key] = data[0];
+        const raw = data && (data[city] || data[Object.keys(data)[0]]);
+        if (raw && typeof raw === 'object' && !raw.error) {
+            const qc = Number(raw.quote_count) || 0;
+            cityIntelligenceCache[key] = {
+                found:                 true,
+                quoteCount:            qc,
+                tourCount:             qc,
+                avgNights:             Number(raw.suggested_nights) || 0,
+                avgBreakfastPct:       Number(raw.breakfast_included_pct) || 0,
+                avgHotelCostPerNight:  Number(raw.avg_hotel_crn) || 0,
+                avgSightseeingPerDay:  Number(raw.avg_sightseeing_per_day) || 0,
+                nextCity:              raw.next_city_suggestion || '',
+                country:               raw.country || '',
+                mostCommonCombo:       raw.most_common_combo || '',
+                budgetLow:             Number(raw.budget_low_per_adult) || 0,
+                budgetAnchor:          Number(raw.budget_anchor_per_adult) || 0,
+                budgetHigh:            Number(raw.budget_high_per_adult) || 0,
+            };
+        } else {
+            cityIntelligenceCache[key] = { found: false };
+        }
     } catch(e) { cityIntelligenceCache[key] = { found: false }; }
     renderRouteInputs();
 }
@@ -4995,24 +5017,23 @@ function renderTables() {
             // Editable day note (replaces "Free Day / Transfer" static text)
             if (!item.dayNotes) item.dayNotes = {};
             const noteVal = item.dayNotes[d] || '';
-            // Show editable note field; hide from print if empty
-            const noteField = `<div class="${!noteVal ? 'hide-if-empty' : ''}">
+            // Note + Add Tour inline on same row
+            const noteAndAdd = `<div class="day-note-row" style="display:flex;align-items:center;justify-content:flex-start;gap:16px;">
                 <textarea onchange="currentPlan[${planIdx}].dayNotes = currentPlan[${planIdx}].dayNotes||{}; currentPlan[${planIdx}].dayNotes[${d}]=this.value;"
-                    class="pdf-input w-full bg-transparent outline-none italic resize-none overflow-hidden text-slate-400"
-                    style="font-size:12px;"
+                    class="pdf-input bg-transparent outline-none italic resize-none overflow-hidden text-slate-400 ${!noteVal ? 'hide-if-empty' : ''}"
+                    style="font-size:12px;flex:0 0 auto;width:200px;min-width:160px;"
                     placeholder="Free Day / Transfer" rows="1">${noteVal}</textarea>
+                <button onclick="openAddTourDirect(${planIdx},${d},${JSON.stringify(item.city).replace(/"/g,'&quot;')},'')" class="act-add-btn no-print" style="flex-shrink:0;">+ Add tour</button>
             </div>`;
-            // + Add Tour on every day (including checkout/departure days)
-            const addBtn = `<div class="no-print mt-1"><button onclick="openAddTourDirect(${planIdx},${d},${JSON.stringify(item.city).replace(/"/g,'&quot;')},'')" class="act-add-btn">+ Add tour</button></div>`;
-            const actsMarkup = topLines + actsContent + noteField + bottomLines + addBtn;
+            const actsMarkup = topLines + actsContent + noteAndAdd + bottomLines;
 
             const _isSameDateAsPrevCheckout = isCheckinOtherCity
                 && formatDate(curDate) === formatDate(new Date(currentPlan[planIdx - 1].cout));
             const _leftCell = _isSameDateAsPrevCheckout
-                ? `<td class="day-row p-2 border" style="vertical-align:top;padding-top:12px;width:11%;">
+                ? `<td class="day-row p-2 border" style="vertical-align:top;padding-top:8px;width:11%;">
                     <span class="day-city-badge" style="margin-top:0;">${item.city}</span>
                    </td>`
-                : `<td class="day-row p-2 border" style="vertical-align:top;padding-top:12px;width:11%;">
+                : `<td class="day-row p-2 border" style="vertical-align:top;padding-top:8px;width:11%;">
                     <span style="font-family:var(--serif);font-size:13px;font-weight:700;color:var(--ink);display:block;white-space:nowrap;">${formatDate(curDate)}</span>
                     <span class="day-city-badge">${item.city}</span>
                    </td>`;
@@ -5238,6 +5259,10 @@ function calculateBudgetInvestment() {
     document.getElementById('perChildTotal').innerText = fmt(finalChildPrice);
     const _childCell = document.getElementById('perChildCostCell');
     if (_childCell) _childCell.style.display = children > 0 ? '' : 'none';
+    const _summaryGrid = document.getElementById('resSummaryGrid');
+    if (_summaryGrid) _summaryGrid.style.gridTemplateColumns = children > 0
+        ? '1fr 1.4fr 1fr 1fr 1.2fr'
+        : '1fr 1.4fr 1fr 1.2fr';
     document.getElementById('resGrandTotal').innerText = fmt(grandTotal);
     document.getElementById('netH').innerText = fmt(hNet);
     document.getElementById('netS').innerText = fmt(sNet);
