@@ -7012,8 +7012,13 @@ async function processBillableAction(actionType, deliverFn) {
         return;
     }
 
-    // CHANGED PATH — Popup 1
-    const yes1 = await _confirmCreateNewVersion();
+    // CHANGED PATH.
+    // "Create new version?" modal only fires when this quote was loaded from a
+    // saved record AND the traveler name is still the same — i.e. we're about
+    // to bump V1→V2 of an existing record. Brand-new quotes (no savedId) and
+    // renamed quotes are saved silently as a new record.
+    const isVersionBump = !!_loadedFromName && _loadedFromName === paxName;
+    const yes1 = isVersionBump ? await _confirmCreateNewVersion() : true;
     if (yes1) {
         // Save (charges per pricing inside saveItinerary), then deliver
         const saveRes = await fetch(API_URL, {
