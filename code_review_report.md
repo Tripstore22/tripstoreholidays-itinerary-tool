@@ -1,4 +1,4 @@
-# TripStore Code Review — 2026-05-14
+# TripStore Code Review — 2026-05-15
 
 **Reviewer:** Automated (Claude)
 **Scope:** Code.gs, Pipeline.gs, Quote_Intelligence.gs, index_fit.tripstore.html, write_to_sheets.py, archive_to_input.py
