@@ -6083,7 +6083,16 @@ function selectHotel(routeId, hotelIndex, city) {
     const route = currentPlan.find(p => p.id === routeId);
     if (!route) return;
     const cityHotels = (masterData.hotels || []).filter(h => h.city.toLowerCase() === city.toLowerCase());
-    route.hotel = cityHotels[hotelIndex];
+    const picked = cityHotels[hotelIndex];
+    if (!picked) return;
+    // E6 — unit conversion: master h.cost is per-night room rate; route.hotel.cost
+    // must be per-night-per-pricing-unit so calculateHotelPrice(cost, nights)
+    // returns total stay cost. Without this, the multiplier is applied twice.
+    const cfg = getTravelConfigs();
+    const rooms = cfg.roomsRequired || 1;
+    const pf = cfg.pricingFactor || 1;
+    const perNightPerUnit = pf > 0 ? (Number(picked.cost) || 0) * rooms / pf : 0;
+    route.hotel = Object.assign({}, picked, { cost: perNightPerUnit });
     route.isHotelManual = true;
     // Re-run transfer optimizer so arrival/departure legs pick up the new hotel name & price
     const paxCount = getPaxCount();
