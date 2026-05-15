@@ -5410,7 +5410,7 @@ function updateBudgetCalcPanel() {
     if (!bpp || (A + C) === 0) { panel.style.display = 'none'; return; }
     panel.style.display = 'block';
 
-    const adultEq     = A + 0.70 * C;
+    const adultEq     = A + 0.50 * C;
     const clientTotal = bpp * adultEq;
 
     let gstPct = 0, gstDivisor = 1, net, markupVal, gstVal, gstLbl = 'GST:';
