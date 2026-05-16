@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-index_fit.tripstore.html static validator.
-Run before making ANY change to the HTML file.
+app/index.html static validator.
+Canonical Trip Store app source (since the Option B split — landing at /, app at /app/).
+Run before making ANY change to the app HTML file.
 Usage: python3 check_html.py
 """
 
 import re, sys, os
 
 ROOT     = os.path.dirname(os.path.abspath(__file__))
-HTML     = os.path.join(ROOT, 'index_fit.tripstore.html')
-INDEX    = os.path.join(ROOT, 'index.html')
+HTML     = os.path.join(ROOT, 'app', 'index.html')
 
 errors   = []
 warnings = []
@@ -103,22 +103,7 @@ for pattern, label in REQUIRED:
 if missing == 0:
     ok(f'All {len(REQUIRED)} critical features present')
 
-# ── 3. INDEX.HTML SYNC CHECK ───────────────────────────────────────────────────
-# index.html is what GitHub Pages actually serves.
-# If it differs from index_fit.tripstore.html, the live site is out of date.
-
-if os.path.exists(INDEX):
-    with open(INDEX, encoding='utf-8') as f:
-        index_src = f.read()
-    if src == index_src:
-        ok('index.html is in sync with index_fit.tripstore.html')
-    else:
-        fail('index.html is OUT OF SYNC with index_fit.tripstore.html — live site will serve stale code')
-        fail('  Fix: cp index_fit.tripstore.html index.html  then commit both files together')
-else:
-    warn('index.html not found — cannot verify sync with index_fit.tripstore.html')
-
-# ── 4. API URL INTEGRITY ───────────────────────────────────────────────────────
+# ── 3. API URL INTEGRITY ───────────────────────────────────────────────────────
 # Check that the API URL appears exactly once.
 # 0 = already caught by section 2; >1 = may point to different deployments.
 
@@ -129,7 +114,7 @@ elif api_count == 1:
     ok('API URL appears exactly once — no duplicate endpoint risk')
 # api_count == 0 already caught as MISSING in section 2
 
-# ── 5. SCRIPT TAG BALANCE ──────────────────────────────────────────────────────
+# ── 4. SCRIPT TAG BALANCE ──────────────────────────────────────────────────────
 # A mismatched <script>/<\/script> pair is a silent killer — JS below the error
 # simply doesn't run, and the browser shows no obvious error.
 

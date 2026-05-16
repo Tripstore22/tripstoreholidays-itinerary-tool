@@ -64,3 +64,7 @@ dev/
 *.LIVE_STAGING.html
 *.local.md
 _archived_orphans_2026-05-07/
+
+# DEV backup folders (created by integration scripts, local-only)
+dev_pre_landing_split_*/
+*.pre_*.bak.html

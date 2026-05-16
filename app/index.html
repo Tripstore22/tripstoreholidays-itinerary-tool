@@ -814,7 +814,7 @@ thead{display:table-header-group;}
 <div id="login-screen">
   <div class="login-card">
     <div style="display:flex;justify-content:center;margin-bottom:16px;">
-      <img src="images/tripstorelogo.png" alt="Trip Store" style="height:44px;" onerror="handleLogoError(this,'div')">
+      <img src="../images/tripstorelogo.png" alt="Trip Store" style="height:44px;" onerror="handleLogoError(this,'div')">
     </div>
     <div class="login-tabs">
       <button id="tab-login" class="login-tab active" onclick="toggleAuthMode('login')">Login</button>
@@ -878,7 +878,7 @@ thead{display:table-header-group;}
     <!-- Brand -->
     <div class="sb-brand">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <img src="images/tripstorelogo.png" alt="Trip Store" style="height:26px;" onerror="handleLogoError(this,'span')">
+        <img src="../images/tripstorelogo.png" alt="Trip Store" style="height:26px;" onerror="handleLogoError(this,'span')">
         <button onclick="startNewQuote()" style="font-size:8px;font-weight:700;color:var(--terra);border:1px solid var(--terra-b);background:var(--terra-bg);padding:2px 9px;border-radius:5px;cursor:pointer;text-transform:uppercase;font-family:var(--sans);">New Quote</button>
       </div>
       <span id="roleBadge" style="display:none;"></span>
@@ -1093,7 +1093,7 @@ thead{display:table-header-group;}
         </div>
         <div class="pb-right">
           <div class="pb-right-panel">
-            <img id="quoteLogo" src="images/tripstorelogo.png" alt="Trip Store" onerror="this.style.display='none'">
+            <img id="quoteLogo" src="../images/tripstorelogo.png" alt="Trip Store" onerror="this.style.display='none'">
           </div>
         </div>
       </div>
@@ -8117,6 +8117,45 @@ async function walletDeductForQuote(paxName, description) {
         return { success: false, message: e.message };
     }
 }
+</script>
+
+<script id="ts-landing-action-handler">
+(function() {
+  'use strict';
+  function handleLandingAction() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      var action = params.get('action');
+      if (action !== 'signup' && action !== 'login') return;
+
+      var attempts = 0;
+      var maxAttempts = 40; // ~10 seconds at 250ms intervals
+      var poll = setInterval(function() {
+        attempts++;
+        if (typeof toggleAuthMode === 'function') {
+          var modal = document.getElementById('login-screen');
+          if (modal) {
+            toggleAuthMode(action);
+            clearInterval(poll);
+            return;
+          }
+        }
+        if (attempts >= maxAttempts) {
+          clearInterval(poll);
+          console.warn('[ts-action] toggleAuthMode never became available within 10s');
+        }
+      }, 250);
+    } catch (e) {
+      console.error('[ts-action] error:', e);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', handleLandingAction);
+  } else {
+    handleLandingAction();
+  }
+})();
 </script>
 </body>
 </html>
