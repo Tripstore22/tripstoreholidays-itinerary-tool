@@ -39,6 +39,8 @@ html{height:100%;overflow:hidden;}body{height:100%;font-family:var(--sans);backg
 /* ── TOAST ── */
 #toast-container{position:fixed;top:20px;right:20px;z-index:9999;}
 .toast{padding:10px 20px;border-radius:8px;color:#fff;margin-bottom:8px;font-weight:600;font-size:13px;animation:slideIn .3s ease-out;box-shadow:0 8px 24px rgba(0,0,0,.2);font-family:var(--sans);}
+.toast.bg-green-600{background:#16a34a;}
+.toast.bg-red-600{background:#dc2626;}
 @keyframes slideIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
 @keyframes dashSpin{to{transform:rotate(360deg)}}
 
@@ -2787,7 +2789,7 @@ function launchApp(modeText) {
     } else {
         // Admin always sees Trip Store branding — reset any pre-set values
         const ql = document.getElementById('quoteLogo');
-        if (ql) { ql.src = 'images/tripstorelogo.png'; ql.alt = 'Trip Store'; ql.style.display = 'block'; }
+        if (ql) { ql.src = '../images/tripstorelogo.png'; ql.alt = 'Trip Store'; ql.style.display = 'block'; }
         const eyebrow = document.getElementById('bannerEyebrow');
         if (eyebrow) eyebrow.textContent = 'Travel Proposal · Trip Store Holidays';
         const footer = document.getElementById('footerBrandName');
@@ -2827,7 +2829,7 @@ async function applyAgentBranding() {
         const data = await res.json();
         const logo = document.getElementById('quoteLogo');
         if (logo) {
-            logo.src = data.logoUrl || 'images/tripstorelogo.png';
+            logo.src = data.logoUrl || '../images/tripstorelogo.png';
             logo.alt = data.logoUrl ? (data.agencyName || 'Agency Logo') : 'Trip Store';
             logo.style.display = 'block';
         }
