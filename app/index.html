@@ -3856,12 +3856,14 @@ function tourMatchesCity(tour, city) {
     return false;
 }
 
-// Helper — Swiss Pass tour detection (mirrors backend isSwissPassTour_)
+// Helper — Swiss Pass tour detection. Mirrors backend post-2026-05-18 fix:
+// eligibility is driven by the master Swiss_Pass_Price column, not by a
+// substring marker in the tour name (no master tour actually carries such markers).
 function isSwissPassTour(tourName) {
-    const lower = (tourName || '').toLowerCase();
-    const markers = ['with swiss pass','on swiss pass','on your swiss pass',
-                     'swiss pass included','using swiss pass'];
-    return markers.some(m => lower.indexOf(m) !== -1);
+    const sheetRow = (masterData.sights || [])
+        .find(m => (m.info || '') === tourName);
+    return !!(sheetRow && sheetRow.swiss_pass_price != null
+              && sheetRow.swiss_pass_price !== '');
 }
 
 // Helper — full sight visibility filter: city match (with Base_Cities) + Swiss Pass toggle
@@ -6351,6 +6353,12 @@ function addActivityToDay(routeId, day, info) {
 
     route.sights.push({ ...sight, price: Number(sight.price), instanceId: Date.now() + Math.random(), assignedDay: day, isManual: true });
     renderTables();
+    // Re-apply Swiss Pass overrides — swap commits push the new sight at full price;
+    // if the toggle is on, applySwissPassToQuote needs to re-run so the SPP override
+    // applies to any newly-eligible tour (e.g. swapped-in Jungfraujoch).
+    if (swissPassEnabled && window.swissPassData) {
+        applySwissPassToQuote(true, window.swissPassData);
+    }
 
     if (isSwap) {
         window._swapTarget = null;
