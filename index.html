@@ -82,7 +82,7 @@
     display: flex; align-items: center; justify-content: space-between;
     max-width: 1280px; margin: 0 auto; padding: 12px 48px;
   }
-  .topbar img { height: 38px; display: block; }
+  .topbar img { height: 40px; display: block; }
   .nav-links { display: flex; align-items: center; gap: 28px; }
   .nav-links a { color: #2C1810; font-size: 15px; font-weight: 500; }
   .nav-links a:hover { color: #C4633F; }
@@ -405,16 +405,6 @@
     padding: 10px 18px 14px;
     border-top: 0.5px solid rgba(184, 147, 90, 0.3);
     margin-top: 8px;
-  }
-
-  .hero-art-caption {
-    grid-column: 1 / -1;
-    font-family: "Playfair Display", Georgia, serif;
-    font-style: italic;
-    color: #C4633F;
-    text-align: center;
-    margin-top: 12px;
-    font-size: 13px;
   }
 
   /* SECTION 2 — PAIN */
@@ -757,10 +747,12 @@
   }
   .cp-sub {
     font-size: 12px;
-    color: rgba(250, 246, 240, 0.75);
-    font-style: italic;
-    font-family: "Playfair Display", Georgia, serif;
-    margin-bottom: 18px;
+    color: #FAF6F0;
+    font-style: normal;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-weight: 400;
+    margin-bottom: 14px;
+    opacity: 0.95;
   }
   .cp-multiplier {
     padding-top: 14px;
@@ -930,7 +922,7 @@
     min-height: auto;
     display: block;
   }
-  footer img { height: 28px; display: block; margin: 0 auto 12px; }
+  footer img { height: 30px; display: block; margin: 0 auto 12px; }
   footer .line { margin: 5px 0; }
   footer a { color: #5F4A3A; }
   footer a:hover { color: #C4633F; }
@@ -1058,7 +1050,7 @@
     .topbar-inner { padding: 12px 20px; }
     .nav-links a:not(.btn-cta):not(.topbar-cta) { display: none; }
     .nav-links { gap: 12px; }
-    .topbar img { height: 32px; }
+    .topbar img { height: 34px; }
 
     .hero { padding: 32px 0 28px; }
     .hero-grid { grid-template-columns: 1fr; gap: 36px; }
@@ -1132,6 +1124,81 @@
 
     #scrollNext { display: none; }
   }
+
+  /* ====== v6 POLISH (2026-05-17) ====== */
+
+  /* L1 — keep "90 seconds." together on its own line */
+  .italic-accent.nowrap { white-space: nowrap; }
+
+  /* L2 — hero-sub bold/italic guards in case reset strips them */
+  .hero-sub strong { font-weight: 700; }
+  .hero-sub em { font-style: italic; }
+
+  /* L4 — pain-section eyebrow as a tinted callout (scoped: .pain matches one section) */
+  .pain .eyebrow {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.16em !important;
+    background: rgba(196, 99, 63, 0.10) !important;
+    padding: 8px 16px !important;
+    border-radius: 2px !important;
+    display: inline-block !important;
+    border-left: 3px solid #C4633F !important;
+    color: #C4633F !important;
+  }
+
+  /* P3 — caption removed; flush hero-art to top (cards back to :nth-child(1..4), original rotations apply) */
+  .hero-art { padding-top: 0 !important; margin-top: 0 !important; }
+
+  /* P1 — hero compactness (fit one viewport @ 1440x900) */
+  .hero {
+    padding-top: 24px !important;
+    padding-bottom: 20px !important;
+  }
+  .hero h1 {
+    font-size: clamp(32px, 4.2vw, 48px) !important;
+    line-height: 1.08 !important;
+    margin-bottom: 18px !important;
+  }
+  .hero-sub {
+    margin-bottom: 22px !important;
+    line-height: 1.4 !important;
+  }
+  .hero-ctas {
+    margin-bottom: 20px !important;
+  }
+  .trust-strip {
+    margin-top: 18px !important;
+    padding-top: 14px !important;
+  }
+  .trust-item .num {
+    font-size: 22px !important;
+  }
+
+  /* P2 — extra guard for nested strong>em (bold+italic together) */
+  .hero-sub strong em,
+  .hero-sub em strong { font-weight: 700; font-style: italic; }
+
+  /* P4 — force hero content to top (override section { align-items: center }) */
+  .hero,
+  section.hero {
+    align-items: start !important;
+    justify-content: start !important;
+  }
+  .hero .hero-grid,
+  .hero .container.hero-grid {
+    align-items: start !important;
+  }
+
+  /* L7 — pricing fineprint (class is .price-note, not .pricing-fineprint) */
+  .price-note {
+    font-size: 14px !important;
+    color: #2C1810 !important;
+    font-style: normal !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    font-weight: 500 !important;
+    margin-top: 20px !important;
+  }
 </style>
 </head>
 <body>
@@ -1159,11 +1226,13 @@
         <div>
           <span class="eyebrow">— For Indian travel agents</span>
           <h1>
-            Quote a Europe trip in <span class="italic-accent">90 seconds.</span><br />
+            Quote a Europe trip in<br />
+            <span class="italic-accent nowrap">90 seconds.</span><br />
             Stop losing customers to slow turnaround.
           </h1>
           <p class="hero-sub">
-            Contracted rates across 67 cities. Auto-built quotes, fully white-labelled. Spend time closing, not quoting.
+            Auto-built quotes across 67 cities, fully white-labelled.<br />
+            <strong>Spend time closing,</strong> <strong><em>not quoting.</em></strong>
           </p>
           <div class="hero-ctas">
             <a href="app/index.html?action=signup" class="btn-cta large">Sign Up Free →</a>
@@ -1252,7 +1321,6 @@
             </div>
           </div>
 
-          <div class="hero-art-caption">Itinerary · Profit at a glance · Hotel &amp; tour swap · White-label PDF</div>
         </div>
       </div>
     </section>
@@ -1612,10 +1680,17 @@
       const btn = document.getElementById('scrollNext');
       const sections = Array.from(document.querySelectorAll('main > section, footer'));
       btn.addEventListener('click', () => {
-        const scrollTop = window.scrollY;
+        const currentTop = window.scrollY;
         for (const s of sections) {
-          if (s.offsetTop > scrollTop + 50) {
+          if (s.offsetTop > currentTop + window.innerHeight / 2) {
+            // Workaround: scroll-snap mandatory conflicts with smooth programmatic scroll
+            const htmlEl = document.documentElement;
+            const originalSnap = htmlEl.style.scrollSnapType;
+            htmlEl.style.scrollSnapType = 'none';
             window.scrollTo({ top: s.offsetTop, behavior: 'smooth' });
+            setTimeout(() => {
+              htmlEl.style.scrollSnapType = originalSnap || '';
+            }, 800);
             break;
           }
         }
