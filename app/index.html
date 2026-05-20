@@ -7120,6 +7120,10 @@ async function processBillableAction(actionType, deliverFn) {
             showToast('Save blocked: ' + (result.message || 'unknown'), 'error');
             return;
         }
+        // Track the just-saved name so the next changed save creates the next
+        // version (V2 → V3 → …), and surface the new name to the agent.
+        _loadedFromName = saveName;
+        document.getElementById('paxNameInput').value = saveName;
         if (result.charged) {
             showToast(result.message || 'Saved with charge', 'success');
             // Refresh wallet badge if available
