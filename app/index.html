@@ -7102,7 +7102,8 @@ async function processBillableAction(actionType, deliverFn) {
     // saved record AND the traveler name is still the same — i.e. we're about
     // to bump V1→V2 of an existing record. Brand-new quotes (no savedId) and
     // renamed quotes are saved silently as a new record.
-    const isVersionBump = !!_loadedFromName && _loadedFromName === paxName;
+    const loadedBase    = _loadedFromName ? _loadedFromName.replace(/_V\d+$/i, '') : null;
+    const isVersionBump = !!loadedBase && loadedBase === paxName;
     const yes1 = isVersionBump ? await _confirmCreateNewVersion() : true;
     if (yes1) {
         // On version bump, suffix _V{N+1} so server creates a NEW row instead of
