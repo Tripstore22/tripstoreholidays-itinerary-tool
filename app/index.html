@@ -8257,7 +8257,7 @@ window.tsCal = (function(){
     else   { label.textContent = 'Select date';  btn.classList.add('is-placeholder');    }
   }
 
-  function render(){
+  function tsCalRender(){
     const selISO = (document.getElementById(activeField === 'checkin' ? 'checkinInput' : 'checkoutInput') || {}).value;
     const sel    = parseISO(selISO);
     const first  = new Date(viewYear, viewMonth, 1);
@@ -8303,7 +8303,7 @@ window.tsCal = (function(){
       viewMonth += Number(b.dataset.nav);
       if (viewMonth < 0) { viewMonth = 11; viewYear--; }
       if (viewMonth > 11){ viewMonth = 0;  viewYear++; }
-      render();
+      tsCalRender();
     });
     popup.querySelectorAll('.tsc-day[data-day]').forEach(b => b.onclick = (e) => {
       e.stopPropagation();
@@ -8367,7 +8367,7 @@ window.tsCal = (function(){
     popup.style.left = left + 'px';
     popup.style.top  = top + 'px';
     popup.classList.add('is-open');
-    render();
+    tsCalRender();
   }
 
   function close(){
@@ -8376,7 +8376,7 @@ window.tsCal = (function(){
     activeField = null;
   }
 
-  function init(){
+  function tsCalInit(){
     popup = document.getElementById('tsCalendarPopup');
     if (!popup) return;
     // Move popup to <body> so it escapes any scrolling/overflow-hidden ancestor
@@ -8392,8 +8392,8 @@ window.tsCal = (function(){
     document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tsCalInit);
+  else tsCalInit();
 
   return { open, close, refreshTrigger };
 })();
