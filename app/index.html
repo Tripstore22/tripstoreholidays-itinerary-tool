@@ -320,14 +320,14 @@ html{height:100%;overflow:hidden;}body{height:100%;font-family:var(--sans);backg
   font-family:var(--serif);font-size:24px;color:#fff;
   font-style:italic;line-height:1.2;
 }
-.pb-left{z-index:1;padding:24px 28px 20px;min-width:0;}
+.pb-left{z-index:1;padding:22px 28px 18px;min-width:0;}
 .pb-right{
   z-index:2;display:flex;padding:0;
 }
 .pb-right-panel{
   background:var(--cream);
   display:flex;align-items:center;justify-content:center;
-  padding:14px 18px;flex:1;min-height:0;width:100%;
+  padding:13px 18px;flex:1;min-height:0;width:100%;
 }
 .pb-right-panel img{
   max-width:100%;max-height:120px;width:auto;height:auto;
@@ -355,7 +355,7 @@ html{height:100%;overflow:hidden;}body{height:100%;font-family:var(--sans);backg
 }
 .pdf-footer{
   background:linear-gradient(to right,#2a1609 0%,#5c2d1a 40%,#a04525 75%,#c86030 100%);
-  padding:10px 24px;display:flex;align-items:center;
+  padding:9px 24px;display:flex;align-items:center;
   justify-content:space-between;margin-top:4px;
 }
 
@@ -806,6 +806,35 @@ thead{display:table-header-group;}
 /* ────────────────────────────────────────────────────────────── */
 /* Phase 8 cleanup: legacy hotel/land budget hint + breakdown bar never surface */
 #hotelBudgetHint, #sightBudgetHint, #budgetBreakdownBar { display: none !important; }
+
+/* ── Custom calendar (replaces native <input type=date>) ── */
+.ts-date-native{position:absolute!important;left:-9999px!important;width:1px;height:1px;opacity:0;pointer-events:none;}
+.ts-date-trigger{display:flex;align-items:center;gap:6px;width:100%;background:#faf6ef;border:1px solid #dcd0bc;border-radius:8px;padding:6px 10px;height:32px;font-size:11px;font-family:var(--sans);color:var(--ink);cursor:pointer;transition:border-color .15s,box-shadow .15s;text-align:left;}
+.ts-date-trigger:hover{border-color:#b85c38;}
+.ts-date-trigger:focus{outline:none;border-color:#b85c38;box-shadow:0 0 0 2px rgba(184,92,56,.18);}
+.ts-date-trigger.is-open{border-color:#b85c38;box-shadow:0 0 0 2px rgba(184,92,56,.18);}
+.ts-date-trigger .tsd-icon{font-size:13px;line-height:1;color:#b85c38;flex-shrink:0;}
+.ts-date-trigger .tsd-label{flex:1;}
+.ts-date-trigger.is-placeholder .tsd-label{color:#8a7b6b;font-style:italic;}
+#tsCalendarPopup{position:fixed;z-index:9999;background:#faf6ef;border:1px solid #dcd0bc;border-radius:12px;box-shadow:0 8px 32px rgba(42,37,32,.12);padding:14px;width:260px;font-family:var(--sans);display:none;}
+#tsCalendarPopup.is-open{display:block;}
+.tsc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.tsc-title{font-family:'Playfair Display',serif;font-size:14px;font-weight:700;color:#b85c38;letter-spacing:.2px;}
+.tsc-nav{background:none;border:none;color:#b85c38;font-size:16px;line-height:1;cursor:pointer;padding:2px 6px;border-radius:4px;}
+.tsc-nav:hover{background:#f5ede0;}
+.tsc-dow{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px;}
+.tsc-dow-cell{font-size:9px;text-transform:uppercase;color:#8a7b6b;text-align:center;font-weight:700;letter-spacing:.4px;padding:4px 0;}
+.tsc-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.tsc-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--ink);cursor:pointer;border-radius:50%;background:none;border:none;transition:background .12s,color .12s;}
+.tsc-day:hover:not(:disabled){background:#f5ede0;}
+.tsc-day.is-today{border:1px solid #b85c38;}
+.tsc-day.is-selected{background:#b85c38;color:#fff;}
+.tsc-day.is-selected.is-today{border-color:#b85c38;}
+.tsc-day.is-other-month{color:#c8b9a7;}
+.tsc-day:disabled{opacity:.35;cursor:not-allowed;}
+.tsc-foot{display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid #ede2cf;}
+.tsc-foot-btn{background:none;border:none;color:#b85c38;font-size:10px;font-weight:600;cursor:pointer;padding:2px 4px;font-family:var(--sans);}
+.tsc-foot-btn:hover{text-decoration:underline;}
 </style>
 </head>
 <body>
@@ -921,14 +950,20 @@ thead{display:table-header-group;}
         <div id="cityDropdown"></div>
         <div id="launchBadge" class="no-print" style="font-size:9px;color:#7A9E7E;font-weight:600;margin-top:3px;letter-spacing:.3px;">Launch: 40 destinations</div>
       </div>
-      <div class="ts-row ts-field">
+      <div class="ts-row ts-field" style="position:relative;">
         <div>
           <label class="ts-label">Check-in</label>
-          <input type="date" id="checkinInput" class="ts-input">
+          <input type="date" id="checkinInput" class="ts-date-native" tabindex="-1" aria-hidden="true">
+          <button type="button" id="checkinTrigger" class="ts-date-trigger is-placeholder" onclick="tsCal.open('checkin', this)">
+            <span class="tsd-icon">📅</span><span class="tsd-label">Select date</span>
+          </button>
         </div>
         <div>
           <label class="ts-label">Check-out</label>
-          <input type="date" id="checkoutInput" class="ts-input">
+          <input type="date" id="checkoutInput" class="ts-date-native" tabindex="-1" aria-hidden="true">
+          <button type="button" id="checkoutTrigger" class="ts-date-trigger is-placeholder" onclick="tsCal.open('checkout', this)">
+            <span class="tsd-icon">📅</span><span class="tsd-label">Select date</span>
+          </button>
         </div>
       </div>
       <button onclick="addCityToRoute()" class="btn-ghost" style="margin-bottom:8px;">+ Add Stop</button>
@@ -978,14 +1013,14 @@ thead{display:table-header-group;}
         <div id="breakdownTotalLine" style="font-weight:700;color:var(--ink);"></div>
         <div id="breakdownUtilLine" style="margin-top:4px;font-weight:700;"></div>
       </div>
-      <div class="ts-row ts-field">
+      <div class="ts-field" style="display:block;">
         <!-- DEPRECATED — restore by removing display:none -->
-        <button onclick="runOptimizer(true,true)" id="generateQuoteBtn" class="btn-terra no-print" style="display:none;background:var(--ink2);font-size:11px;">▶ Generate Quote</button>
-        <button onclick="onAutoBuildQuote()" id="autoBuildBtn" class="no-print" style="font-size:12px;background:#7A9E7E;color:#fff;border:none;border-radius:7px;padding:0 14px;height:34px;font-weight:700;font-family:'Playfair Display',serif;letter-spacing:.3px;cursor:pointer;flex:1;">⚡ Auto-Build Quote</button>
+        <button onclick="runOptimizer(true,true)" id="generateQuoteBtn" class="btn-terra no-print" style="display:none !important;background:var(--ink2);font-size:11px;">▶ Generate Quote</button>
+        <button onclick="onAutoBuildQuote()" id="autoBuildBtn" class="no-print" style="font-size:12px;background:#7A9E7E;color:#fff;border:none;border-radius:7px;padding:0 14px;height:34px;font-weight:700;font-family:'Playfair Display',serif;letter-spacing:.3px;cursor:pointer;width:100%;display:block;">⚡ Auto-Build Quote</button>
       </div>
-      <div class="ts-field no-print" style="margin-top:-6px;font-size:9px;color:var(--ink3);font-style:italic;text-align:right;">Builds itinerary from 1,527 past quotes</div>
+      <div class="ts-field no-print" style="margin-top:-6px;font-size:9px;color:var(--ink3);font-style:italic;text-align:center;">Powered by Intelligence from 2,000+ real quotes</div>
       <!-- Algorithm toggle (v2.2 beta) -->
-      <div id="algoToggleWrap" class="no-print" style="display:flex;align-items:center;gap:10px;margin:6px 0 0 0;font-size:11px;color:#6b5d54;flex-wrap:wrap;">
+      <div id="algoToggleWrap" class="no-print" style="display:none;align-items:center;gap:10px;margin:6px 0 0 0;font-size:11px;color:#6b5d54;flex-wrap:wrap;">
         <span style="font-weight:600;">Algorithm:</span>
         <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
           <input type="radio" name="algoChoice" value="v1" id="algoV1" checked onchange="setAlgorithm('v1')" style="margin:0;">
@@ -2535,7 +2570,7 @@ loadReport();
 // =============================================================
 // CONFIGURATION
 // =============================================================
-const API_URL = "https://script.google.com/macros/s/AKfycbwP9KQH39hcBcLQsPsOL_c4hKIuV3TTlm1XW2CT2e72W-TYVP01-adjsVAKtAAArhGQWA/exec"; // DEV @18 — 2026-05-04 RBAC 5-role + getAllUsers (prev pinned @5 AKfycbwRr9k5...)
+const API_URL = "https://script.google.com/macros/s/AKfycbwRr9k5XrA0M_bDSS5W4XdbTFYEZIFoDz5cKnuq3nqVARFlhigCfD9fZgzPpFxkhpyobw/exec"; // DEV @18 — 2026-05-04 RBAC 5-role + getAllUsers (prev pinned @5 AKfycbwRr9k5...)
 
 // =============================================================
 // GLOBAL STATE
@@ -3160,6 +3195,7 @@ function startNewQuote() {
     document.getElementById('cityInput').value        = '';
     document.getElementById('checkinInput').value     = '';
     document.getElementById('checkoutInput').value    = '';
+    if (window.tsCal) { tsCal.refreshTrigger('checkin'); tsCal.refreshTrigger('checkout'); }
     document.getElementById('searchInput').value      = '';
     const vSel = document.getElementById('vehicleTypeSelect');
     if (vSel) vSel.value = 'auto';
@@ -3757,7 +3793,7 @@ function renderRouteInputs() {
                     : _iq + '+';
         const _fmtN = intel ? Math.round(parseFloat(intel.avgNights) || 0) : 0;
         const _bkfRaw = intel ? parseFloat(intel.avgBreakfastPct) : 0;
-        const _fmtB = _bkfRaw ? (Math.round(_bkfRaw < 1 ? _bkfRaw * 100 : _bkfRaw) + '% incl. breakfast') : '';
+        const _fmtB = _bkfRaw ? (Math.round(_bkfRaw < 1 ? _bkfRaw * 100 : _bkfRaw) + '% Incl. Breakfast') : '';
         const _pill = (label, val) => (val !== '' && val !== null && val !== undefined && val !== 0)
             ? `<span style="font-size:8px;background:var(--white);border:1px solid var(--border2);border-radius:10px;padding:2px 8px;color:var(--ink3);white-space:nowrap;">${label}: <b>${val}</b></span>`
             : '';
@@ -3765,12 +3801,11 @@ function renderRouteInputs() {
             ? `<div style="background:var(--cream2);border:1px solid var(--border);border-radius:7px;padding:8px 10px;margin-top:8px;">
                  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:${intel.nextCity ? '6px' : '0'};">
                    ${_iq > 0 ? `<span style="font-size:8px;background:var(--terra-bg);border:1px solid var(--terra-b);border-radius:10px;padding:2px 8px;color:var(--terra);white-space:nowrap;">📊 <b>${_fmtQ}</b> quotes</span>` : ''}
-                   ${_fmtN ? _pill('avg stay', _fmtN + ' nights') : ''}
-                   ${intel.avgHotelCostPerNight ? _pill('hotel', intel.avgHotelCostPerNight + '/room') : ''}
-                   ${_fmtB ? _pill('breakfast', _fmtB) : ''}
-                   ${intel.avgSightseeingPerDay ? _pill('sights', intel.avgSightseeingPerDay + '/day') : ''}
+                   ${_fmtN ? _pill('Avg. Stay', _fmtN + ' Nights') : ''}
+                   ${(intel.avgHotelCostPerNight || _fmtB) ? `<span style="font-size:8px;background:var(--white);border:1px solid var(--border2);border-radius:10px;padding:2px 8px;color:var(--ink3);white-space:nowrap;">${intel.avgHotelCostPerNight ? 'Hotel: <b>Avg. ₹' + Number(intel.avgHotelCostPerNight).toLocaleString('en-IN') + '/night</b>' : ''}${intel.avgHotelCostPerNight && _fmtB ? '&nbsp;&nbsp;&nbsp;' : ''}${_fmtB ? '<b>' + _fmtB + '</b>' : ''}</span>` : ''}
+                   ${intel.avgSightseeingPerDay ? _pill('Sightseeing', '₹' + Number(intel.avgSightseeingPerDay).toLocaleString('en-IN') + '/day') : ''}
                  </div>
-                 ${intel.nextCity ? `<div style="font-size:9px;color:var(--ink4);">Often paired with: <b style="color:var(--ink3);">${intel.nextCity}</b></div>` : ''}
+                 ${intel.nextCity ? `<div style="font-size:9px;color:var(--ink4);">Often Paired With: <b style="color:var(--ink3);">${intel.nextCity}</b></div>` : ''}
                </div>`
             : (intel && !intel.found
                 ? `<div style="margin-top:6px;font-size:9px;color:var(--ink4);font-style:italic;">No archive data for ${r.city}</div>`
@@ -3821,7 +3856,7 @@ async function fetchCityIntelligence(city) {
                 avgBreakfastPct:       Number(raw.breakfast_included_pct) || 0,
                 avgHotelCostPerNight:  Number(raw.avg_hotel_crn) || 0,
                 avgSightseeingPerDay:  Number(raw.avg_sightseeing_per_day) || 0,
-                nextCity:              raw.next_city_suggestion || '',
+                nextCity:              (raw.next_city_suggestion || '').split(',').map(x => x.trim()).filter(x => x && !/\d/.test(x)).join(', '),
                 country:               raw.country || '',
                 mostCommonCombo:       raw.most_common_combo || '',
                 budgetLow:             Number(raw.budget_low_per_adult) || 0,
@@ -4966,34 +5001,61 @@ function renderTables() {
             }
 
             const _catEmoji = c => {
-            const l = (c||'').toLowerCase();
-            if(l.includes('landmark')) return '🏛';
-            if(l.includes('walking')||l.includes('walk tour')||l.includes('walking tour')) return '🚶';
-            if(l.includes('must-do')||l.includes('must do')||l.includes('must do')) return '⭐';
-            if(l.includes('hop-on')||l.includes('hop on')||l.includes('day trip')) return '🚌';
-            if(l.includes('segway')||l.includes('city tour')) return '🛴';
-            if(l.includes('food')||l.includes('cultur')||l.includes('dining')) return '🍽';
-            if(l.includes('wine')||l.includes('tasting')||l.includes('drink')) return '🍷';
-            if(l.includes('museum')||l.includes('gallery')||l.includes('art')) return '🖼';
-            if(l.includes('night')||l.includes('evening')||l.includes('show')||l.includes('theatre')) return '🌙';
-            if(l.includes('adventure')||l.includes('hiking')||l.includes('trek')) return '⛰';
-            if(l.includes('nature')||l.includes('park')||l.includes('garden')) return '🌿';
-            if(l.includes('cruise')||l.includes('boat')||l.includes('ferry')) return '⛵';
-            if(l.includes('bike')||l.includes('cycling')) return '🚲';
-            if(l.includes('cable')||l.includes('gondola')||l.includes('funicular')) return '🚡';
-            if(l.includes('beach')||l.includes('swim')||l.includes('coast')) return '🏖';
-            if(l.includes('ski')||l.includes('snow')||l.includes('winter')) return '⛷';
-            if(l.includes('sport')||l.includes('game')||l.includes('stadium')) return '🏟';
-            if(l.includes('shopping')||l.includes('market')) return '🛍';
-            if(l.includes('spa')||l.includes('wellness')||l.includes('relax')) return '💆';
-            return '📍';
+            const s = (c||'').toLowerCase();
+            // Theme parks FIRST — must beat the `park` substring in the nature line
+            if(s.includes('theme park')||s.includes('disney')||s.includes('amusement')) return '🎡';
+            // Transport / wheels — before night/show so "Night Bus" hits 🚌
+            if(s.includes('hop-on')||s.includes('hop on')||s.includes('bus tour')||s.includes('bus')||s.includes('open-top')) return '🚌';
+            if(s.includes('segway')) return '🛴';
+            if(s.includes('bike')||s.includes('cycling')) return '🚲';
+            if(s.includes('cable')||s.includes('gondola')||s.includes('funicular')) return '🚡';
+            if(s.includes('vespa')||s.includes('scooter')||s.includes('moped')||s.includes('tuk tuk')||s.includes('tuk-tuk')) return '🛵';
+            if(s.includes('tours on wheels')||s.includes('driving')) return '🚗';
+            // Water
+            if(s.includes('cruise')||s.includes('boat')||s.includes('ferry')||s.includes('sailing')) return '⛵';
+            if(s.includes('water sport')||s.includes('kayak')||s.includes('swim')||s.includes('beach')||s.includes('coast')) return '🏄';
+            // Food / drink
+            if(s.includes('wine')||s.includes('tasting')||s.includes('drink')||s.includes('beer')) return '🍷';
+            if(s.includes('food')||s.includes('cultur')||s.includes('dining')||s.includes('cooking')||s.includes('culinary')) return '🍽';
+            // Museums / landmarks
+            if(s.includes('museum')||s.includes('gallery')||s.includes('art')) return '🖼';
+            if(s.includes('landmark')||s.includes('historical')||s.includes('architecture')||s.includes('unesco')) return '🏛';
+            // Shows / entertainment — SPECIFIC types first, generic "show" last
+            if(s.includes('concert')||s.includes('opera')||s.includes('music')||s.includes('orchestra')) return '🎵';
+            if(s.includes('theatre')||s.includes('theater')) return '🎭';
+            if(s.includes('live show')||s.includes('flamenco')||s.includes('gladiator')||s.includes('dinner show')) return '🎪';
+            if(s.includes('night')||s.includes('evening')||s.includes('nightlife')||s.includes('show')) return '🌙';
+            // Adventure / nature
+            if(s.includes('arctic')||s.includes('northern lights')||s.includes('snow')||s.includes('ski')||s.includes('winter')) return '❄️';
+            if(s.includes('mountain')||s.includes('hiking')||s.includes('trek')||s.includes('adventure')) return '⛰';
+            if(s.includes('nature')||s.includes('park')||s.includes('garden')||s.includes('wildlife')) return '🌿';
+            // Walking / city tours
+            if(s.includes('walking')||s.includes('walk tour')) return '🚶';
+            if(s.includes('city tour')||s.includes('day trip')||s.includes('day tour')) return '🗺';
+            // Family
+            if(s.includes('family')||s.includes('kids')||s.includes('children')) return '👨‍👩‍👧';
+            // Wellness / romance
+            if(s.includes('spa')||s.includes('wellness')||s.includes('relax')) return '💆';
+            if(s.includes('romantic')||s.includes('romance')) return '💑';
+            // Shopping
+            if(s.includes('shopping')||s.includes('market')) return '🛍';
+            // Sports
+            if(s.includes('sport')||s.includes('game')||s.includes('stadium')) return '🏟';
+            // Photography
+            if(s.includes('photo')) return '📷';
+            // Entry tickets (generic)
+            if(s.includes('entry')||s.includes('ticket')) return '🎫';
+            // Catch-alls
+            if(s.includes('must-do')||s.includes('must do')||s.includes('popular')) return '⭐';
+            if(s.includes('hidden')||s.includes('gems')) return '💎';
+            return '📍'; // default
         };
         const actsContent = activities.map(s => {
                 const sIdx   = item.sights.findIndex(f => f.instanceId === s.instanceId);
                 const sTotal = Math.round(s.price * config.totalPax);
                 const cat    = s.category ? `<span class="act-cat">${s.category}</span>` : '';
                 const dur    = s.duration ? `<span class="act-dur">${s.duration}</span>` : '';
-                const icon   = `<span style="font-size:14px;flex-shrink:0;line-height:1;">${_catEmoji(s.category)}</span>`;
+                const icon   = `<span style="font-size:14px;flex-shrink:0;line-height:1;">${_catEmoji((s.category||'') + ' ' + (s.info||''))}</span>`;
                 const passBadge = (swissPassEnabled && isSwissPassTour(s.info))
                     ? `<span style="color:#2e7d32;font-size:11px;font-style:italic;font-weight:600;flex-shrink:0;"> · Swiss Pass</span>`
                     : '';
@@ -5590,8 +5652,7 @@ function setAlgorithm(algo) {
 }
 
 function getAlgorithm() {
-    try { return sessionStorage.getItem('tripstore_algo') || 'v1'; }
-    catch (e) { return 'v1'; }
+    return 'v4-premium';
 }
 
 window.addEventListener('DOMContentLoaded', function() {
@@ -8167,5 +8228,176 @@ async function walletDeductForQuote(paxName, description) {
   }
 })();
 </script>
+<script>
+// ── Custom calendar (Change 3a/3b) ─────────────────────────────
+// Drives the cream/terracotta popup that replaces native <input type="date">
+// for #checkinInput and #checkoutInput. Hidden native inputs still hold the
+// YYYY-MM-DD value so addCityToRoute() (L3722) keeps working unchanged.
+window.tsCal = (function(){
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DOW    = ['S','M','T','W','T','F','S'];
+  const today  = new Date(); today.setHours(0,0,0,0);
+
+  let activeField = null;   // 'checkin' | 'checkout'
+  let viewYear    = today.getFullYear();
+  let viewMonth   = today.getMonth();
+  let popup, trigger;
+
+  const fmtDisplay = d => d ? d.getDate().toString().padStart(2,'0') + ' ' + MONTHS[d.getMonth()].slice(0,3) + ' ' + d.getFullYear() : '';
+  const fmtISO     = d => d ? d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') : '';
+  const parseISO   = s => { if (!s) return null; const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+
+  function refreshTrigger(field){
+    const inp = document.getElementById(field === 'checkin' ? 'checkinInput' : 'checkoutInput');
+    const btn = document.getElementById(field === 'checkin' ? 'checkinTrigger' : 'checkoutTrigger');
+    if (!inp || !btn) return;
+    const d = parseISO(inp.value);
+    const label = btn.querySelector('.tsd-label');
+    if (d) { label.textContent = fmtDisplay(d); btn.classList.remove('is-placeholder'); }
+    else   { label.textContent = 'Select date';  btn.classList.add('is-placeholder');    }
+  }
+
+  function render(){
+    const selISO = (document.getElementById(activeField === 'checkin' ? 'checkinInput' : 'checkoutInput') || {}).value;
+    const sel    = parseISO(selISO);
+    const first  = new Date(viewYear, viewMonth, 1);
+    const startDow = first.getDay();
+    const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+    const prevDays = new Date(viewYear, viewMonth, 0).getDate();
+
+    let cells = '';
+    for (let i = startDow - 1; i >= 0; i--) {
+      cells += `<button type="button" class="tsc-day is-other-month" disabled>${prevDays - i}</button>`;
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const cur = new Date(viewYear, viewMonth, d);
+      const isPast = cur < today;
+      const isToday = cur.getTime() === today.getTime();
+      const isSel  = sel && cur.getTime() === sel.getTime();
+      const cls = ['tsc-day'];
+      if (isToday) cls.push('is-today');
+      if (isSel)   cls.push('is-selected');
+      cells += `<button type="button" class="${cls.join(' ')}" ${isPast?'disabled':''} data-day="${d}">${d}</button>`;
+    }
+    const totalCells = startDow + daysInMonth;
+    const trailing = (7 - (totalCells % 7)) % 7;
+    for (let d = 1; d <= trailing; d++) {
+      cells += `<button type="button" class="tsc-day is-other-month" disabled>${d}</button>`;
+    }
+
+    popup.innerHTML = `
+      <div class="tsc-head">
+        <button type="button" class="tsc-nav" data-nav="-1" aria-label="Previous month">‹</button>
+        <span class="tsc-title">${MONTHS[viewMonth]} ${viewYear}</span>
+        <button type="button" class="tsc-nav" data-nav="1" aria-label="Next month">›</button>
+      </div>
+      <div class="tsc-dow">${DOW.map(d => `<div class="tsc-dow-cell">${d}</div>`).join('')}</div>
+      <div class="tsc-grid">${cells}</div>
+      <div class="tsc-foot">
+        <button type="button" class="tsc-foot-btn" data-action="clear">Clear</button>
+        <button type="button" class="tsc-foot-btn" data-action="today">Today</button>
+      </div>`;
+
+    popup.querySelectorAll('.tsc-nav').forEach(b => b.onclick = (e) => {
+      e.stopPropagation();
+      viewMonth += Number(b.dataset.nav);
+      if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+      if (viewMonth > 11){ viewMonth = 0;  viewYear++; }
+      render();
+    });
+    popup.querySelectorAll('.tsc-day[data-day]').forEach(b => b.onclick = (e) => {
+      e.stopPropagation();
+      select(new Date(viewYear, viewMonth, Number(b.dataset.day)));
+    });
+    popup.querySelector('[data-action="clear"]').onclick = (e) => { e.stopPropagation(); select(null); };
+    popup.querySelector('[data-action="today"]').onclick = (e) => { e.stopPropagation(); select(new Date(today)); };
+  }
+
+  function select(d){
+    const inpId = activeField === 'checkin' ? 'checkinInput' : 'checkoutInput';
+    const inp = document.getElementById(inpId);
+    inp.value = d ? fmtISO(d) : '';
+    inp.dispatchEvent(new Event('change', {bubbles:true}));
+    refreshTrigger(activeField);
+
+    // 3b: when check-in is set, jump check-out's view to that month and default
+    // its value to check-in + 1 day (only if check-out is currently empty or
+    // already <= check-in).
+    if (activeField === 'checkin' && d) {
+      const coutInp = document.getElementById('checkoutInput');
+      const coutCur = parseISO(coutInp.value);
+      const nextDay = new Date(d); nextDay.setDate(nextDay.getDate() + 1);
+      if (!coutCur || coutCur <= d) {
+        coutInp.value = fmtISO(nextDay);
+        coutInp.dispatchEvent(new Event('change', {bubbles:true}));
+        refreshTrigger('checkout');
+      }
+      // Pre-position the calendar's next opening to check-in's month
+      viewYear  = d.getFullYear();
+      viewMonth = d.getMonth();
+    }
+    close();
+  }
+
+  function open(field, btn){
+    if (activeField === field && popup.classList.contains('is-open')) { close(); return; }
+    activeField = field;
+    trigger = btn;
+    document.querySelectorAll('.ts-date-trigger').forEach(t => t.classList.remove('is-open'));
+    btn.classList.add('is-open');
+
+    const inpId = field === 'checkin' ? 'checkinInput' : 'checkoutInput';
+    const cur = parseISO(document.getElementById(inpId).value);
+    if (cur) { viewYear = cur.getFullYear(); viewMonth = cur.getMonth(); }
+    // For checkout opened without a current value, default view to checkin's month if available
+    else if (field === 'checkout') {
+      const cin = parseISO(document.getElementById('checkinInput').value);
+      if (cin) { viewYear = cin.getFullYear(); viewMonth = cin.getMonth(); }
+    }
+
+    // Position popup — viewport coords (popup is position:fixed)
+    const rect = btn.getBoundingClientRect();
+    const popupW = 300;   // popup width (260) + border + breathing room
+    const popupH = 320;   // approx rendered height
+    let left = rect.left;
+    let top  = rect.bottom + 6;
+    if (left + popupW > window.innerWidth - 12) left = window.innerWidth - popupW - 12;
+    if (left < 12) left = 12;
+    if (top + popupH > window.innerHeight - 12) top = Math.max(12, rect.top - popupH - 6);
+    popup.style.left = left + 'px';
+    popup.style.top  = top + 'px';
+    popup.classList.add('is-open');
+    render();
+  }
+
+  function close(){
+    if (popup) popup.classList.remove('is-open');
+    document.querySelectorAll('.ts-date-trigger').forEach(t => t.classList.remove('is-open'));
+    activeField = null;
+  }
+
+  function init(){
+    popup = document.getElementById('tsCalendarPopup');
+    if (!popup) return;
+    // Move popup to <body> so it escapes any scrolling/overflow-hidden ancestor
+    if (popup.parentNode !== document.body) document.body.appendChild(popup);
+    refreshTrigger('checkin');
+    refreshTrigger('checkout');
+    document.addEventListener('click', e => {
+      if (!popup.classList.contains('is-open')) return;
+      if (popup.contains(e.target)) return;
+      if (e.target.closest('.ts-date-trigger')) return;
+      close();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+
+  return { open, close, refreshTrigger };
+})();
+</script>
+<div id="tsCalendarPopup" role="dialog" aria-label="Date picker"></div>
 </body>
 </html>
