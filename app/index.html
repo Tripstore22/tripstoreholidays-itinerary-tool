@@ -7108,7 +7108,7 @@ async function processBillableAction(actionType, deliverFn) {
     if (yes1) {
         // On version bump, suffix _V{N+1} so server creates a NEW row instead of
         // overwriting. Original (V1) stays unsuffixed.
-        const saveName = isVersionBump ? `${paxName}_V${(state.current_version || 1) + 1}` : `${paxName}_V1`;
+        const saveName = `${paxName}_V${(state.max_version || 0) + 1}`;
         // Save (charges per pricing inside saveItinerary), then deliver
         const saveRes = await fetch(API_URL, {
             method: 'POST',
