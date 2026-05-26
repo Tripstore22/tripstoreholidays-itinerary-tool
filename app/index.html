@@ -1068,9 +1068,14 @@ thead{display:table-header-group;}
         </div>
       </div>
       <div class="ts-row3 no-print" style="margin-bottom:6px;">
-        <button id="printBtn" onclick="triggerExport('print',this)" style="background:var(--ink2);color:#fff;height:28px;border-radius:7px;font-size:9px;font-weight:700;border:none;cursor:pointer;font-family:var(--sans);">Print</button>
-        <button id="pdfBtn" onclick="triggerExport('pdf',this)" style="background:#ea580c;color:#fff;height:28px;border-radius:7px;font-size:9px;font-weight:700;border:none;cursor:pointer;font-family:var(--sans);">PDF</button>
-        <button id="excelBtn" onclick="triggerExport('excel',this)" style="background:var(--sage);color:#fff;height:28px;border-radius:7px;font-size:9px;font-weight:700;border:none;cursor:pointer;font-family:var(--sans);">Excel</button>
+        <!-- v16 LEGACY — Print button. Hidden, code retained for recoverability. -->
+        <button id="printBtn" onclick="triggerExport('print',this)" data-flag="legacy-print" style="display:none;background:var(--ink2);color:#fff;height:28px;border-radius:7px;font-size:9px;font-weight:700;border:none;cursor:pointer;font-family:var(--sans);">Print</button>
+        <!-- v16 — single PDF path. Now wired to Adobe PDF Services via downloadAdobePDF. -->
+        <button id="pdfBtn" onclick="downloadAdobePDF(this)" style="background:#ea580c;color:#fff;height:28px;border-radius:7px;font-size:9px;font-weight:700;border:none;cursor:pointer;font-family:var(--sans);padding:0 12px;">Download PDF</button>
+        <!-- v16 — Excel hidden by flag (SHOW_EXCEL=false). Logic intact. Flag flips later. -->
+        <button id="excelBtn" onclick="triggerExport('excel',this)" data-flag="excel" style="display:none;background:var(--sage);color:#fff;height:28px;border-radius:7px;font-size:9px;font-weight:700;border:none;cursor:pointer;font-family:var(--sans);">Excel</button>
+        <!-- v16 — WhatsApp placeholder, hidden by flag (SHOW_WHATSAPP=false). -->
+        <button id="whatsappBtn" data-flag="whatsapp" onclick="sendToWhatsApp(this)" style="display:none;background:#25d366;color:#fff;height:28px;border-radius:7px;font-size:9px;font-weight:700;border:none;cursor:pointer;font-family:var(--sans);padding:0 12px;">Send to WhatsApp</button>
       </div>
     </div>
 
@@ -1263,9 +1268,13 @@ thead{display:table-header-group;}
           <button id="btnPdfClient" onclick="setPdfMode('client')" style="background:var(--white);color:var(--ink3);height:28px;padding:0 14px;border-radius:6px;font-size:11px;font-weight:700;border:1px solid var(--border2);cursor:pointer;font-family:var(--sans);">Client</button>
         </div>
         <div class="export-btns">
-          <button onclick="triggerExport('print',this)" style="background:var(--ink2);color:#fff;padding:10px 20px;border-radius:8px;font-weight:700;font-size:13px;text-transform:uppercase;border:none;cursor:pointer;font-family:var(--sans);">🖨 Print</button>
-          <button onclick="triggerExport('pdf',this)" style="background:#ea580c;color:#fff;padding:10px 20px;border-radius:8px;font-weight:700;font-size:13px;text-transform:uppercase;border:none;cursor:pointer;font-family:var(--sans);">📄 PDF</button>
-          <button onclick="triggerExport('excel',this)" style="background:var(--sage);color:#fff;padding:10px 20px;border-radius:8px;font-weight:700;font-size:13px;text-transform:uppercase;border:none;cursor:pointer;font-family:var(--sans);">📊 Excel</button>
+          <!-- v16 LEGACY — Print (hidden, code retained) -->
+          <button onclick="triggerExport('print',this)" data-flag="legacy-print" style="display:none;background:var(--ink2);color:#fff;padding:10px 20px;border-radius:8px;font-weight:700;font-size:13px;text-transform:uppercase;border:none;cursor:pointer;font-family:var(--sans);">🖨 Print</button>
+          <button onclick="downloadAdobePDF(this)" style="background:#ea580c;color:#fff;padding:10px 20px;border-radius:8px;font-weight:700;font-size:13px;text-transform:uppercase;border:none;cursor:pointer;font-family:var(--sans);">📄 Download PDF</button>
+          <!-- v16 — Excel hidden by SHOW_EXCEL flag -->
+          <button onclick="triggerExport('excel',this)" data-flag="excel" style="display:none;background:var(--sage);color:#fff;padding:10px 20px;border-radius:8px;font-weight:700;font-size:13px;text-transform:uppercase;border:none;cursor:pointer;font-family:var(--sans);">📊 Excel</button>
+          <!-- v16 — WhatsApp placeholder, hidden by SHOW_WHATSAPP flag -->
+          <button data-flag="whatsapp" onclick="sendToWhatsApp(this)" style="display:none;background:#25d366;color:#fff;padding:10px 20px;border-radius:8px;font-weight:700;font-size:13px;text-transform:uppercase;border:none;cursor:pointer;font-family:var(--sans);">💬 WhatsApp</button>
         </div>
       </div>
 
@@ -2567,6 +2576,7 @@ loadReport();
 </div>
 
 <script>
+// v18: quote-ID handshake. Server mints Q-id, browser captures + replays.
 // =============================================================
 // CONFIGURATION
 // =============================================================
@@ -3183,6 +3193,8 @@ function startNewQuote() {
     selectedTransfers = [];
     selectedIntercity = [];
     _loadedFromName   = null;
+    window._lastQuoteId = null; // v18: new quote — drop captured quoteId
+    window._pregenPdf   = null;
 
     // Clear form inputs
     document.getElementById('paxNameInput').value     = '';
@@ -3381,6 +3393,8 @@ async function searchItinerary(query) {
         renderRouteInputs();
         renderTables();
         _loadedFromName = query;   // ← mark as "opened from saved"
+        window._lastQuoteId = null; // v18: loaded record — server will mint quoteId on next save
+        window._pregenPdf   = null;
         showToast(`Loaded: ${query}`);
     } catch (e) { showToast("Error loading itinerary", "error"); }
     finally { btn.innerText = "LOAD"; }
@@ -6988,7 +7002,20 @@ function _buildAutoSaveName() {
         ? new Date(selectedRoute[0].cin).toLocaleDateString('en-GB', {day:'2-digit', month:'short'}).replace(' ','')
         : new Date().toLocaleDateString('en-GB', {day:'2-digit', month:'short'}).replace(' ','');
     const fallback = selectedRoute.length > 0 ? selectedRoute[0].city : 'Draft';
-    const cleanBase = rawName.replace(/_V\d+$/i, '').replace(/\s+x\d+_\d{2}[A-Za-z]{3}$/i, '').trim();
+    // Strip ALL suffix tokens (_Vn, x{pax}_{DDMmm}) wherever they sit in the
+    // string — anchored-$ regex fails when tokens accumulate out of order
+    // (e.g. "...x3_15May_v1 x3_15May" → only trailing tag stripped, _v1 survives
+    // → fresh tag re-appended → duplicate baked in). Loop until idempotent.
+    let cleanBase = rawName;
+    let prev;
+    do {
+        prev = cleanBase;
+        cleanBase = cleanBase
+            .replace(/_V\d+\b/gi, '')
+            .replace(/\s+x\d+_\d{1,2}[A-Za-z]{3}\b/gi, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    } while (cleanBase !== prev);
     return `${cleanBase || fallback} x${cfg.totalPax}_${firstDate}`;
 }
 
@@ -7120,6 +7147,12 @@ async function processBillableAction(actionType, deliverFn) {
             showToast('Save blocked: ' + (result.message || 'unknown'), 'error');
             return;
         }
+        // v18: capture server-minted quoteId from save response.
+        if (result.quoteId) {
+            window._lastQuoteId = result.quoteId;
+        } else {
+            console.warn('[v18] save response missing quoteId');
+        }
         // Track the just-saved name so the next changed save creates the next
         // version (V2 → V3 → …), and surface the new name to the agent.
         _loadedFromName = saveName;
@@ -7182,6 +7215,287 @@ function _buildExportFileBase() {
     return `${base} x ${cfg.totalPax}_${firstDate}`;
 }
 
+// v16/v17 feature flags. Excel hidden until internal-vs-agent gating is built.
+// WhatsApp button is a placeholder; feature not yet implemented.
+const SHOW_EXCEL    = false;
+const SHOW_WHATSAPP = false;
+// Apply flags after DOM is ready.
+(function _applyExportFlags(){
+  try {
+    if (SHOW_EXCEL)    document.querySelectorAll('[data-flag="excel"]').forEach(b => b.style.display = '');
+    if (SHOW_WHATSAPP) document.querySelectorAll('[data-flag="whatsapp"]').forEach(b => b.style.display = '');
+  } catch (e) { /* DOM may not be parsed yet; tolerated */ }
+})();
+
+// v17 — Adobe PDF Services endpoint (test deployment until customer URL flip).
+const ADOBE_PDF_API = 'https://script.google.com/macros/s/AKfycbzHI5cGHeknV7qlGNx3X62qtNH_STe3t6wRTBiJ0aEPU2I0lj9_Z9MI2qmUKzX3osl35Q/exec';
+
+// =============================================================
+// v17 — "Generating PDF…" MODAL OVERLAY
+// On-brand visible popup so the agent knows the system is working. Auto-closes
+// when PDF is ready. Used even with pre-gen active — covers race conditions.
+// =============================================================
+function _showPdfModal(initialText) {
+  var existing = document.getElementById('_pdfModalOverlay');
+  if (existing) { existing.style.display = 'flex'; return existing; }
+  var ov = document.createElement('div');
+  ov.id = '_pdfModalOverlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(28,24,18,0.55);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:"Nunito Sans",system-ui,sans-serif;';
+  ov.innerHTML = ''
+    + '<div style="background:#fff;border-radius:14px;padding:36px 44px;box-shadow:0 12px 40px rgba(0,0,0,0.25);min-width:320px;text-align:center;border:1px solid rgba(184,92,56,0.2);">'
+    +   '<div style="width:46px;height:46px;border:4px solid #fdf0ea;border-top-color:#b85c38;border-radius:50%;margin:0 auto 18px;animation:_pdfSpin 0.9s linear infinite;"></div>'
+    +   '<div id="_pdfModalText" style="font-size:14px;font-weight:700;color:#1c1812;letter-spacing:0.02em;">' + (initialText || 'Generating PDF…') + '</div>'
+    +   '<div id="_pdfModalSub" style="font-size:11px;color:#9e9080;margin-top:6px;font-style:italic;">This takes about 15–20 seconds</div>'
+    + '</div>'
+    + '<style>@keyframes _pdfSpin{to{transform:rotate(360deg)}}</style>';
+  document.body.appendChild(ov);
+  return ov;
+}
+function _updatePdfModal(text, sub) {
+  var t = document.getElementById('_pdfModalText'); if (t && text) t.innerText = text;
+  var s = document.getElementById('_pdfModalSub');  if (s && sub  !== undefined) s.innerText = sub;
+}
+function _hidePdfModal() {
+  var ov = document.getElementById('_pdfModalOverlay');
+  if (ov) ov.style.display = 'none';
+}
+
+// =============================================================
+// v17 — Download PDF. Uses pre-gen cache if available; else live-generates.
+// Modal overlay always shown so agent sees feedback even on instant case.
+// =============================================================
+async function downloadAdobePDF(btnEl) {
+  if (btnEl && btnEl.disabled) return;
+  var paxName = (document.getElementById('paxNameInput') || {}).value || '';
+  // FAST PATH: pre-gen cache hit. Key by quoteId when available, paxName otherwise.
+  var pre = window._pregenPdf;
+  var preQid = window._lastQuoteId || null;
+  var fastHit = pre && pre.fileId && (
+    (preQid && pre.quoteId === preQid) ||
+    (!preQid && pre.paxName === paxName.trim())
+  );
+  if (fastHit) {
+    _showPdfModal('PDF ready — opening…');
+    _updatePdfModal(null, '');
+    var directUrl = 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(pre.fileId);
+    window.open(directUrl, '_blank');
+    setTimeout(_hidePdfModal, 600);
+    return;
+  }
+  // SLOW PATH: pre-gen unavailable or stale — save current state, then generate.
+  if (btnEl) {
+    btnEl.dataset.origText = btnEl.innerText;
+    btnEl.innerText = 'Generating PDF…';
+    btnEl.disabled = true;
+    btnEl.style.opacity = '0.7';
+  }
+  _showPdfModal('Saving quote…', 'Step 1 of 2');
+
+  try {
+    await _ensureSaved();
+    var quoteIdAfter = window._lastQuoteId || null;
+    console.log('[downloadAdobePDF] _ensureSaved done. quoteId=', quoteIdAfter, 'pregen=', window._pregenPdf);
+    // After save: pre-gen may have populated the cache — use it if so.
+    var pre2 = window._pregenPdf;
+    if (pre2 && pre2.fileId && quoteIdAfter && pre2.quoteId === quoteIdAfter) {
+      _updatePdfModal('PDF ready — opening…', '');
+      var preUrl = 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(pre2.fileId);
+      window.open(preUrl, '_blank');
+      setTimeout(_hidePdfModal, 600);
+      if (btnEl) {
+        btnEl.innerText = btnEl.dataset.origText || 'Download PDF';
+        btnEl.disabled = false; btnEl.style.opacity = '';
+      }
+      return;
+    }
+  } catch (saveErr) {
+    console.warn('[downloadAdobePDF] ensureSaved threw:', saveErr);
+  }
+
+  // v18: prefer quoteId; fall back to legacy paxName only if no quoteId.
+  var qid = window._lastQuoteId || null;
+  var params;
+  if (qid) {
+    params = 'quoteId=' + encodeURIComponent(qid);
+  } else {
+    var legacyName = (typeof _buildAutoSaveName === 'function') ? _buildAutoSaveName() : paxName;
+    params = 'paxName=' + encodeURIComponent(legacyName);
+  }
+  _updatePdfModal('Generating PDF…', 'Step 2 of 2 — about 15–20 seconds');
+  try {
+    var res  = await fetch(ADOBE_PDF_API + '?action=generatePDF&' + params, { method: 'GET' });
+    var data = await res.json();
+    if (data && data.error) {
+      var code = data.error;
+      var msg  = data.message || '';
+      var human;
+      if (code === 'quoteid_not_found' || code === 'paxname_not_found') {
+        human = 'Quote not found on server. Try saving again.';
+      } else if (code === 'saved_itineraries_not_found') {
+        human = 'Save incomplete — please check balance and save again.';
+      } else if (code === 'pdf_generation_failed') {
+        human = 'PDF generation failed: ' + msg;
+      } else {
+        human = 'Could not generate PDF: ' + (msg || code);
+      }
+      throw new Error(human);
+    }
+    if (!data || !data.fileId) throw new Error('PDF generator returned no fileId');
+    _updatePdfModal('PDF ready — opening…', '');
+    var directUrl = 'https://drive.google.com/uc?export=download&id=' + encodeURIComponent(data.fileId);
+    window.open(directUrl, '_blank');
+    // Cache for repeat downloads — key by quoteId if we have one.
+    if (qid) {
+      window._pregenPdf = { fileId: data.fileId, quoteId: qid, ts: Date.now() };
+    } else {
+      window._pregenPdf = { fileId: data.fileId, paxName: paxName, ts: Date.now() };
+    }
+    setTimeout(_hidePdfModal, 800);
+  } catch (e) {
+    console.error('[Adobe PDF]', e);
+    _updatePdfModal('PDF generation failed', (e && e.message) || 'unknown error');
+    setTimeout(_hidePdfModal, 2400);
+    if (typeof showToast === 'function') {
+      showToast((e && e.message) || 'PDF generation failed', 'error');
+    }
+  } finally {
+    if (btnEl) {
+      btnEl.innerText = btnEl.dataset.origText || 'Download PDF';
+      btnEl.disabled = false;
+      btnEl.style.opacity = '';
+    }
+  }
+}
+
+// v16 — WhatsApp placeholder. Feature not yet implemented.
+async function sendToWhatsApp(btnEl) {
+  if (typeof showToast === 'function') showToast('WhatsApp send — coming soon', 'info');
+}
+
+// =============================================================
+// v17 — SILENT AUTO-SAVE + PRE-GEN
+// Every 30s, if the quote builder has unsaved changes AND a paxName exists,
+// save silently via existing saveItinerary flow, then trigger background PDF
+// pre-gen. "Download PDF" click serves the cached PDF instantly.
+// No UI noise on success. Single retry on failure, then go quiet.
+// =============================================================
+let _autoSaveDirty = false;
+let _autoSaveFailCount = 0;
+let _autoSaveInFlight = false;
+
+function _markDirty() {
+  _autoSaveDirty = true;
+  // Invalidate any cached pre-gen — stale now.
+  window._pregenPdf = null;
+}
+// Hook _markDirty into common edit signals. Existing render functions call
+// calculateBudgetInvestment / renderTables after any change; we patch those.
+(function _wireAutoSaveHooks() {
+  ['calculateBudgetInvestment', 'renderTables'].forEach(function(fnName){
+    try {
+      var orig = window[fnName];
+      if (typeof orig === 'function' && !orig._wrapped_v17) {
+        window[fnName] = function() { _markDirty(); return orig.apply(this, arguments); };
+        window[fnName]._wrapped_v17 = true;
+      }
+    } catch (e) {}
+  });
+})();
+
+// v18: see _lastQuoteId; server mints, FE captures
+window._lastQuoteId = null;
+
+// v17.2 — Force a save regardless of dirty flag. Used by Download PDF slow path
+// so fresh quotes (never saved) get into Quote_Log + Saved_Itineraries before
+// the Apps Script tries to look them up. Reuses _autoSaveTick guards otherwise.
+// Returns the quoteId (v18) so the caller can query the right record.
+async function _ensureSaved() {
+  _autoSaveDirty = true; // override; let _autoSaveTick run its full path
+  await _autoSaveTick();
+  return window._lastQuoteId;
+}
+
+async function _autoSaveTick() {
+  if (_autoSaveInFlight) return;
+  if (!_autoSaveDirty)   return;
+  var paxNameRaw = (document.getElementById('paxNameInput')||{}).value || '';
+  if (!paxNameRaw.trim()) return;            // no quote in progress
+  if (!Array.isArray(window.currentPlan) || window.currentPlan.length === 0) return;
+  _autoSaveInFlight = true;
+  try {
+    var saveName = (typeof _buildAutoSaveName === 'function') ? _buildAutoSaveName() : paxNameRaw.trim();
+    var payload  = (typeof _buildCurrentPayload === 'function') ? _buildCurrentPayload() : null;
+    // v17.5: prefer the directly-set username; only fall back to _resolveAgentName.
+    // Admin sessions can have _resolveAgentName return empty → save endpoint silently rejects.
+    var agent = window.currentUsername || (typeof _resolveAgentName === 'function' ? _resolveAgentName() : '') || 'admin';
+    if (!payload) { _autoSaveInFlight = false; console.warn('[autoSaveTick] no payload — _buildCurrentPayload returned null'); return; }
+    console.log('[autoSaveTick] resolved agent=', JSON.stringify(agent));
+    console.log('[autoSaveTick] POSTing saveItinerary as', JSON.stringify({paxName: saveName, savedBy: agent, payload_keys: Object.keys(payload||{})}));
+    var res = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'saveItinerary', paxName: saveName, payload: payload, savedBy: agent, silent: true })
+    });
+    var rawText = await res.text();
+    console.log('[autoSaveTick] raw response:', rawText.slice(0, 400));
+    var result;
+    try { result = JSON.parse(rawText); }
+    catch (parseErr) { result = { success: false, message: 'Non-JSON response: ' + rawText.slice(0, 200) }; }
+    if (result && result.success) {
+      _autoSaveDirty = false;
+      _autoSaveFailCount = 0;
+      // v18: capture server-minted quoteId from save response.
+      if (result.quoteId) {
+        window._lastQuoteId = result.quoteId;
+      } else {
+        console.warn('[v18] save response missing quoteId');
+      }
+      // Fire pre-gen in background (no await — we don't want to block next tick).
+      _pregenAfterSave(result.quoteId || null, saveName);
+    } else {
+      _autoSaveFailCount++;
+      if (_autoSaveFailCount >= 3 && typeof showToast === 'function') {
+        showToast('Auto-save failed (3 attempts). Try saving manually.', 'error');
+      }
+    }
+  } catch (e) {
+    _autoSaveFailCount++;
+    console.warn('[autosave]', e);
+  } finally {
+    _autoSaveInFlight = false;
+  }
+}
+
+async function _pregenAfterSave(quoteId, paxName) {
+  // v18: pre-gen is keyed by quoteId. If quoteId is missing, skip — we cannot
+  // reliably invalidate a paxName-keyed cache under the ID contract.
+  if (!quoteId) {
+    console.warn('[v18] _pregenAfterSave skipped — no quoteId');
+    return;
+  }
+  try {
+    var url = ADOBE_PDF_API + '?action=generatePDF&quoteId=' + encodeURIComponent(quoteId);
+    var res = await fetch(url, { method: 'GET' });
+    var data = await res.json().catch(function(){ return null; });
+    if (data && data.fileId) {
+      window._pregenPdf = { fileId: data.fileId, quoteId: quoteId, ts: Date.now() };
+    }
+  } catch (e) {
+    // silent — Download PDF click will fall back to live-generate
+  }
+}
+
+// Start the 30s ticker once the page is loaded.
+setInterval(_autoSaveTick, 30000);
+// Also kick once shortly after first quote render (when paxName + plan exist).
+setTimeout(_autoSaveTick, 4000);
+
+// =============================================================
+// LEGACY — replaced by Adobe PDF v16 (2026-05-26).
+// The downloadPDF() function below was the old html2canvas + jsPDF flow.
+// It is no longer wired to any visible button (Print + old PDF triggers now
+// hidden or repointed to downloadAdobePDF). Function body retained for
+// recoverability. To restore: re-attach via triggerExport('pdf', this).
+// =============================================================
 async function downloadPDF() {
     const element = document.getElementById('pdf-content');
     const fileBase = _buildExportFileBase();
