@@ -4792,6 +4792,25 @@ function runOptimizer(reoptimizeHotels = false, reoptimizeSights = false, skipRo
     showToast("Plan generated successfully (v11 tod-slot)", "success");
 }
 
+// v19.1 (2026-05-27) — Build the customer-facing Transfer DETAILS sentence
+// from current state (vehicle + from + to). Never reads master Schedule text,
+// so DETAILS can never disagree with FROM/TO. Confirmed against full 1,411-row
+// Transfers master scan: every Schedule cell is pure boilerplate, zero
+// operational detail is lost.
+function _vehicleLabelForDetails(typeCode) {
+  switch (String(typeCode || '').trim()) {
+    case 'economySedan':   return 'Economy Sedan';
+    case 'standardVan':    return 'Standard Van';
+    case 'premiumVan':     return 'Premium Van';
+    case 'executiveSedan': return 'Executive Sedan';
+    default:               return 'Sedan or Van'; // 'auto' or anything unknown
+  }
+}
+function _buildTransferDetailsText(from, to, vehicleLabel) {
+  var v = String(vehicleLabel || '').trim() || 'Sedan or Van';
+  return 'One way Transfer from ' + (from || '') + ' to ' + (to || '') + ' in ' + v;
+}
+
 // --- TRANSFER OPTIMIZER ---
 function optimizeTransfers(tBudgetTotal, paxCount) {
     if (!masterData.transfers || masterData.transfers.length === 0) return;
@@ -4836,11 +4855,13 @@ function optimizeTransfers(tBudgetTotal, paxCount) {
             from = match ? match.from : cityFallback;
             to   = match ? match.to   : '';
         }
+        // v19.1: details ALWAYS generated from current state — never reads master Schedule.
+        const _vLabel = _vehicleLabelForDetails((getTravelConfigs() || {}).vehicleType);
         return {
             legId, date,
             city:           match ? match.city : cityFallback,
             from, to,
-            details:        match ? (match.notes || '') : '',
+            details:        _buildTransferDetailsText(from, to, _vLabel),
             vehiclePrice:   vPrice,
             avgPrice:       vPrice,
             economySedan:   match ? (Number(match.economySedan)    || 0) : 0,
@@ -4859,9 +4880,18 @@ function optimizeTransfers(tBudgetTotal, paxCount) {
     const arrivalManual = manualTransfers.find(t => t.legId === `arrival-${firstPlan.city}`);
     if (arrivalManual) {
         // v19 (2026-05-27): override `to` with the LIVE hotel name on every
-        // optimizeTransfers run. Preserves agent's price/vehicle/details/notes
-        // edits but fixes stale hotel name after a post-edit Swap Hotel.
-        newLegs.push(Object.assign({}, arrivalManual, { to: firstPlan?.hotel?.name || arrivalManual.to }));
+        // optimizeTransfers run. Preserves agent's price/vehicle edits but
+        // fixes stale hotel name after a post-edit Swap Hotel.
+        // v19.2 (2026-05-27): ALSO regenerate `details` from current state,
+        // unless agent typed custom text into the Details field (_detailsCustom).
+        const _newArrivalTo = firstPlan?.hotel?.name || arrivalManual.to;
+        const _arrFrom = arrivalManual.from || ((firstPlan.city || '') + ' Airport');
+        const _arrVLabel = _vehicleLabelForDetails((getTravelConfigs() || {}).vehicleType);
+        const _arrPatch = { to: _newArrivalTo };
+        if (!arrivalManual._detailsCustom) {
+            _arrPatch.details = _buildTransferDetailsText(_arrFrom, _newArrivalTo, _arrVLabel);
+        }
+        newLegs.push(Object.assign({}, arrivalManual, _arrPatch));
     } else {
         const am = findTransfer(firstPlan.city, firstPlan?.hotel?.name || '', 'ARRIVAL');
         newLegs.push(buildLeg(`arrival-${firstPlan.city}`, firstPlan.cin, firstPlan.city, am, 'ARRIVAL', firstPlan?.hotel?.name || ''));
@@ -4889,7 +4919,15 @@ function optimizeTransfers(tBudgetTotal, paxCount) {
     if (departureManual) {
         // v19 (2026-05-27): override `from` with the LIVE hotel name on every
         // optimizeTransfers run. Same rationale as arrival above.
-        newLegs.push(Object.assign({}, departureManual, { from: lastPlan?.hotel?.name || departureManual.from }));
+        // v19.2 (2026-05-27): ALSO regenerate `details` unless _detailsCustom is set.
+        const _newDepFrom = lastPlan?.hotel?.name || departureManual.from;
+        const _depTo = departureManual.to || ((lastPlan.city || '') + ' Airport');
+        const _depVLabel = _vehicleLabelForDetails((getTravelConfigs() || {}).vehicleType);
+        const _depPatch = { from: _newDepFrom };
+        if (!departureManual._detailsCustom) {
+            _depPatch.details = _buildTransferDetailsText(_newDepFrom, _depTo, _depVLabel);
+        }
+        newLegs.push(Object.assign({}, departureManual, _depPatch));
     } else {
         const dm = findTransfer(lastPlan.city, lastPlan?.hotel?.name || '', 'DEPARTURE');
         newLegs.push(buildLeg(`departure-${lastPlan.city}`, lastPlan.cout, lastPlan.city, dm, 'DEPARTURE', lastPlan?.hotel?.name || ''));
@@ -5618,15 +5656,19 @@ function transformEngineResult(result, route, config) {
         const d = isArrival ? (firstCity.cin || '') : (lastCity.cout || '');
         const from = isArrival ? ((t.city || firstCity.city || '') + ' Airport') : lastHotel;
         const to   = isArrival ? firstHotel : ((t.city || lastCity.city || '') + ' Airport');
-        const vehicleLabel = t.vehicle || t.vehicleType || '';
-        // Prefer the master's Schedule text (Transfers Col N); fall back to generic "vehicle · city" if empty.
-        const details = (t.schedule && t.schedule.trim()) ? t.schedule : (vehicleLabel + ' · ' + (t.city || ''));
+        // v19.1: details ALWAYS generated from current state. The server's t.schedule
+        // is stripped (set to '') so PDF's `t.details || t.schedule` fallback can never
+        // resurrect a stale master Schedule string mentioning a different hotel.
+        const serverVehicleLabel = t.vehicle || t.vehicleType || '';
+        const vehicleLabel = serverVehicleLabel || _vehicleLabelForDetails(((typeof getTravelConfigs === 'function' ? getTravelConfigs() : {}) || {}).vehicleType);
+        const details = _buildTransferDetailsText(from, to, vehicleLabel);
         return Object.assign({}, t, {
-            date:    d,
-            from:    from,
-            to:      to,
-            details: details,
-            legId:   t.legId || (t.leg + '-' + (t.city || ''))
+            date:     d,
+            from:     from,
+            to:       to,
+            details:  details,
+            schedule: '',  // strip server's master Schedule text
+            legId:    t.legId || (t.leg + '-' + (t.city || ''))
         });
     });
 
@@ -5908,6 +5950,13 @@ function editTransfer(index, field, value) {
         selectedTransfers[index][field] = value;
     }
     selectedTransfers[index].isManual = true;
+    // v19.2 (2026-05-27): if the agent typed into the Details cell, mark it
+    // custom so future optimizeTransfers runs (e.g. after a Swap Hotel) won't
+    // regenerate the sentence over their typed text. Any non-Details edit
+    // leaves the flag alone — Details continues to auto-refresh from current state.
+    if (field === 'details') {
+        selectedTransfers[index]._detailsCustom = true;
+    }
     calculateBudgetInvestment();
 }
 
