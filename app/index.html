@@ -1262,7 +1262,7 @@ thead{display:table-header-group;}
 
       <!-- EXPORT + PDF MODE -->
       <div class="export-area no-print">
-        <div class="pdf-mode-btns">
+        <div class="pdf-mode-btns" style="display:none;">
           <span style="font-size:10px;font-weight:700;color:var(--ink4);text-transform:uppercase;">PDF Mode:</span>
           <button id="btnPdfAgent" onclick="setPdfMode('agent')" style="background:var(--ink2);color:#fff;height:28px;padding:0 14px;border-radius:6px;font-size:11px;font-weight:700;border:none;cursor:pointer;font-family:var(--sans);">Agent</button>
           <button id="btnPdfClient" onclick="setPdfMode('client')" style="background:var(--white);color:var(--ink3);height:28px;padding:0 14px;border-radius:6px;font-size:11px;font-weight:700;border:1px solid var(--border2);cursor:pointer;font-family:var(--sans);">Client</button>
@@ -7268,14 +7268,19 @@ function _buildExportFileBase() {
 // v16/v17 feature flags. Excel hidden until internal-vs-agent gating is built.
 // WhatsApp button is a placeholder; feature not yet implemented.
 const SHOW_EXCEL    = false;
-const SHOW_WHATSAPP = false;
+const SHOW_WHATSAPP = true;
 // Apply flags after DOM is ready.
-(function _applyExportFlags(){
+function _applyExportFlags(){
   try {
     if (SHOW_EXCEL)    document.querySelectorAll('[data-flag="excel"]').forEach(b => b.style.display = '');
     if (SHOW_WHATSAPP) document.querySelectorAll('[data-flag="whatsapp"]').forEach(b => b.style.display = '');
-  } catch (e) { /* DOM may not be parsed yet; tolerated */ }
-})();
+  } catch (e) { /* tolerated */ }
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _applyExportFlags);
+} else {
+  _applyExportFlags();
+}
 
 // v17 — Adobe PDF Services endpoint (test deployment until customer URL flip).
 const ADOBE_PDF_API = 'https://script.google.com/macros/s/AKfycbzHI5cGHeknV7qlGNx3X62qtNH_STe3t6wRTBiJ0aEPU2I0lj9_Z9MI2qmUKzX3osl35Q/exec';
@@ -7421,9 +7426,47 @@ async function downloadAdobePDF(btnEl) {
   }
 }
 
-// v16 — WhatsApp placeholder. Feature not yet implemented.
+// Generate the quote PDF server-side and send it to the agent's own
+// WhatsApp number (Interakt Document message). One backend call.
 async function sendToWhatsApp(btnEl) {
-  if (typeof showToast === 'function') showToast('WhatsApp send — coming soon', 'info');
+  if (btnEl && btnEl.disabled) return;
+  var origText = btnEl ? btnEl.innerText : '';
+  if (btnEl) {
+    btnEl.dataset.origText = origText;
+    btnEl.innerText = 'Sending…';
+    btnEl.disabled = true;
+    btnEl.style.opacity = '0.7';
+  }
+  try {
+    if (typeof showToast === 'function') showToast('Generating PDF for WhatsApp…', 'info');
+    await _ensureSaved();
+    var qid     = window._lastQuoteId || null;
+    var paxName = (document.getElementById('paxNameInput') || {}).value || '';
+    var legacyName = (typeof _buildAutoSaveName === 'function') ? _buildAutoSaveName() : paxName;
+    var res = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'sendWhatsAppPDF',
+        agentUsername: window.currentUsername || '',
+        quoteId: qid || '',
+        paxName: legacyName
+      })
+    });
+    var result = await res.json();
+    if (result && result.success) {
+      if (typeof showToast === 'function') showToast('Quote sent to your WhatsApp!', 'success');
+    } else {
+      if (typeof showToast === 'function') showToast('WhatsApp send failed: ' + ((result && result.error) || 'unknown error'), 'error');
+    }
+  } catch (e) {
+    if (typeof showToast === 'function') showToast('Error: ' + ((e && e.message) || e), 'error');
+  } finally {
+    if (btnEl) {
+      btnEl.innerText = btnEl.dataset.origText || origText || 'WhatsApp';
+      btnEl.disabled = false;
+      btnEl.style.opacity = '';
+    }
+  }
 }
 
 // =============================================================
