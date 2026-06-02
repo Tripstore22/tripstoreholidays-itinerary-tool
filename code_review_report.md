@@ -1,7 +1,7 @@
-# TripStore Itinerary Tool — Daily Code Review
-**Date:** 2026-06-01
-**Reviewer:** Automated (Claude)
-**Files Reviewed:** Code.gs, Pipeline.gs, Quote_Intelligence.gs, index_fit.tripstore.html, write_to_sheets.py, archive_to_input.py
+# TripStore Code Review Report
+**Date:** 2026-06-02
+**Reviewer:** Automated Daily Review
+**Files Reviewed:** Code.gs, Pipeline.gs, Quote_Intelligence.gs, index_fit.tripstore.html, write_to_sheets.py
 **Missing Files (not in repo):** extract_itineraries.py, write_inputs_to_sheets.py, cleanup_sheet.py, clean_pipeline_data.py, cross_reference.py, enrich_hotels.py, enrich_hotels_booking.py
 
 ---
