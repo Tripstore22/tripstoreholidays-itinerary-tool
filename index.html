@@ -1364,10 +1364,19 @@
   /* Real-iPhone readability pass. Bumps body / headings / stats / cards / CTAs.    */
   /* All within @media (max-width:768px). Desktop unchanged.                        */
   @media (max-width: 768px) {
-    /* Root + body baseline — 16px to defeat any iOS auto-shrink */
-    html { font-size: 16px !important; }
-    body { font-size: 16px !important; line-height: 1.6 !important; }
-    p, li { font-size: 16px !important; line-height: 1.6 !important; }
+    /* Root + body baseline — 17px so it reads at native iPhone sizes (Pro/Pro Max  */
+    /* portrait viewport ≈ 393-430pt; at 16px, text looked small vs DevTools 390px) */
+    html {
+      font-size: 17px !important;
+      -webkit-text-size-adjust: 100% !important;
+      text-size-adjust: 100% !important;
+    }
+    body {
+      font-size: 17px !important;
+      line-height: 1.6 !important;
+      -webkit-text-size-adjust: 100% !important;
+    }
+    p, li { font-size: 17px !important; line-height: 1.6 !important; }
 
     /* Section eyebrow labels */
     .eyebrow,
@@ -1428,7 +1437,8 @@
     .cp-sub, .cp-label { font-size: 12px !important; }
 
     /* Hero copy */
-    .hero-sub { font-size: 16px !important; line-height: 1.55 !important; }
+    .hero-sub { font-size: 18px !important; line-height: 1.55 !important; }
+    .hero h1 { font-size: clamp(30px, 8.5vw, 40px) !important; }
 
     /* FAQ */
     .faq-q { font-size: 15px !important; line-height: 1.4 !important; }
@@ -1442,7 +1452,20 @@
     /* CTA buttons */
     .btn-cta,
     .btn-cta.large,
-    .topbar-cta { font-size: 16px !important; padding: 16px 20px !important; }
+    .topbar-cta { font-size: 17px !important; padding: 16px 20px !important; }
+  }
+
+  /* Narrow-phone sub-breakpoint — push slightly bigger on small iPhones */
+  @media (max-width: 480px) {
+    html { font-size: 17px !important; }
+    body, p, li { font-size: 17px !important; }
+    .hero-sub { font-size: 18px !important; }
+    .pain-step .step-title { font-size: 16px !important; }
+    .compare-row-mobile,
+    .compare-row-mobile .compare-label,
+    .compare-row-mobile .compare-val { font-size: 15px !important; }
+    .faq-q { font-size: 16px !important; }
+    .faq-a p { font-size: 15px !important; }
   }
 </style>
 </head>
