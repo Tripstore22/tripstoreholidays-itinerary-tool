@@ -1121,6 +1121,86 @@ thead{display:table-header-group;}
   /* Top nav inside ts-nav (the toolbar at the very top) — already scrolls; ensure nothing overflows the body */
   body, html { overflow-x: hidden; }
 }
+
+/* ====== M2.1 — Sidebar font bumps + swap buttons back (2026-06-04) ====== */
+@media (max-width: 768px) {
+  /* iOS auto-zoom on focus triggers when input font-size < 16px */
+  .ts-sidebar input,
+  .ts-sidebar select,
+  .ts-sidebar textarea,
+  .ts-sidebar .ts-input,
+  .ts-sidebar .ts-select,
+  .ts-sidebar .ts-date-trigger,
+  .ts-sidebar .ts-date-trigger .tsd-label {
+    font-size: 16px !important;
+  }
+
+  /* Section labels (TRAVELER DETAILS, ROUTE, PRICING CONTROLS, …) */
+  .ts-sidebar .sb-lbl,
+  .ts-sidebar .sb-heading { font-size: 13px !important; }
+
+  /* Field labels (Adults, Children, Check-in, …) */
+  .ts-sidebar .ts-label { font-size: 13px !important; }
+
+  /* Budget calc panel */
+  .ts-sidebar #budgetCalcPanel,
+  .ts-sidebar #budgetCalcPanel * { font-size: 13px !important; }
+
+  /* City-intelligence pills inside the sidebar — pills use inline font-size:8px,    */
+  /* override via attribute selector on their wrapper spans/divs.                    */
+  .ts-sidebar span[style*="font-size:8px"],
+  .ts-sidebar span[style*="font-size: 8px"],
+  .ts-sidebar div[style*="font-size:9px"],
+  .ts-sidebar div[style*="font-size: 9px"] {
+    font-size: 11px !important;
+  }
+
+  /* Sidebar generic divs that hardcode small font (inline) */
+  .ts-sidebar [style*="font-size:10px"],
+  .ts-sidebar [style*="font-size: 10px"] { font-size: 12px !important; }
+
+  /* ── FIX 2 — bring Swap button back on Hotels + Day-wise tables ──             */
+
+  /* HOTELS: Swap is col 8 (.no-print). Unhide for this column only.              */
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(1) tr > *:nth-child(8) {
+    display: table-cell !important;
+  }
+  /* Hotel col widths (was 25/15/60): 22/10/52/16 to make room for Swap.          */
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(1) tr > *:nth-child(1) { width: 22% !important; }
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(1) tr > *:nth-child(4) { width: 10% !important; }
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(1) tr > *:nth-child(5) { width: 52% !important; }
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(1) tr > *:nth-child(8) { width: 16% !important; }
+  /* Shrink the Swap button itself on mobile */
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(1) td:nth-child(8) .tbl-action-btn {
+    font-size: 10px !important;
+    padding: 4px 6px !important;
+  }
+
+  /* DAY-WISE activity rows: re-show the swap button (×|⇌ buttons inside .act-row)  */
+  /* Only the swap (⇌) button is brought back. Delete (×) and price col stay hidden.*/
+  /* The swap button is the first <button class="no-print"> inside .act-row.        */
+  .ts-preview #sightTableBody .act-row button.no-print:nth-of-type(1) {
+    display: inline-flex !important;
+    flex-shrink: 0 !important;
+    font-size: 10px !important;
+    padding: 4px 8px !important;
+    width: auto !important;
+    height: auto !important;
+    margin-left: auto !important;
+  }
+  /* Lay the act-row so name takes most width and swap sits to the right */
+  .ts-preview #sightTableBody .act-row {
+    flex-direction: row !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+  }
+  .ts-preview #sightTableBody .act-row > div:first-child {
+    flex: 1 1 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+  }
+}
 </style>
 </head>
 <body>
