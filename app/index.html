@@ -835,6 +835,292 @@ thead{display:table-header-group;}
 .tsc-foot{display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid #ede2cf;}
 .tsc-foot-btn{background:none;border:none;color:#b85c38;font-size:10px;font-weight:600;cursor:pointer;padding:2px 4px;font-family:var(--sans);}
 .tsc-foot-btn:hover{text-decoration:underline;}
+
+/* ====== M2 — Mobile responsive supplement (2026-06-03) ====== */
+/* Brief 2 — additive @media(max-width:768px). DEV only.            */
+/* NOTE: Brief 2 #2 (kill scale(0.40) on PDF preview) — NOT APPLIED. */
+/* No scale() transform exists anywhere in this file; preview uses  */
+/* normal flow already. Reporting back to Sumit rather than adapting*/
+/* silently per the stop-and-report rule.                           */
+@media (max-width: 768px) {
+  /* 0. Release the fixed-viewport lock — base CSS has html/body height:100% + overflow:hidden */
+  html, body {
+    height: auto !important;
+    min-height: 100% !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    display: block !important;
+  }
+
+  /* 1. Stack left sidebar + right panel vertically */
+  .ts-app-body { display: block !important; overflow: visible !important; height: auto !important; }
+  #tab-itinerary {
+    display: block !important;
+    flex-direction: column;
+    overflow: visible !important;
+    height: auto !important;
+  }
+  .ts-sidebar {
+    width: 100% !important;
+    height: auto !important;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    overflow-y: visible !important;
+  }
+  .ts-preview {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    flex: none !important;
+    overflow: visible !important;
+    padding: 12px !important;
+    display: block !important;
+  }
+  /* #tab-itinerary inline style includes height:0; ensure the override sticks */
+  #tab-itinerary[style] { height: auto !important; }
+  /* #pdf-content kept at width:100%, no transform — see HEADER NOTE on #2 */
+  #pdf-content { width: 100% !important; transform: none !important; margin: 0 !important; }
+
+  /* 3. Tables — mobile redesign per 2026-06-03 brief                              */
+  /*    HOTELS:    City | Nights | Hotel Name        (price/meals hidden)          */
+  /*    DAY-WISE:  Date+City | Tour Name             (price/swap/del/tags hidden)  */
+  /*    TRANSFERS: Date | From | To                  (type/details/cost hidden)    */
+  /*    TRAINS:    Date | Mode | Route               (notes/cost hidden)           */
+  .ts-preview .trip-table {
+    display: table !important;
+    table-layout: fixed !important;
+    width: 100% !important;
+    font-size: 12px;
+    overflow-x: visible !important;
+  }
+  .ts-preview .trip-table th,
+  .ts-preview .trip-table td {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    padding: 8px 6px !important;
+    font-size: 12px !important;
+    vertical-align: top !important;
+  }
+  /* Hide any cell flagged .no-print */
+  .ts-preview .trip-table th.no-print,
+  .ts-preview .trip-table td.no-print { display: none !important; }
+
+  /* ── HOTELS (1st .trip-table) ──                                                 */
+  /* Show: City(1) 25% | Nights(4) 15% | Hotel Name(5) 60%                          */
+  /* Hide: In(2), Out(3), Meals/Room/Cat(6), Total Stay(7)                          */
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(1) tr > *:nth-child(2),
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(1) tr > *:nth-child(3),
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(1) tr > *:nth-child(6),
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(1) tr > *:nth-child(7) {
+    display: none !important;
+  }
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(1) tr > *:nth-child(1) { width: 25% !important; }
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(1) tr > *:nth-child(4) { width: 15% !important; text-align: center !important; }
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(1) tr > *:nth-child(5) { width: 60% !important; }
+
+  /* ── DAY-WISE (2nd .trip-table) ──                                               */
+  /* Two cols only: Date+City (col 1, 22%) | Tour Name (col 2, 78%)                 */
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(2) tr > *:nth-child(1) {
+    width: 22% !important;
+  }
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(2) tr > *:nth-child(2) {
+    width: 78% !important;
+  }
+  /* Override inline style="width:11%" on day-row tds */
+  .ts-preview #sightTableBody td.day-row[style] { width: 22% !important; }
+  /* City badge below date may be long ("Lauterbrunnen") — allow it to wrap */
+  .ts-preview #sightTableBody .day-city-badge {
+    white-space: normal !important;
+    word-break: break-word !important;
+    display: inline-block !important;
+    line-height: 1.15 !important;
+  }
+
+  /* Inside each activity card: hide price, swap, delete, tag pills                 */
+  .ts-preview #sightTableBody .act-row .price-col,
+  .ts-preview #sightTableBody .act-row button.no-print,
+  .ts-preview #sightTableBody .act-row .act-cat,
+  .ts-preview #sightTableBody .act-row .act-dur {
+    display: none !important;
+  }
+  /* Tour name textarea — full width, allow wrap, no min-width constraint */
+  .ts-preview #sightTableBody .act-row {
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    gap: 6px !important;
+  }
+  .ts-preview #sightTableBody .act-row > div:first-child {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    flex-wrap: nowrap !important;
+  }
+  .ts-preview #sightTableBody .act-row > div:first-child textarea.pdf-input {
+    width: 100% !important;
+    min-width: 0 !important;
+    white-space: normal !important;
+    font-size: 13px !important;
+  }
+
+  /* ── TRANSFERS (3rd .trip-table) ──                                              */
+  /* Show: Date(1) 25% | From(3) 37% | To(4) 38%                                    */
+  /* Hide: Type(2), Details(5), Cost(6 no-print), Action(7 no-print)                */
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(3) {
+    display: table !important;
+    overflow-x: visible !important;
+  }
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(3) tr > *:nth-child(2),
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(3) tr > *:nth-child(5) {
+    display: none !important;
+  }
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(3) tr > *:nth-child(1) { width: 25% !important; }
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(3) tr > *:nth-child(3) { width: 37% !important; }
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(3) tr > *:nth-child(4) { width: 38% !important; }
+
+  /* ── TRAINS (4th .trip-table) ──                                                 */
+  /* Show: Date(1) 20% | Mode(2) 25% | Route(3) 55%                                 */
+  /* Hide: Notes(4), Cost(5 no-print), Action(6 no-print)                           */
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(4) tr > *:nth-child(4) {
+    display: none !important;
+  }
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(4) tr > *:nth-child(1) { width: 20% !important; }
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(4) tr > *:nth-child(2) { width: 25% !important; }
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(4) tr > *:nth-child(3) { width: 55% !important; }
+  /* Mode pill: smaller font + constrain width so the terracotta bg doesn't bleed   */
+  /* into Route column. The pill is actually an <input>, max-width:100px inline.    */
+  .ts-preview #ferryBusTableBody td:nth-child(2) input,
+  .ts-preview #ferryBusTableBody td:nth-child(2) span,
+  .ts-preview #ferryBusTableBody td:nth-child(2) .city-tag {
+    font-size: 10px !important;
+    padding: 2px 6px !important;
+    letter-spacing: 0.04em !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* day-note-row: "Free Day / Transfer" + "+ Add tour" — let them wrap + shrink    */
+  /* so + Add tour stops overflowing the right edge of the activities column.       */
+  .ts-preview #sightTableBody .day-note-row {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    justify-content: space-between !important;
+  }
+  .ts-preview #sightTableBody .day-note-row textarea {
+    flex: 1 1 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: calc(100% - 90px) !important;
+  }
+  .ts-preview #sightTableBody .day-note-row .act-add-btn {
+    flex: 0 0 auto !important;
+    padding: 3px 8px !important;
+    font-size: 11px !important;
+    white-space: nowrap !important;
+  }
+
+  /* Day-wise activity row: stack name above price+actions so full tour name shows */
+  .ts-preview #sightTableBody .act-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 6px !important;
+  }
+  .ts-preview #sightTableBody .act-row > div:first-child {
+    width: 100% !important;
+    flex: 1 1 100% !important;
+  }
+  .ts-preview #sightTableBody .act-row > div:first-child textarea.pdf-input {
+    width: 100% !important;
+    min-width: 0 !important;
+    white-space: normal !important;
+  }
+  /* Price + action buttons row */
+  .ts-preview #sightTableBody .act-row .price-col {
+    justify-content: flex-start !important;
+    margin-left: 0 !important;
+  }
+
+  /* ₹ + input gap fix: input was width:70px text-align:right, causing big empty space */
+  .ts-preview .price-col input.pdf-input,
+  .ts-preview #sightTableBody .price-col input.pdf-input,
+  .ts-preview #hotelTableBody .price-col input.pdf-input {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: 110px !important;
+    text-align: left !important;
+    padding-left: 2px !important;
+  }
+
+  /* Summary grid (4-col) stacks too */
+  #resSummaryGrid { grid-template-columns: 1fr 1fr !important; }
+  #resSummaryGrid > div { border-right: none !important; border-bottom: 1px solid var(--border); }
+
+  /* Profitability grid 4-col → 2-col */
+  #profitability-section > div:last-child { grid-template-columns: repeat(2, 1fr) !important; }
+
+  /* 4. Form inputs — 44px tap targets */
+  .ts-input, .ts-select, .ts-date-trigger {
+    height: 44px !important;
+    min-height: 44px;
+    font-size: 14px;
+  }
+  .login-input { padding: 14px 16px; min-height: 44px; font-size: 15px; }
+  .login-btn { min-height: 48px; }
+  /* ts-row stays 2-col on mobile (Adults+Children, Check-in+Check-out fit fine) */
+  .ts-row3 { grid-template-columns: 1fr !important; gap: 8px; }
+
+  /* 5. Bottom action buttons — sticky full-width row */
+  .export-area {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--white);
+    border-top: 1px solid var(--border);
+    padding: 10px 12px !important;
+    margin: 12px -12px 0 !important;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.08);
+    z-index: 50;
+  }
+  .export-area .export-btns {
+    display: flex !important;
+    flex-direction: row;
+    gap: 8px;
+    width: 100%;
+  }
+  .export-area .export-btns > button {
+    flex: 1 1 0;
+    min-height: 44px;
+    padding: 10px 6px !important;
+    font-size: 12px !important;
+  }
+  .pdf-mode-btns { flex-wrap: wrap; gap: 6px; }
+
+  /* 6. Tab navigation — horizontal scroll instead of side-stack */
+  .ts-nav {
+    display: flex !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    padding: 6px 8px;
+    gap: 4px;
+  }
+  .ts-nav::-webkit-scrollbar { display: none; }
+  .ts-nav-btn {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    min-height: 40px;
+    font-size: 12px;
+  }
+  .ts-nav-role { display: none; }
+  .ts-nav-right { margin-left: 0; flex-shrink: 0; }
+
+  /* Top nav inside ts-nav (the toolbar at the very top) — already scrolls; ensure nothing overflows the body */
+  body, html { overflow-x: hidden; }
+}
 </style>
 </head>
 <body>

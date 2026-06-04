@@ -1199,6 +1199,166 @@
     font-weight: 500 !important;
     margin-top: 20px !important;
   }
+
+  /* ====== M1.2 — Compare-table mobile card layout (2026-06-03) ====== */
+  /* Desktop: hidden. Mobile: shown (via @media block below).             */
+  .compare-mobile { display: none; }
+  .compare-card {
+    background: #FFFCF6;
+    border: 1px solid #ECE3D2;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 10px;
+  }
+  .compare-feature {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #8A7560;
+    margin-bottom: 10px;
+  }
+  .compare-row-mobile {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid #F2EADD;
+    font-size: 13px;
+  }
+  .compare-row-mobile:last-child { border-bottom: none; }
+  .compare-row-mobile .compare-label {
+    color: #8A7560;
+    flex-shrink: 0;
+    min-width: 110px;
+  }
+  .compare-row-mobile .compare-val {
+    color: #2C1810;
+    text-align: right;
+    line-height: 1.4;
+  }
+  .compare-row-mobile.highlight {
+    background: #FFF4EE;
+    border-radius: 8px;
+    padding: 10px 12px;
+    border-bottom: none;
+    margin-top: 4px;
+  }
+  .compare-row-mobile.highlight .compare-label { color: #5F4A3A; font-weight: 600; }
+  .compare-row-mobile.highlight .compare-val {
+    font-weight: 700;
+    color: #C1622F;
+  }
+
+  /* ====== M1 — Mobile responsive supplement (2026-06-03) ====== */
+  /* Additive @media(max-width:768px) per Brief 1. Overrides the earlier */
+  /* 1046–1126 block where the brief disagrees with prior behaviour:     */
+  /*   - compare table: keep tabular layout, hide ChatGPT col (not cards)*/
+  /*   - hero CTAs: stack vertically + full-width                        */
+  /*   - all CTAs: width 100%                                            */
+  /*   - footer: stack contact lines vertically                          */
+  /* M1.1 (2026-06-03) — full-bleed fix: reset UA body margin, force      */
+  /* box-sizing, override topbar-inner padding (was 48px desktop only).   */
+  @media (max-width: 768px) {
+    /* 0. Full-bleed root reset — kill UA body margin + tame overflow */
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      overflow-x: hidden !important;
+      box-sizing: border-box;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body > * { max-width: 100%; }
+
+    /* Container + topbar — collapse desktop 48px padding to 16px */
+    .container { padding: 0 16px !important; max-width: 100% !important; }
+    .topbar-inner {
+      padding: 12px 16px !important;
+      max-width: 100% !important;
+    }
+
+    /* Sections — no fixed widths defined, just kill any horizontal overflow */
+    section { width: 100%; max-width: 100%; overflow-x: hidden; }
+    .hero-art { overflow: hidden; }
+    .hero-art-card { max-width: 100%; }
+
+    /* 1. Nav — single CTA only (already hides .nav-links text; also kill any inline anchors) */
+    .topbar-inner { gap: 8px; }
+    .topbar-cta { padding: 8px 14px; font-size: 13px; }
+
+    /* 2. Hero — clamp font + stack buttons vertically full-width */
+    .hero h1 { font-size: clamp(26px, 7.5vw, 36px) !important; }
+    .hero-sub { font-size: clamp(14px, 4vw, 17px) !important; }
+    .hero-ctas {
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: 12px !important;
+    }
+    .hero-ctas > * { width: 100%; }
+
+    /* 3. Comparison — table hidden entirely; card layout (.compare-mobile) shown */
+    .compare-table { display: none !important; }
+    .compare-mobile { display: block !important; }
+
+    /* 3b. Calc ledger — payoff has unconditional grid-column:3 / grid-row:1.     */
+    /* When the earlier media block collapses to grid-template-columns:1fr, the   */
+    /* payoff still demands col 3, creating two implicit cols that overflow.      */
+    /* Reset placement so the 1fr collapse actually works.                        */
+    .calc-ledger > *,
+    .calc-ledger .calc-inputs,
+    .calc-ledger .calc-payoff {
+      grid-column: auto !important;
+      grid-row: auto !important;
+      max-width: 100%;
+    }
+    .calc-payoff { width: 100%; box-sizing: border-box; }
+
+    /* 4. Pricing — single column, full-width card (price-strip is the grid) */
+    .price-strip { grid-template-columns: 1fr !important; gap: 0; }
+    .price-cell { width: 100%; border-right: none; }
+
+    /* 5. All CTA buttons — width 100% (excludes the persistent topbar CTA) */
+    .btn-cta:not(.topbar-cta) {
+      width: 100%;
+      display: block;
+      text-align: center;
+      box-sizing: border-box;
+    }
+    .btn-cta.large { padding: 14px 20px; font-size: 16px; }
+
+    /* 6. Footer — stack vertically */
+    footer .container { text-align: center; }
+    footer .line { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+    footer .line span { display: none; }
+
+    /* 7. Pain-flow — tighten step cards + arrow spacing (was 120px tall + 18px pad) */
+    .pain-flow { gap: 6px !important; margin-bottom: 20px; }
+    .pain-step {
+      padding: 12px 14px !important;
+      min-height: 0 !important;
+      border-radius: 10px !important;
+    }
+    .pain-step .step-num {
+      font-size: 9.5px !important;
+      letter-spacing: 0.14em !important;
+      margin-bottom: 6px !important;
+    }
+    .pain-step .step-title {
+      font-size: 15px !important;
+      margin-bottom: 4px !important;
+      line-height: 1.2 !important;
+    }
+    .pain-step .step-meta { font-size: 12px !important; }
+    .pain-step.lost .step-meta { font-size: 13px !important; }
+    .pain-arrow {
+      padding: 2px 0 !important;
+      font-size: 16px !important;
+      line-height: 1 !important;
+    }
+  }
 </style>
 </head>
 <body>
@@ -1454,6 +1614,100 @@
             </tr>
           </tbody>
         </table>
+
+        <!-- MOBILE-ONLY card layout (mirrors the table, ChatGPT col omitted) -->
+        <div class="compare-mobile" aria-hidden="false">
+          <div class="compare-card">
+            <div class="compare-feature">Time per quote</div>
+            <div class="compare-row-mobile">
+              <span class="compare-label">Doing it yourself</span>
+              <span class="compare-val">6 to 48 hours</span>
+            </div>
+            <div class="compare-row-mobile">
+              <span class="compare-label">ChatGPT / AI tools</span>
+              <span class="compare-val">5 minutes</span>
+            </div>
+            <div class="compare-row-mobile highlight">
+              <span class="compare-label">Trip Store</span>
+              <span class="compare-val">90 seconds</span>
+            </div>
+          </div>
+          <div class="compare-card">
+            <div class="compare-feature">Pricing</div>
+            <div class="compare-row-mobile">
+              <span class="compare-label">Doing it yourself</span>
+              <span class="compare-val">Email DMC, wait, copy-paste</span>
+            </div>
+            <div class="compare-row-mobile">
+              <span class="compare-label">ChatGPT / AI tools</span>
+              <span class="compare-val">Made up, often wrong</span>
+            </div>
+            <div class="compare-row-mobile highlight">
+              <span class="compare-label">Trip Store</span>
+              <span class="compare-val">Contracted rates across hotels, sights, trains, transfers</span>
+            </div>
+          </div>
+          <div class="compare-card">
+            <div class="compare-feature">Itinerary</div>
+            <div class="compare-row-mobile">
+              <span class="compare-label">Doing it yourself</span>
+              <span class="compare-val">Manual day-by-day</span>
+            </div>
+            <div class="compare-row-mobile">
+              <span class="compare-label">ChatGPT / AI tools</span>
+              <span class="compare-val">Generic "famous places"</span>
+            </div>
+            <div class="compare-row-mobile highlight">
+              <span class="compare-label">Trip Store</span>
+              <span class="compare-val">Iconic landmarks, must-do activities, top-rated experiences chosen by default</span>
+            </div>
+          </div>
+          <div class="compare-card">
+            <div class="compare-feature">PDF for customer</div>
+            <div class="compare-row-mobile">
+              <span class="compare-label">Doing it yourself</span>
+              <span class="compare-val">Word doc, you format</span>
+            </div>
+            <div class="compare-row-mobile">
+              <span class="compare-label">ChatGPT / AI tools</span>
+              <span class="compare-val">None — rebuild from chat</span>
+            </div>
+            <div class="compare-row-mobile highlight">
+              <span class="compare-label">Trip Store</span>
+              <span class="compare-val">Fully white-labelled — your logo, your colour, your contact</span>
+            </div>
+          </div>
+          <div class="compare-card">
+            <div class="compare-feature">Revisions</div>
+            <div class="compare-row-mobile">
+              <span class="compare-label">Doing it yourself</span>
+              <span class="compare-val">Repeat full process</span>
+            </div>
+            <div class="compare-row-mobile">
+              <span class="compare-label">ChatGPT / AI tools</span>
+              <span class="compare-val">Start over from scratch</span>
+            </div>
+            <div class="compare-row-mobile highlight">
+              <span class="compare-label">Trip Store</span>
+              <span class="compare-val">Edit any line, re-quote in 10 seconds</span>
+            </div>
+          </div>
+          <div class="compare-card">
+            <div class="compare-feature">Multi-city quotes</div>
+            <div class="compare-row-mobile">
+              <span class="compare-label">Doing it yourself</span>
+              <span class="compare-val">Multiple DMCs, multiple emails</span>
+            </div>
+            <div class="compare-row-mobile">
+              <span class="compare-label">ChatGPT / AI tools</span>
+              <span class="compare-val">Mostly hallucinated</span>
+            </div>
+            <div class="compare-row-mobile highlight">
+              <span class="compare-label">Trip Store</span>
+              <span class="compare-val">End-to-end in one quote</span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
