@@ -1359,6 +1359,90 @@
       line-height: 1 !important;
     }
   }
+
+  /* ====== M3 — Mobile font-size bump (2026-06-04) ====== */
+  /* Real-iPhone readability pass. Bumps body / headings / stats / cards / CTAs.    */
+  /* All within @media (max-width:768px). Desktop unchanged.                        */
+  @media (max-width: 768px) {
+    /* Body / paragraph baseline — 15px / 1.6 */
+    body { font-size: 15px !important; line-height: 1.6 !important; }
+    p, li { font-size: 15px !important; line-height: 1.6 !important; }
+
+    /* Section eyebrow labels */
+    .eyebrow,
+    section .eyebrow,
+    .pain .eyebrow,
+    section.compare .section-head .eyebrow,
+    .calc-eyebrow,
+    .impact .eyebrow { font-size: 11px !important; }
+
+    /* Section headings (h2) — 24px minimum */
+    h2,
+    .section-head h2,
+    section.compare .section-head h2,
+    section.impact .section-head h2,
+    .faq h2,
+    .final h2 { font-size: 24px !important; line-height: 1.2 !important; }
+
+    /* Sub-headings (h3, h4) */
+    h3, h4,
+    .pain-col h4,
+    .impact-card h4,
+    .price-callout h3 { font-size: 18px !important; line-height: 1.25 !important; }
+
+    /* Stat numbers (trust-strip 90/75+/1500+) */
+    .trust-item .num,
+    .trust-item .num .unit { font-size: 28px !important; line-height: 1.05 !important; }
+    .trust-item .label { font-size: 12px !important; }
+
+    /* Pain step */
+    .pain-step .step-num { font-size: 11px !important; }
+    .pain-step .step-title { font-size: 15px !important; line-height: 1.25 !important; }
+    .pain-step .step-meta { font-size: 13px !important; }
+    .pain-step.lost .step-meta { font-size: 14px !important; }
+
+    /* Pain bullet lists */
+    .pain-list li { font-size: 14px !important; line-height: 1.5 !important; }
+    .pain-list li.bullet-hero { font-size: 15px !important; }
+
+    /* Compare cards (mobile-only layout) */
+    .compare-feature { font-size: 12px !important; }
+    .compare-row-mobile { font-size: 14px !important; line-height: 1.5 !important; }
+    .compare-row-mobile .compare-label,
+    .compare-row-mobile .compare-val { font-size: 14px !important; }
+
+    /* Pricing — amounts stay large, labels readable */
+    .price-cell .amt { font-size: 30px !important; line-height: 1.1 !important; }
+    .price-cell .amt .min { font-size: 14px !important; }
+    .price-cell .label { font-size: 13px !important; }
+    .price-cell p { font-size: 13px !important; line-height: 1.5 !important; }
+    .price-callout h3 { font-size: 22px !important; }
+    .price-note { font-size: 13px !important; }
+
+    /* Calc / payoff */
+    .calc-title { font-size: 17px !important; }
+    .calc-input-row .ci-num { font-size: 15px !important; }
+    .calc-input-row .ci-text { font-size: 13px !important; }
+    .cp-amount { font-size: 32px !important; }
+    .cp-sub, .cp-label { font-size: 12px !important; }
+
+    /* Hero copy */
+    .hero-sub { font-size: 16px !important; line-height: 1.55 !important; }
+
+    /* FAQ */
+    .faq-q { font-size: 15px !important; line-height: 1.4 !important; }
+    .faq-a p { font-size: 14px !important; line-height: 1.6 !important; }
+
+    /* Footer */
+    footer,
+    footer .line,
+    footer a { font-size: 13px !important; line-height: 1.55 !important; }
+
+    /* CTA buttons */
+    .btn-cta,
+    .btn-cta.large,
+    .topbar-cta { font-size: 16px !important; padding: 16px 20px !important; }
+  }
 </style>
 </head>
 <body>
