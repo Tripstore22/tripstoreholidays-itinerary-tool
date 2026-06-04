@@ -1364,9 +1364,10 @@
   /* Real-iPhone readability pass. Bumps body / headings / stats / cards / CTAs.    */
   /* All within @media (max-width:768px). Desktop unchanged.                        */
   @media (max-width: 768px) {
-    /* Body / paragraph baseline — 15px / 1.6 */
-    body { font-size: 15px !important; line-height: 1.6 !important; }
-    p, li { font-size: 15px !important; line-height: 1.6 !important; }
+    /* Root + body baseline — 16px to defeat any iOS auto-shrink */
+    html { font-size: 16px !important; }
+    body { font-size: 16px !important; line-height: 1.6 !important; }
+    p, li { font-size: 16px !important; line-height: 1.6 !important; }
 
     /* Section eyebrow labels */
     .eyebrow,
