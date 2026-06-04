@@ -1128,8 +1128,10 @@ thead{display:table-header-group;}
   .ts-sidebar,
   .ts-sidebar * { font-size: 15px !important; }
 
-  /* Inputs / selects / textareas / custom controls — 16px to defeat iOS auto-zoom  */
-  .ts-sidebar input,
+  /* Inputs / selects / textareas — 16px to defeat iOS auto-zoom on focus.          */
+  /* CRITICAL: exclude radio + checkbox so 5% / 18% / No GST radios don't get a     */
+  /* 48px tap area each (was creating huge vertical gaps between them).             */
+  .ts-sidebar input:not([type="radio"]):not([type="checkbox"]),
   .ts-sidebar select,
   .ts-sidebar textarea,
   .ts-sidebar .ts-input,
@@ -1140,13 +1142,28 @@ thead{display:table-header-group;}
     height: 48px !important;
     min-height: 48px !important;
   }
+  /* Radios + checkboxes stay native size; their labels handle spacing */
+  .ts-sidebar input[type="radio"],
+  .ts-sidebar input[type="checkbox"] {
+    height: auto !important;
+    min-height: 0 !important;
+    width: auto !important;
+    font-size: 16px !important;
+  }
+  .ts-sidebar .gst-option {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 6px 0 !important;
+    min-height: 0 !important;
+  }
 
-  /* Section labels (TRAVELER DETAILS / ROUTE / PRICING CONTROLS / …) — they're    */
-  /* uppercase chips, want bold but not big                                         */
+  /* Section labels (TRAVELER DETAILS / ROUTE / PRICING CONTROLS / …) */
   .ts-sidebar .sb-lbl,
   .ts-sidebar .sb-heading {
-    font-size: 14px !important;
+    font-size: 16px !important;
     font-weight: 700 !important;
+    margin-bottom: 10px !important;
   }
 
   /* Field labels (Adults / Children / Check-in / Vehicle Type / Markup % / …) */
@@ -1210,12 +1227,32 @@ thead{display:table-header-group;}
     align-items: center !important;
     flex-wrap: nowrap !important;
     gap: 6px !important;
+    padding: 4px 7px !important;
   }
   .ts-preview #sightTableBody .act-row > div:first-child {
     flex: 1 1 auto !important;
     width: auto !important;
     min-width: 0 !important;
   }
+  /* Tour name textarea — bump from 13 → 15px so it reads on iPhone */
+  .ts-preview #sightTableBody .act-row > div:first-child textarea.pdf-input {
+    font-size: 15px !important;
+    line-height: 1.35 !important;
+  }
+  /* Day-wise table outer cell padding — tighten so cards aren't bloated */
+  .ts-preview #pdf-content > table.trip-table:nth-of-type(2) td { padding: 6px 4px !important; }
+
+  /* Calendar popup — small + crisp on mobile (260px is too wide for 393pt) */
+  #tsCalendarPopup {
+    width: 240px !important;
+    padding: 10px !important;
+    font-size: 12px !important;
+  }
+  #tsCalendarPopup .tsc-title { font-size: 13px !important; }
+  #tsCalendarPopup .tsc-dow-cell { font-size: 9px !important; padding: 2px 0 !important; }
+  #tsCalendarPopup .tsc-day { font-size: 12px !important; }
+  #tsCalendarPopup .tsc-nav { font-size: 14px !important; padding: 2px 6px !important; }
+  #tsCalendarPopup .tsc-foot-btn { font-size: 11px !important; }
 }
 </style>
 </head>
