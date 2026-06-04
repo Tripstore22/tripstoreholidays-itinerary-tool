@@ -1124,7 +1124,11 @@ thead{display:table-header-group;}
 
 /* ====== M2.1 — Sidebar font bumps + swap buttons back (2026-06-04) ====== */
 @media (max-width: 768px) {
-  /* iOS auto-zoom on focus triggers when input font-size < 16px */
+  /* Universal sidebar baseline — wins over any inline font-size via !important.    */
+  .ts-sidebar,
+  .ts-sidebar * { font-size: 15px !important; }
+
+  /* Inputs / selects / textareas / custom controls — 16px to defeat iOS auto-zoom  */
   .ts-sidebar input,
   .ts-sidebar select,
   .ts-sidebar textarea,
@@ -1133,28 +1137,40 @@ thead{display:table-header-group;}
   .ts-sidebar .ts-date-trigger,
   .ts-sidebar .ts-date-trigger .tsd-label {
     font-size: 16px !important;
+    height: 48px !important;
+    min-height: 48px !important;
   }
 
-  /* Section labels (TRAVELER DETAILS, ROUTE, PRICING CONTROLS, …) */
+  /* Section labels (TRAVELER DETAILS / ROUTE / PRICING CONTROLS / …) — they're    */
+  /* uppercase chips, want bold but not big                                         */
   .ts-sidebar .sb-lbl,
-  .ts-sidebar .sb-heading { font-size: 13px !important; }
+  .ts-sidebar .sb-heading {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+  }
 
-  /* Field labels (Adults, Children, Check-in, …) */
+  /* Field labels (Adults / Children / Check-in / Vehicle Type / Markup % / …) */
+  .ts-sidebar label,
   .ts-sidebar .ts-label { font-size: 13px !important; }
 
-  /* Budget calc panel */
-  .ts-sidebar #budgetCalcPanel,
-  .ts-sidebar #budgetCalcPanel * { font-size: 13px !important; }
+  /* Hints / helper text (`Launch: 67 destinations`, etc.) */
+  .ts-sidebar small,
+  .ts-sidebar .ts-hint { font-size: 12px !important; }
 
-  /* City-intelligence pills inside the sidebar — pills use inline font-size:8px,    */
-  /* override via attribute selector on their wrapper spans/divs.                    */
+  /* Budget calculation panel — was id `budgetCalcPanel`, not `budget-calc-box` */
+  #budgetCalcPanel,
+  #budgetCalcPanel * { font-size: 13px !important; }
+
+  /* City-intelligence pills are inline `<span style="font-size:8px">` spans in    */
+  /* the route input panel. They have no class — match via attribute selector.     */
+  /* Some are wrapped inside the right-panel banner (not .ts-sidebar) so target    */
+  /* both contexts.                                                                */
   .ts-sidebar span[style*="font-size:8px"],
   .ts-sidebar span[style*="font-size: 8px"],
   .ts-sidebar div[style*="font-size:9px"],
   .ts-sidebar div[style*="font-size: 9px"] {
     font-size: 11px !important;
   }
-
   /* Sidebar generic divs that hardcode small font (inline) */
   .ts-sidebar [style*="font-size:10px"],
   .ts-sidebar [style*="font-size: 10px"] { font-size: 12px !important; }
