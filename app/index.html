@@ -6074,6 +6074,10 @@ async function runAutoBuild() {
         }
 
         renderTables();
+        // Swiss Pass P1 fix: re-apply if toggle was ON before Auto-Build.
+        if (swissPassEnabled && window.swissPassData) {
+            applySwissPassToQuote(true, window.swissPassData);
+        }
         showToast('Auto-Build complete — review and edit as needed', 'success');
 
     } catch (e) {
@@ -6392,6 +6396,11 @@ async function onAutoBuildQuote() {
 
         updateBudgetCalcPanel();
         if (typeof renderTables === 'function') renderTables();
+        // Swiss Pass P1 fix: re-apply if toggle was ON before Auto-Build.
+        // Without this, renderTables() blows away the SPP row added by toggleSwissPass.
+        if (swissPassEnabled && window.swissPassData) {
+            applySwissPassToQuote(true, window.swissPassData);
+        }
         // Populate Grand Total, Utilisation, per-adult/child, net breakdown cells
         if (typeof calculateBudgetInvestment === 'function') calculateBudgetInvestment();
         showToast('Auto-Build Quote complete — review and edit as needed', 'success');
