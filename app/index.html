@@ -1254,6 +1254,144 @@ thead{display:table-header-group;}
   #tsCalendarPopup .tsc-nav { font-size: 14px !important; padding: 2px 6px !important; }
   #tsCalendarPopup .tsc-foot-btn { font-size: 11px !important; }
 }
+
+/* ── QUICK QUOTE TAB ─────────────────────────────────────────── */
+.quick-route-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+@media (max-width: 900px) {
+  .quick-route-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .quick-route-grid { grid-template-columns: 1fr; }
+}
+.quick-route-card {
+  background: #fff;
+  border: 1.5px solid #e8ddd0;
+  border-radius: 12px;
+  padding: 18px 20px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  min-height: 90px;
+}
+.quick-route-card:hover {
+  border-color: var(--terra);
+  box-shadow: 0 2px 12px rgba(180,80,50,0.10);
+  transform: translateY(-1px);
+}
+.quick-route-card.selected {
+  background: #fdf3ee;
+  border-color: var(--terra);
+  border-width: 2px;
+  box-shadow: 0 2px 16px rgba(180,80,50,0.15);
+}
+.quick-route-card .route-name {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 6px;
+  padding-right: 80px; /* space for badge */
+}
+.quick-route-card .route-cities {
+  font-size: 11px;
+  color: #555;
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+.quick-route-card .route-footer {
+  font-size: 10px;
+  font-weight: 600;
+  color: #888;
+}
+.quick-route-card .style-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.cat-tab {
+  padding: 7px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid var(--terra);
+  background: #fff;
+  color: var(--terra);
+  transition: all 0.12s;
+}
+.cat-tab:hover, .cat-tab.active {
+  background: var(--terra);
+  color: #fff;
+}
+.qq-field-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--terra);
+  margin-bottom: 5px;
+  display: block;
+}
+.qq-stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  background: var(--cream);
+  padding: 4px 6px;
+  width: fit-content;
+}
+.qq-stepper button {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--terra-b);
+  background: var(--terra-bg);
+  color: var(--terra);
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1;
+}
+.qq-stepper span {
+  min-width: 22px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+input[type="date"]#quickStartDate {
+  border: 1.5px solid #d9c9b8;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #fff;
+  color: #3d2b1f;
+  accent-color: #b45032; /* terracotta — colours the selected date circle */
+  color-scheme: light;
+}
+input[type="date"]#quickStartDate:focus {
+  border-color: #b45032;
+  box-shadow: 0 0 0 3px rgba(180,80,50,0.12);
+  outline: none;
+}
+@keyframes slideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
 </style>
 </head>
 <body>
@@ -1296,7 +1434,8 @@ thead{display:table-header-group;}
 <!-- NAV -->
 <nav class="ts-nav no-print" id="adminNav" style="display:none;">
   <span class="ts-nav-role" id="navRoleLabel">USER</span>
-  <button id="navBtn-itinerary" class="ts-nav-btn active" onclick="switchAdminTab('itinerary')">📋 Itinerary Builder</button>
+  <button id="navBtn-quickquote" class="ts-nav-btn active" onclick="switchAdminTab('quickquote')">⚡ Quick Quote</button>
+  <button id="navBtn-itinerary" class="ts-nav-btn" onclick="switchAdminTab('itinerary')">📋 Itinerary Builder</button>
   <button id="navBtn-saved" class="ts-nav-btn" onclick="switchAdminTab('saved')">📂 My Itineraries</button>
   <button id="navBtn-profile" class="ts-nav-btn user-only-tab" style="display:none;" onclick="switchAdminTab('profile')">👤 My Profile</button>
   <button id="navBtn-quote" class="ts-nav-btn admin-only-tab" style="display:none;" onclick="switchAdminTab('quote')">📊 Quote Dashboard</button>
@@ -1724,6 +1863,106 @@ thead{display:table-header-group;}
     </div><!-- /pdf-content -->
   </main><!-- /ts-preview -->
 </div><!-- /tab-itinerary -->
+
+<!-- QUICK QUOTE TAB -->
+<div id="tab-quickquote" style="display:none;flex-direction:column;flex:1;overflow-y:auto;padding:0 0 40px;background:var(--cream);">
+
+  <!-- STICKY INPUT BAR — hidden until card selected -->
+  <div id="quickStickyBar" style="
+    display: none;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #fff;
+    border-bottom: 2px solid #b45032;
+    padding: 14px 24px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+    animation: slideDown 0.2s ease;
+  ">
+    <div style="max-width:1100px; margin:0 auto; display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+
+      <!-- Selected route name -->
+      <div style="flex:1; min-width:180px;">
+        <div style="font-size:10px; font-weight:700; color:#b45032; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">Selected Route</div>
+        <div id="stickyRouteName" style="font-family:'Playfair Display',Georgia,serif; font-size:14px; font-weight:700; color:#1a1a1a;"></div>
+      </div>
+
+      <!-- Budget input -->
+      <div>
+        <div class="qq-field-label">Budget /person (₹)</div>
+        <input type="number" id="quickBudgetInput" placeholder="e.g. 150000" min="0"
+          oninput="quickBudget=+this.value; validateQuickBuild()"
+          style="border:1.5px solid #d9c9b8; border-radius:8px; padding:9px 12px;
+                 font-size:14px; width:140px; outline:none; font-family:inherit;">
+      </div>
+
+      <!-- Adults stepper -->
+      <div>
+        <div class="qq-field-label">Adults</div>
+        <div class="qq-stepper">
+          <button type="button" onclick="qqStep('adults',-1)">−</button>
+          <span id="qqAdultsVal">2</span>
+          <button type="button" onclick="qqStep('adults',1)">+</button>
+        </div>
+      </div>
+
+      <!-- Children stepper -->
+      <div>
+        <div class="qq-field-label">Children</div>
+        <div class="qq-stepper">
+          <button type="button" onclick="qqStep('children',-1)">−</button>
+          <span id="qqChildrenVal">0</span>
+          <button type="button" onclick="qqStep('children',1)">+</button>
+        </div>
+      </div>
+
+      <!-- Start date -->
+      <div>
+        <div class="qq-field-label">Start Date</div>
+        <input type="date" id="quickStartDate"
+          onchange="validateQuickBuild()"
+          style="background:#fff; cursor:pointer; outline:none; width:155px;
+                 appearance:none; -webkit-appearance:none;">
+      </div>
+
+      <!-- CTA -->
+      <div style="margin-left:auto;">
+        <button id="btnQuickBuild" onclick="handleQuickQuoteBuild()"
+          style="background:#b45032; color:#fff; border:none; border-radius:8px;
+                 padding:11px 28px; font-size:14px; font-weight:700; cursor:pointer;
+                 font-family:'Playfair Display',Georgia,serif; opacity:0.4; pointer-events:none;
+                 white-space:nowrap; transition:opacity 0.15s;">
+          Auto-Build Itinerary →
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <div style="max-width:1100px;margin:0 auto;padding:0 20px;width:100%;box-sizing:border-box;">
+    <div style="text-align:center; padding: 32px 20px 20px;">
+      <h2 style="font-family:'Playfair Display',Georgia,serif; font-size:26px;
+                 font-weight:700; color:#1a1a1a; margin-bottom:6px;">
+        Quick Quote
+      </h2>
+      <p style="font-size:13px; color:#888; margin:0;">
+        Pick a popular Europe route and build in seconds
+      </p>
+    </div>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center;
+                margin-bottom:20px;">
+      <button class="cat-tab active" onclick="filterQuickRoutes('all')">All</button>
+      <button class="cat-tab" onclick="filterQuickRoutes('switzerland')">🇨🇭 Switzerland</button>
+      <button class="cat-tab" onclick="filterQuickRoutes('western')">🇫🇷 Western Europe</button>
+      <button class="cat-tab" onclick="filterQuickRoutes('italy')">🇮🇹 Italy</button>
+      <button class="cat-tab" onclick="filterQuickRoutes('multi')">🌍 Multi-Country</button>
+      <button class="cat-tab" onclick="filterQuickRoutes('islands')">🏝️ Islands &amp; Sun</button>
+    </div>
+
+    <div class="quick-route-grid" id="quickRouteGrid"></div>
+  </div>
+</div>
 
 <div id="tab-saved" style="display:none;flex:1;overflow-y:auto;padding:24px 28px;background:var(--cream);">
   <div id="savedListContent"><div style="text-align:center;padding:80px;color:var(--ink4);"><div style="width:32px;height:32px;border:3px solid var(--border2);border-top-color:var(--terra);border-radius:50%;animation:dashSpin .8s linear infinite;margin:0 auto 14px;"></div>Loading saved itineraries...</div></div>
@@ -3062,6 +3301,245 @@ let pdfMode               = 'agent'; // 'agent' (full) or 'client' (no profitabi
 let walletBalance      = 0; // agent wallet balance, loaded on login
 
 // =============================================================
+// QUICK QUOTE — pre-set routes + state
+// =============================================================
+const QUICK_ROUTES = [
+  // SWITZERLAND
+  {
+    id: 1, category: 'switzerland', style: 'Honeymoon', freq: 23,
+    name: 'Swiss Alpine Classic',
+    cities: [{city:'Zurich',nights:2},{city:'Lucerne',nights:3},{city:'Interlaken',nights:3},{city:'Montreux',nights:3}]
+  },
+  {
+    id: 2, category: 'switzerland', style: 'Family', freq: 5,
+    name: 'Switzerland Family Circuit',
+    cities: [{city:'Zurich',nights:2},{city:'Lucerne',nights:3},{city:'Interlaken',nights:3},{city:'Geneva',nights:2}]
+  },
+  {
+    id: 3, category: 'switzerland', style: 'Adventure', freq: 4,
+    name: 'Swiss Adventure Trail',
+    cities: [{city:'Zurich',nights:2},{city:'Lucerne',nights:3},{city:'Grindelwald',nights:4},{city:'Geneva',nights:2}]
+  },
+  {
+    id: 4, category: 'switzerland', style: 'Adventure', freq: 2,
+    name: 'Grand Swiss Explorer',
+    cities: [{city:'Zurich',nights:2},{city:'Lucerne',nights:3},{city:'Interlaken',nights:3},{city:'Zermatt',nights:3},{city:'Geneva',nights:2}]
+  },
+  // WESTERN EUROPE
+  {
+    id: 5, category: 'western', style: 'Honeymoon', freq: 18,
+    name: 'Paris & Amsterdam',
+    cities: [{city:'Paris',nights:3},{city:'Amsterdam',nights:3}]
+  },
+  {
+    id: 6, category: 'western', style: 'Family', freq: 4,
+    name: 'Benelux & Paris',
+    cities: [{city:'Amsterdam',nights:3},{city:'Brussels',nights:2},{city:'Paris',nights:3}]
+  },
+  {
+    id: 7, category: 'western', style: 'Adventure', freq: 2,
+    name: 'Paris to Berlin',
+    cities: [{city:'Paris',nights:3},{city:'Brussels',nights:2},{city:'Berlin',nights:3}]
+  },
+  {
+    id: 8, category: 'western', style: 'Family', freq: 2,
+    name: 'Western Europe Grand',
+    cities: [{city:'Amsterdam',nights:3},{city:'Paris',nights:3},{city:'Milan',nights:2},{city:'Rome',nights:3}]
+  },
+  // ITALY
+  {
+    id: 9, category: 'italy', style: 'Family', freq: 10,
+    name: 'Italian Grand Tour',
+    cities: [{city:'Rome',nights:3},{city:'Florence',nights:2},{city:'Milan',nights:3}]
+  },
+  {
+    id: 10, category: 'italy', style: 'Honeymoon', freq: 5,
+    name: 'Roman & Tuscan Romance',
+    cities: [{city:'Rome',nights:3},{city:'Florence',nights:2},{city:'Venice',nights:2}]
+  },
+  {
+    id: 11, category: 'italy', style: 'Honeymoon', freq: 7,
+    name: 'Rome & Milan Express',
+    cities: [{city:'Rome',nights:2},{city:'Milan',nights:3}]
+  },
+  {
+    id: 12, category: 'italy', style: 'Family', freq: 2,
+    name: 'Italy Complete',
+    cities: [{city:'Milan',nights:2},{city:'Venice',nights:2},{city:'Florence',nights:2},{city:'Rome',nights:3}]
+  },
+  // MULTI-COUNTRY
+  {
+    id: 13, category: 'multi', style: 'Honeymoon', freq: 4,
+    name: 'Milan, Venice & Paris',
+    cities: [{city:'Milan',nights:2},{city:'Venice',nights:2},{city:'Paris',nights:3}]
+  },
+  {
+    id: 14, category: 'multi', style: 'Family', freq: 4,
+    name: 'Eastern Europe Classic',
+    cities: [{city:'Prague',nights:3},{city:'Vienna',nights:2},{city:'Budapest',nights:5}]
+  },
+  {
+    id: 15, category: 'multi', style: 'Adventure', freq: 3,
+    name: 'Britain & Scotland',
+    cities: [{city:'London',nights:5},{city:'Edinburgh',nights:2}]
+  },
+  {
+    id: 16, category: 'multi', style: 'Adventure', freq: 2,
+    name: 'Spain Explorer',
+    cities: [{city:'Madrid',nights:3},{city:'Seville',nights:2},{city:'Barcelona',nights:3}]
+  },
+  {
+    id: 17, category: 'multi', style: 'Family', freq: 2,
+    name: 'Italy & Rome Complete',
+    cities: [{city:'Rome',nights:3},{city:'Florence',nights:2},{city:'Venice',nights:2},{city:'Milan',nights:2}]
+  },
+  // ISLANDS & SUN
+  {
+    id: 18, category: 'islands', style: 'Islands & Parties', freq: 3,
+    name: 'Iberian Party Trail',
+    cities: [{city:'Barcelona',nights:3},{city:'Ibiza',nights:3},{city:'Madrid',nights:3},{city:'Lisbon',nights:5}]
+  },
+  {
+    id: 19, category: 'islands', style: 'Islands & Parties', freq: 0,
+    name: 'Greek Island Hop',
+    cities: [{city:'Athens',nights:2},{city:'Santorini',nights:3},{city:'Mykonos',nights:3}]
+  },
+  {
+    id: 20, category: 'islands', style: 'Honeymoon', freq: 0,
+    name: 'Portugal Romance',
+    cities: [{city:'Lisbon',nights:5},{city:'Porto',nights:2}]
+  }
+];
+
+const STYLE_BADGE_COLORS = {
+  'Honeymoon':        { bg: '#fce7f3', color: '#9d174d' },
+  'Family':           { bg: '#dbeafe', color: '#1e40af' },
+  'Adventure':        { bg: '#fef3c7', color: '#92400e' },
+  'Islands & Parties':{ bg: '#ccfbf1', color: '#065f46' }
+};
+
+let selectedQuickRoute = null;
+let quickAdults   = 2;
+let quickChildren = 0;
+let quickBudget   = 0;
+let activeCategory = 'all';
+
+function renderQuickRouteCards() {
+    const grid = document.getElementById('quickRouteGrid');
+    if (!grid) return;
+    const filtered = activeCategory === 'all'
+        ? QUICK_ROUTES
+        : QUICK_ROUTES.filter(r => r.category === activeCategory);
+
+    grid.innerHTML = filtered.map(r => {
+        const totalNights = r.cities.reduce((s, c) => s + c.nights, 0);
+        const cityStr = r.cities.map(c => c.city + ' ' + c.nights + 'N').join(' → ');
+        const badge = STYLE_BADGE_COLORS[r.style] || { bg: '#f3f4f6', color: '#374151' };
+        const isSelected = selectedQuickRoute === r.id;
+        return `
+          <div class="quick-route-card ${isSelected ? 'selected' : ''}"
+               onclick="selectQuickRoute(${r.id})">
+            <div class="style-badge"
+                 style="background:${badge.bg};color:${badge.color}">
+              ${r.style}
+            </div>
+            <div class="route-name">${r.name}</div>
+            <div class="route-cities">${cityStr}</div>
+            <div class="route-footer">${totalNights} Nights · ${r.cities.length} Cities</div>
+          </div>`;
+    }).join('');
+}
+
+function filterQuickRoutes(cat) {
+    activeCategory = cat;
+    document.querySelectorAll('.cat-tab').forEach(function(b) {
+        b.classList.toggle('active', b.getAttribute('onclick').includes("'" + cat + "'"));
+    });
+    renderQuickRouteCards();
+}
+
+function selectQuickRoute(id) {
+    selectedQuickRoute = id;
+
+    // Show sticky bar + update route name display
+    const route = QUICK_ROUTES.find(r => r.id === id);
+    document.getElementById('quickStickyBar').style.display = 'block';
+    document.getElementById('stickyRouteName').innerText = route ? route.name : '';
+
+    renderQuickRouteCards();
+    validateQuickBuild();
+}
+
+function qqStep(field, delta) {
+    if (field === 'adults') {
+        quickAdults = Math.max(1, quickAdults + delta);
+        document.getElementById('qqAdultsVal').textContent = quickAdults;
+    } else {
+        quickChildren = Math.max(0, quickChildren + delta);
+        document.getElementById('qqChildrenVal').textContent = quickChildren;
+    }
+    validateQuickBuild();
+}
+
+function validateQuickBuild() {
+    const btn = document.getElementById('btnQuickBuild');
+    if (!btn) return;
+    const ready = selectedQuickRoute !== null
+        && quickBudget > 0
+        && document.getElementById('quickStartDate').value !== '';
+    if (ready) {
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'all';
+    } else {
+        btn.style.opacity = '0.4';
+        btn.style.pointerEvents = 'none';
+    }
+}
+
+function formatDateISO(d) {
+    // local-date format (avoid toISOString UTC shift)
+    const m  = String(d.getMonth() + 1).padStart(2, '0');
+    const dy = String(d.getDate()).padStart(2, '0');
+    return `${d.getFullYear()}-${m}-${dy}`;
+}
+
+function handleQuickQuoteBuild() {
+    if (!selectedQuickRoute || !quickBudget || quickBudget <= 0) return;
+
+    const route = QUICK_ROUTES.find(r => r.id === selectedQuickRoute);
+    if (!route) return;
+
+    // 1. Set pax (programmatic set doesn't fire oninput — call handlePaxChange manually)
+    document.getElementById('adultCountInput').value = quickAdults;
+    document.getElementById('childCountInput').value = quickChildren;
+    handlePaxChange();
+
+    // 2. Set budget per person
+    document.getElementById('budgetPerPerson').value = quickBudget;
+    if (typeof updateBudgetCalcPanel === 'function') updateBudgetCalcPanel();
+
+    // 3. Build selectedRoute from start date — cascade nights
+    const startDateVal = document.getElementById('quickStartDate').value;
+    if (!startDateVal) { showToast('Please pick a start date', 'error'); return; }
+
+    selectedRoute = [];
+    let cursor = new Date(startDateVal + 'T00:00:00'); // local midnight, no UTC shift
+
+    route.cities.forEach(function(c) {
+        const cin = formatDateISO(cursor);
+        cursor.setDate(cursor.getDate() + c.nights);
+        const cout = formatDateISO(cursor);
+        selectedRoute.push({ id: Date.now() + Math.random(), city: c.city, cin, cout, nights: c.nights });
+    });
+
+    // 4. Switch tab → render → fire Auto-Build
+    switchAdminTab('itinerary');
+    renderRouteInputs();
+    updatePaxHeader();
+    setTimeout(function() { onAutoBuildQuote(); }, 100); // small delay for tab paint
+}
+
+// =============================================================
 // VEHICLE HELPERS
 // =============================================================
 // Convert ⭐ emoji rating string to solid ★ characters that respect CSS colour
@@ -3291,6 +3769,7 @@ function launchApp(modeText) {
         refreshAdminList();
     }
     init();
+    switchAdminTab('quickquote'); // Quick Quote is the default landing tab
     loadWalletBalance(); // load agent wallet on login
     if (window.currentRole === 'AGENT') {
         applyAgentBranding();
@@ -3825,6 +4304,12 @@ async function checkAutoLogin() {
 }
 window.addEventListener('DOMContentLoaded', checkAutoLogin);
 window.addEventListener('DOMContentLoaded', fetchLaunchCities);
+window.addEventListener('DOMContentLoaded', function() {
+    renderQuickRouteCards();
+    // Start date can't be in the past
+    const sd = document.getElementById('quickStartDate');
+    if (sd) sd.min = new Date().toISOString().split('T')[0];
+});
 
 // =============================================================
 // ADMIN
@@ -8377,7 +8862,7 @@ async function downloadExcel() {
 
 function switchAdminTab(tab) {
     // Update nav button active class
-    ['itinerary','saved','profile','quote','data','coverage','manager','wallet','agents'].forEach(t => {
+    ['quickquote','itinerary','saved','profile','quote','data','coverage','manager','wallet','agents'].forEach(t => {
         const btn = document.getElementById('navBtn-' + t);
         if (!btn) return;
         btn.classList.toggle('active', t === tab);
@@ -8387,6 +8872,7 @@ function switchAdminTab(tab) {
         btn.style.background = '';
     });
     // Show/hide tab content (itinerary uses flex, others use flex too)
+    document.getElementById('tab-quickquote').style.display = tab === 'quickquote' ? 'flex' : 'none';
     document.getElementById('tab-itinerary').style.display = tab === 'itinerary' ? 'flex' : 'none';
     document.getElementById('tab-saved').style.display     = tab === 'saved'     ? 'flex' : 'none';
     document.getElementById('tab-profile').style.display   = tab === 'profile'   ? 'flex' : 'none';
@@ -8409,14 +8895,14 @@ function switchAdminTab(tab) {
 function applyRoleVisibility(role) {
     const r = String(role || '').trim().toUpperCase();
     const VIS = {
-        ADMIN:        ['itinerary','saved','quote','data','coverage','manager','wallet','agents'],
-        INTERNAL:     ['itinerary','saved'],
-        AGENT:        ['itinerary','saved','profile'],
-        MANAGER:      ['itinerary','saved','quote','coverage','manager'],
-        DATA_MANAGER: ['itinerary','saved','data','coverage'],
+        ADMIN:        ['quickquote','itinerary','saved','quote','data','coverage','manager','wallet','agents'],
+        INTERNAL:     ['quickquote','itinerary','saved'],
+        AGENT:        ['quickquote','itinerary','saved','profile'],
+        MANAGER:      ['quickquote','itinerary','saved','quote','coverage','manager'],
+        DATA_MANAGER: ['quickquote','itinerary','saved','data','coverage'],
     };
-    const allowed = VIS[r] || ['itinerary','saved'];
-    ['itinerary','saved','profile','quote','data','coverage','manager','wallet','agents'].forEach(t => {
+    const allowed = VIS[r] || ['quickquote','itinerary','saved'];
+    ['quickquote','itinerary','saved','profile','quote','data','coverage','manager','wallet','agents'].forEach(t => {
         const btn = document.getElementById('navBtn-' + t);
         if (!btn) return;
         btn.style.display = allowed.indexOf(t) >= 0 ? 'inline-block' : 'none';
