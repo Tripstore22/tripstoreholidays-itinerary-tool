@@ -4443,6 +4443,11 @@ async function searchItinerary(query) {
         renderRouteInputs();
         renderTables();
         _loadedFromName = query;   // ← mark as "opened from saved"
+        // TRAP GUARD: window._lastGenId persists across the session. On loading a saved
+        // quote (no fresh Auto-Build), reset it to THIS quote's own stored genId — or null
+        // if it has none — so a re-save never inherits a stale build id from an earlier,
+        // unrelated Auto-Build this session (which would forge a false proposal↔saved join).
+        window._lastGenId   = data.genId || null;
         window._lastQuoteId = null; // v18: loaded record — server will mint quoteId on next save
         window._pregenPdf   = null;
         showToast(`Loaded: ${query}`);
@@ -6888,6 +6893,89 @@ async function onAutoBuildQuote() {
         }
         // Populate Grand Total, Utilisation, per-adult/child, net breakdown cells
         if (typeof calculateBudgetInvestment === 'function') calculateBudgetInvestment();
+
+        // ── Generation_Log (FIRE-AND-FORGET) ───────────────────────────────
+        // Capture EVERY engine proposal — saved or not — so it can be diffed
+        // later against the final saved plan. PURE LOG: no await in the render
+        // path, isolated try/catch, fetch .catch swallowed. A failed or slow log
+        // must NEVER delay the agent seeing the quote, throw, or touch wallet/Quote_Log.
+        // genId — client-minted BEFORE the log POST so the same id can later be
+        // stitched into the saved payload (proposal ↔ saved join). Stored globally.
+        window._lastGenId = 'G-' + Date.now() + '-' + Math.random().toString(36).slice(2,8);
+        try {
+            const _glRoute = (data && data.route) || [];
+            // Proposed_Tours_JSON — { city: [{canonical_id, name, dayIdx}] } from the RAW
+            // engine response (only data.route carries canonical_id; the transform drops it).
+            const _glProposed = {};
+            _glRoute.forEach(function(r) {
+                _glProposed[r.city] = (r.tours || []).map(function(t) {
+                    return { canonical_id: t.canonical_id || null, name: t.name || '', dayIdx: t.dayIdx };
+                });
+            });
+            // Proposed_Hotels_JSON — { city: {name, starRating, category, cost, nights} }
+            // from currentPlan (transformed FE keys). cost = per-night-per-pricing-unit (NOT total stay).
+            const _glHotels = {};
+            currentPlan.forEach(function(p) {
+                const h = p.hotel || {};
+                _glHotels[p.city] = { name: h.name || '', starRating: h.starRating || null,
+                                      category: h.category || '', cost: Number(h.cost) || 0, nights: p.nights || 0 };
+            });
+            // Proposed_Intercity_JSON — [{from, to, mode, classType, price}] as the engine produced.
+            const _glIntercity = (selectedIntercity || []).map(function(ic) {
+                return { from: ic.from || '', to: ic.to || '', mode: ic.mode || '',
+                         classType: ic.classType || '', price: Number(ic.price) || 0 };
+            });
+            // Proposed_Transfers_JSON — [{city, leg, vehicleType, price}]. price = the field the FE
+            // DISPLAYS as the leg cost (vehiclePrice || avgPrice, render L6235). Phantom ₹0 legs NOT filtered.
+            const _glTransfers = (selectedTransfers || []).map(function(t) {
+                return { city: t.city || '', leg: t.leg || '', vehicleType: t.vehicleType || t.vehicle || '',
+                         price: Number(t.vehiclePrice || t.avgPrice) || 0 };
+            });
+            const _glCities = [...new Set(_glRoute.map(function(r){ return r.city; }).filter(Boolean))];
+            // Dominant Hotel Category — mirror Quote_Log buildQuoteLogRow (_mostCommon of hotel categories).
+            const _glCats = currentPlan.map(function(p){ return p.hotel && p.hotel.category; }).filter(Boolean);
+            const _glDomCat = (function(arr){
+                if (!arr.length) return '';
+                const m = {}; let best = '', bestN = 0;
+                arr.forEach(function(v){ m[v] = (m[v]||0)+1; if (m[v] > bestN) { bestN = m[v]; best = v; } });
+                return best;
+            })(_glCats);
+            // Grand Total + Utilisation — read the on-screen FE-computed values (post calculateBudgetInvestment).
+            const _glGrand  = parseInt((document.getElementById('resGrandTotal').innerText || '').replace(/[^0-9]/g, ''), 10) || 0;
+            const _glUtil   = (document.getElementById('valUtil').innerText || '').replace('%', '').trim();
+            const _glBudget = (Number(document.getElementById('hotelBudget').value) || 0)
+                            + (Number(document.getElementById('sightBudget').value) || 0);
+            const _glPayload = {
+                genId:                 window._lastGenId,
+                agent:                 window.currentUsername || '',
+                travelMonth:           monthStr,
+                adults:                cfg.adults,
+                children:              cfg.children,
+                totalPax:              cfg.totalPax,
+                cities:                _glCities.join(', '),
+                totalNights:           _glRoute.reduce(function(s,r){ return s + (r.nights||0); }, 0),
+                numCities:             _glCities.length,
+                grandTotal:            _glGrand,
+                budgetEntered:         _glBudget,
+                utilisation:           _glUtil,
+                algorithm:             getAlgorithm(),
+                proposedToursJson:     _glProposed,
+                proposedHotelsJson:    _glHotels,
+                proposedIntercityJson: _glIntercity,
+                proposedTransfersJson: _glTransfers,
+                dominantHotelCategory: _glDomCat,
+                vehicleType:           (document.getElementById('vehicleTypeSelect') && document.getElementById('vehicleTypeSelect').value) || '',
+                notes:                 'auto-build generation'
+            };
+            fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'appendGenerationLog', payload: _glPayload })
+            }).catch(function(){ /* silent — logging must never surface to the agent */ });
+        } catch (_glErr) {
+            /* silent — generation logging must never break the quote */
+        }
+        // ── END Generation_Log ──────────────────────────────────────────────
+
         showToast('Auto-Build Quote complete — review and edit as needed', 'success');
 
     } catch (e) {
@@ -8104,6 +8192,10 @@ function _buildCurrentPayload() {
         markup:      document.getElementById('markupInput').value,
         gstMode:     document.querySelector('input[name="gstMode"]:checked')?.value || 'none',
         vehicleType: document.getElementById('vehicleTypeSelect')?.value || 'auto',
+        // genId — stitch the proposal↔saved join. Set ONLY by a fresh Auto-Build or by
+        // loading a saved quote (to its own stored id / null). Never fabricated: write
+        // null when absent so a stale build id can't be inherited on load→resave.
+        genId: window._lastGenId || null,
         selectedRoute, currentPlan, selectedTransfers, selectedIntercity
     };
 }
