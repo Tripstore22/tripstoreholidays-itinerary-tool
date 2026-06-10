@@ -6025,18 +6025,20 @@ function renderTables() {
 
     // Hotels + Sightseeing
     currentPlan.forEach((item, planIdx) => {
-        if (!item.hotel) item.hotel = {};           // ensure hotel object always exists
-        if (!item.sights) item.sights = [];         // ensure sights array always exists
-        if (!item.dayNotes) item.dayNotes = {};     // ensure dayNotes always exists
-        const hotelCostTotal = calculateHotelPrice(Number(item.hotel?.cost) || 0, item.nights);
-        const starLine = item.hotel?.starRating
-            ? `<div style="font-size:8px;font-weight:bold;color:#c8990a;margin-top:1px;line-height:1.2;">${renderStars(item.hotel.starRating)}</div>`
+        // Render-only locals — do NOT mutate currentPlan on load. Persisting empty
+        // hotel/sights/dayNotes here makes a freshly-loaded quote diverge from its
+        // stored blob → computeFrontendHash mismatch → spurious "Create new version?"
+        // modal + bill. Edits lazily create the real keys (see onchange handlers below).
+        const _h = item.hotel || {}, _s = item.sights || [], _dn = item.dayNotes || {};
+        const hotelCostTotal = calculateHotelPrice(Number(_h.cost) || 0, item.nights);
+        const starLine = _h.starRating
+            ? `<div style="font-size:8px;font-weight:bold;color:#c8990a;margin-top:1px;line-height:1.2;">${renderStars(_h.starRating)}</div>`
             : '';
-        const catLine  = item.hotel?.category
-            ? `<div style="font-size:8px;font-weight:bold;color:#334155;margin-top:1px;line-height:1.2;">${item.hotel.category}</div>`
+        const catLine  = _h.category
+            ? `<div style="font-size:8px;font-weight:bold;color:#334155;margin-top:1px;line-height:1.2;">${_h.category}</div>`
             : '';
-        const roomLine  = item.hotel?.roomType || item.hotel?.type || '';
-        const mealsLine = item.hotel?.meals || '';
+        const roomLine  = _h.roomType || _h.type || '';
+        const mealsLine = _h.meals || '';
 
         hHtml += `
         <tr class="border-b">
@@ -6045,19 +6047,19 @@ function renderTables() {
             <td class="p-2 border text-center font-bold" style="font-size:13px;">${formatDate(item.cout)}</td>
             <td class="text-center p-2 border"><span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--cream3);font-size:13px;font-weight:800;color:var(--ink2);">${item.nights}</span></td>
             <td class="p-2 border" style="min-width:120px;">
-                <textarea onchange="currentPlan[${planIdx}].hotel.name = this.value"
+                <textarea onchange="(currentPlan[${planIdx}].hotel||(currentPlan[${planIdx}].hotel={})).name = this.value"
                     class="pdf-input w-full bg-transparent outline-none uppercase font-bold resize-none overflow-hidden"
                     style="font-size:13px;"
-                    rows="1">${item.hotel?.name || ''}</textarea>
+                    rows="1">${_h.name || ''}</textarea>
                 <div style="font-size:10px;color:#64748b;font-style:italic;line-height:1.2;margin-top:1px;">or similar</div>
                 ${starLine}
             </td>
             <td class="p-2 border" style="min-width:80px;">
-                <textarea onchange="currentPlan[${planIdx}].hotel.meals = this.value"
+                <textarea onchange="(currentPlan[${planIdx}].hotel||(currentPlan[${planIdx}].hotel={})).meals = this.value"
                     class="pdf-input w-full bg-transparent outline-none resize-none overflow-hidden"
                     style="font-size:11px;color:#7c5f3a;font-weight:600;"
                     rows="1" placeholder="Meals">${mealsLine}</textarea>
-                <textarea onchange="currentPlan[${planIdx}].hotel.roomType = this.value; currentPlan[${planIdx}].hotel.type = this.value"
+                <textarea onchange="var _hh=currentPlan[${planIdx}].hotel||(currentPlan[${planIdx}].hotel={}); _hh.roomType = this.value; _hh.type = this.value"
                     class="pdf-input w-full bg-transparent outline-none resize-none overflow-hidden"
                     style="font-size:11px;color:var(--ink4);"
                     rows="1">${roomLine}</textarea>
@@ -6067,7 +6069,7 @@ function renderTables() {
                 <div class="flex items-center justify-center">
                     <span style="font-weight:bold;font-size:13px;color:var(--terra);flex-shrink:0;margin-right:2px;">₹</span>
                     <input type="number" value="${hotelCostTotal}"
-                        onchange="currentPlan[${planIdx}].hotel.cost = Number(this.value)/(${item.nights||1}*${config.pricingFactor}); calculateBudgetInvestment();"
+                        onchange="(currentPlan[${planIdx}].hotel||(currentPlan[${planIdx}].hotel={})).cost = Number(this.value)/(${item.nights||1}*${config.pricingFactor}); calculateBudgetInvestment();"
                         class="pdf-input text-right bg-transparent outline-none font-bold"
                         style="width:70px;border:none;flex-shrink:0;font-size:13px;color:var(--terra);">
                 </div>
@@ -6078,7 +6080,7 @@ function renderTables() {
         </tr>`;
 
         for (let d = 0; d <= item.nights; d++) {
-            const activities = item.sights.filter(s => s.assignedDay === d);
+            const activities = _s.filter(s => s.assignedDay === d);
             const curDate    = new Date(item.cin);
             curDate.setDate(curDate.getDate() + d);
 
@@ -6168,7 +6170,7 @@ function renderTables() {
             return '📍'; // default
         };
         const actsContent = activities.map(s => {
-                const sIdx   = item.sights.findIndex(f => f.instanceId === s.instanceId);
+                const sIdx   = _s.findIndex(f => f.instanceId === s.instanceId);
                 const sTotal = Math.round(s.price * config.totalPax);
                 const cat    = s.category ? `<span class="act-cat">${s.category}</span>` : '';
                 const dur    = s.duration ? `<span class="act-dur">${s.duration}</span>` : '';
@@ -6198,8 +6200,7 @@ function renderTables() {
                 </div>`;
             }).join('');
             // Editable day note (replaces "Free Day / Transfer" static text)
-            if (!item.dayNotes) item.dayNotes = {};
-            const noteVal = item.dayNotes[d] || '';
+            const noteVal = _dn[d] || '';
             // Note + Add Tour inline on same row
             const noteAndAdd = `<div class="day-note-row" style="display:flex;align-items:center;justify-content:flex-start;gap:16px;">
                 <textarea onchange="currentPlan[${planIdx}].dayNotes = currentPlan[${planIdx}].dayNotes||{}; currentPlan[${planIdx}].dayNotes[${d}]=this.value;"
