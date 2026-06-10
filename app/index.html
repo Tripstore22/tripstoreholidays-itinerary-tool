@@ -4383,7 +4383,11 @@ async function saveItinerary() {
             if (!rawName || rawName !== auto) {
                 document.getElementById('paxNameInput').value = auto;
             }
-            _loadedFromName = null;
+            // Keep the loaded-from tracker ALIVE (was: =null, which wiped the version
+            // chain after every save → a subsequent real change saved silently with no
+            // _Vn bump). _buildAutoSaveName strips _Vn, so on the next save loadedBase
+            // still equals paxName → the "Create new version?" modal fires (V2→V3→…).
+            _loadedFromName = auto;
             if (isAdmin) refreshAdminList();
         });
     } catch (e) {
@@ -8339,11 +8343,14 @@ async function processBillableAction(actionType, deliverFn) {
 
     // CHANGED PATH.
     // "Create new version?" modal only fires when this quote was loaded from a
-    // saved record AND the traveler name is still the same — i.e. we're about
-    // to bump V1→V2 of an existing record. Brand-new quotes (no savedId) and
-    // renamed quotes are saved silently as a new record.
+    // saved record, the traveler name is still the same, AND the CURRENT user
+    // already owns a row with this base (state.exists). The last clause stops the
+    // false modal when an admin/manager opens ANOTHER agent's quote: checkQuoteState
+    // is keyed by (paxName, current user), so a cross-owner load returns exists=false
+    // → no version bump → it saves silently as the current user's own new record.
+    // Brand-new quotes (no _loadedFromName) and renamed quotes also save silently.
     const loadedBase    = _loadedFromName ? _loadedFromName.replace(/_V\d+$/i, '') : null;
-    const isVersionBump = !!loadedBase && loadedBase === paxName;
+    const isVersionBump = !!loadedBase && loadedBase === paxName && state.exists;
     const yes1 = isVersionBump ? await _confirmCreateNewVersion() : true;
     if (yes1) {
         // On version bump, suffix _V{N+1} so server creates a NEW row instead of
