@@ -1468,7 +1468,7 @@ input[type="date"]#quickStartDate:focus {
     <div class="sb-brand">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
         <img src="../images/tripstorelogo.png" alt="Trip Store" style="height:26px;" onerror="handleLogoError(this,'span')">
-        <button onclick="startNewQuote()" style="font-size:8px;font-weight:700;color:var(--terra);border:1px solid var(--terra-b);background:var(--terra-bg);padding:2px 9px;border-radius:5px;cursor:pointer;text-transform:uppercase;font-family:var(--sans);">New Quote</button>
+        <button onclick="startNewQuote()" style="font-size:13px;font-weight:800;color:#fff;border:none;background:var(--terra);padding:8px 16px;border-radius:7px;cursor:pointer;text-transform:uppercase;font-family:var(--sans);letter-spacing:.3px;box-shadow:0 1px 3px rgba(184,92,56,0.3);">+ New Quote</button>
       </div>
       <span id="roleBadge" style="display:none;"></span>
     </div>
@@ -1485,7 +1485,7 @@ input[type="date"]#quickStartDate:focus {
           <input type="number" id="adultCountInput" class="ts-input" value="2" min="1" oninput="handlePaxChange();updateBudgetCalcPanel()">
         </div>
         <div>
-          <label class="ts-label">Children</label>
+          <label class="ts-label">Children <span style="font-size:9px;color:var(--ink4);font-weight:600;">(below 12 yrs)</span></label>
           <input type="number" id="childCountInput" class="ts-input" value="0" min="0" oninput="handlePaxChange();updateBudgetCalcPanel()">
         </div>
       </div>
@@ -1908,7 +1908,7 @@ input[type="date"]#quickStartDate:focus {
 
       <!-- Children stepper -->
       <div>
-        <div class="qq-field-label">Children</div>
+        <div class="qq-field-label">Children <span style="font-size:9px;color:var(--ink4);font-weight:600;">(below 12 yrs)</span></div>
         <div class="qq-stepper">
           <button type="button" onclick="qqStep('children',-1)">−</button>
           <span id="qqChildrenVal">0</span>
@@ -4399,6 +4399,9 @@ async function saveItinerary() {
             // _Vn bump). _buildAutoSaveName strips _Vn, so on the next save loadedBase
             // still equals paxName → the "Create new version?" modal fires (V2→V3→…).
             _loadedFromName = auto;
+            // Manual Save succeeded → clear any auto-save backoff and re-arm the ticker.
+            _autoSaveBackoff = false;
+            _autoSaveFailCount = 0;
             if (isAdmin) refreshAdminList();
         });
     } catch (e) {
@@ -8659,6 +8662,10 @@ async function sendToWhatsApp(btnEl) {
 // =============================================================
 let _autoSaveDirty = false;
 let _autoSaveFailCount = 0;
+// After 3 consecutive auto-save fails, stop the 30s ticker from hammering the
+// backend (and spamming the agent). Cleared by ANY successful save — a manual
+// Save, or a user-forced save (_ensureSaved) that succeeds — which re-arms the ticker.
+let _autoSaveBackoff = false;
 let _autoSaveInFlight = false;
 
 function _markDirty() {
@@ -8701,17 +8708,21 @@ function _captureSavedQuoteId(result) {
 // Returns the quoteId (v18) so the caller can query the right record.
 async function _ensureSaved() {
   _autoSaveDirty = true; // override; let _autoSaveTick run its full path
-  await _autoSaveTick();
+  await _autoSaveTick(true); // force=true: a deliberate user save bypasses backoff
   return window._lastQuoteId;
 }
 
-async function _autoSaveTick() {
+async function _autoSaveTick(force) {
   // v19 (2026-05-27): entry log BEFORE any early-return so silent bailouts
   // are impossible to miss. Bug history: window.currentPlan check (since
   // removed) was silently early-returning on every call for months.
   var _planLen = (typeof currentPlan !== 'undefined' && Array.isArray(currentPlan)) ? currentPlan.length : 'not-array';
   var _hasPax  = !!((document.getElementById('paxNameInput')||{}).value || '').trim();
-  console.log('[autoSaveTick] entry. dirty=', _autoSaveDirty, 'inflight=', _autoSaveInFlight, 'hasPax=', _hasPax, 'planLen=', _planLen);
+  console.log('[autoSaveTick] entry. dirty=', _autoSaveDirty, 'inflight=', _autoSaveInFlight, 'hasPax=', _hasPax, 'planLen=', _planLen, 'backoff=', _autoSaveBackoff);
+  // Backed off after 3 consecutive fails: the periodic ticker goes quiet so we
+  // stop hammering the backend. A user-forced save (_ensureSaved → force=true)
+  // still runs — and if it succeeds, it clears the backoff and re-arms the ticker.
+  if (_autoSaveBackoff && !force) return;
   if (_autoSaveInFlight) return;
   if (!_autoSaveDirty)   return;
   var paxNameRaw = (document.getElementById('paxNameInput')||{}).value || '';
@@ -8743,6 +8754,7 @@ async function _autoSaveTick() {
     if (result && result.success) {
       _autoSaveDirty = false;
       _autoSaveFailCount = 0;
+      _autoSaveBackoff = false;   // any successful save re-arms the periodic ticker
       // v19: shared capture (see _captureSavedQuoteId definition above).
       _captureSavedQuoteId(result);
       // [v19 LEGACY — background pre-gen removed. Was: _pregenAfterSave fired
@@ -8750,12 +8762,14 @@ async function _autoSaveTick() {
       // _pregenAfterSave(result.quoteId || null, saveName);
     } else {
       _autoSaveFailCount++;
-      if (_autoSaveFailCount >= 3 && typeof showToast === 'function') {
+      if (_autoSaveFailCount === 3 && typeof showToast === 'function') {
         showToast('Auto-save failed (3 attempts). Try saving manually.', 'error');
       }
+      if (_autoSaveFailCount >= 3) _autoSaveBackoff = true;
     }
   } catch (e) {
     _autoSaveFailCount++;
+    if (_autoSaveFailCount >= 3) _autoSaveBackoff = true;
     console.warn('[autosave]', e);
   } finally {
     _autoSaveInFlight = false;
