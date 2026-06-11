@@ -3503,6 +3503,17 @@ function formatDateISO(d) {
     return `${d.getFullYear()}-${m}-${dy}`;
 }
 
+// Nights = date-only diff between check-in/out (bare YYYY-MM-DD strings → same UTC
+// offset both ends → IST-safe). Mirrors the certified-correct Add-Stop calc. Used at
+// every PROPOSAL consumer so display / day-wise / price derive from the dates the client
+// sees and can never contradict a drifted stored item.nights. NEVER write the result back
+// into currentPlan — nights is part of the dirty-detection hash (computeFrontendHash), so
+// mutating it on load/render re-triggers the spurious "Create new version?" modal + bill.
+function _nightsBetween(cin, cout){
+    if(!cin || !cout) return 0;
+    return Math.max(0, Math.round((new Date(cout) - new Date(cin)) / 86400000));
+}
+
 function handleQuickQuoteBuild() {
     if (!selectedQuickRoute || !quickBudget || quickBudget <= 0) return;
 
@@ -6034,7 +6045,10 @@ function renderTables() {
         // stored blob → computeFrontendHash mismatch → spurious "Create new version?"
         // modal + bill. Edits lazily create the real keys (see onchange handlers below).
         const _h = item.hotel || {}, _s = item.sights || [], _dn = item.dayNotes || {};
-        const hotelCostTotal = calculateHotelPrice(Number(_h.cost) || 0, item.nights);
+        // Derive nights from the dates the client sees; fall back to stored only if dates
+        // are absent. Read-only local — never written back (keeps the hash byte-identical).
+        const _nights = _nightsBetween(item.cin, item.cout) || item.nights || 1;
+        const hotelCostTotal = calculateHotelPrice(Number(_h.cost) || 0, _nights);
         const starLine = _h.starRating
             ? `<div style="font-size:8px;font-weight:bold;color:#c8990a;margin-top:1px;line-height:1.2;">${renderStars(_h.starRating)}</div>`
             : '';
@@ -6049,7 +6063,7 @@ function renderTables() {
             <td class="p-2 border whitespace-nowrap"><span class="city-tag">${item.city}</span></td>
             <td class="p-2 border text-center font-bold" style="font-size:13px;">${formatDate(item.cin)}</td>
             <td class="p-2 border text-center font-bold" style="font-size:13px;">${formatDate(item.cout)}</td>
-            <td class="text-center p-2 border"><span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--cream3);font-size:13px;font-weight:800;color:var(--ink2);">${item.nights}</span></td>
+            <td class="text-center p-2 border"><span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--cream3);font-size:13px;font-weight:800;color:var(--ink2);">${_nights}</span></td>
             <td class="p-2 border" style="min-width:120px;">
                 <textarea onchange="(currentPlan[${planIdx}].hotel||(currentPlan[${planIdx}].hotel={})).name = this.value"
                     class="pdf-input w-full bg-transparent outline-none uppercase font-bold resize-none overflow-hidden"
@@ -6073,7 +6087,7 @@ function renderTables() {
                 <div class="flex items-center justify-center">
                     <span style="font-weight:bold;font-size:13px;color:var(--terra);flex-shrink:0;margin-right:2px;">₹</span>
                     <input type="number" value="${hotelCostTotal}"
-                        onchange="(currentPlan[${planIdx}].hotel||(currentPlan[${planIdx}].hotel={})).cost = Number(this.value)/(${item.nights||1}*${config.pricingFactor}); calculateBudgetInvestment();"
+                        onchange="(currentPlan[${planIdx}].hotel||(currentPlan[${planIdx}].hotel={})).cost = Number(this.value)/(${_nights}*${config.pricingFactor}); calculateBudgetInvestment();"
                         class="pdf-input text-right bg-transparent outline-none font-bold"
                         style="width:70px;border:none;flex-shrink:0;font-size:13px;color:var(--terra);">
                 </div>
@@ -6083,7 +6097,7 @@ function renderTables() {
             </td>
         </tr>`;
 
-        for (let d = 0; d <= item.nights; d++) {
+        for (let d = 0; d <= _nights; d++) {
             const activities = _s.filter(s => s.assignedDay === d);
             const curDate    = new Date(item.cin);
             curDate.setDate(curDate.getDate() + d);
@@ -6091,8 +6105,8 @@ function renderTables() {
             // --- Default day-transition lines ---
             const isFirstDayOfTrip    = planIdx === 0 && d === 0;
             const isCheckinOtherCity  = planIdx > 0 && d === 0;
-            const isCheckoutToNext    = d === item.nights && planIdx < currentPlan.length - 1;
-            const isLastDayOfTrip     = planIdx === currentPlan.length - 1 && d === item.nights;
+            const isCheckoutToNext    = d === _nights && planIdx < currentPlan.length - 1;
+            const isLastDayOfTrip     = planIdx === currentPlan.length - 1 && d === _nights;
 
             let topLines = '', bottomLines = '';
             if (isFirstDayOfTrip) {
@@ -7220,6 +7234,7 @@ function editIntercity(index, field, value) {
 function openHotelSwap(routeId) {
     const item = currentPlan.find(p => p.id === routeId);
     const city = item.city;
+    const _nights = _nightsBetween(item.cin, item.cout) || item.nights || 1;  // derive — never trust drifted stored nights
     const options    = (masterData.hotels || []).filter(h => h.city.toLowerCase() === city.toLowerCase());
     const maxPrice   = options.length > 0 ? Math.max(...options.map(h => Number(h.cost))) : 100000;
     const minPrice   = options.length > 0 ? Math.min(...options.map(h => Number(h.cost))) : 0;
@@ -7227,7 +7242,7 @@ function openHotelSwap(routeId) {
     const stars      = [...new Set(options.map(h => h.starRating).filter(Boolean))].sort();
     window._currentHotelCost  = Number(item.hotel?.cost) || 0;
     window._currentHotelName  = (item.hotel?.name || '').toLowerCase();
-    window._currentHotelNights = item.nights || 1;
+    window._currentHotelNights = _nights;
 
     document.getElementById('modalHeading').innerText = `Select Hotel: ${city}`;
     const mc = document.getElementById('modalContent');
@@ -7235,7 +7250,7 @@ function openHotelSwap(routeId) {
     mc.style.cssText = 'flex:1;min-height:0;';
     mc.innerHTML = `
         <div style="background:#faf7f2;border-bottom:1px solid #e8ddd0;padding:12px 16px;" class="flex-shrink-0 space-y-2">
-            <div style="font-size:10px;color:#7a6458;font-weight:600;">${city} · ${item.nights} night${item.nights !== 1 ? 's' : ''}</div>
+            <div style="font-size:10px;color:#7a6458;font-weight:600;">${city} · ${_nights} night${_nights !== 1 ? 's' : ''}</div>
             <input type="text" id="modalSearch" placeholder="Search hotel name..."
                 oninput="applyHotelFilters(${routeId},'${city}')"
                 style="width:100%;padding:6px 10px;border:1px solid #e8ddd0;border-radius:6px;font-size:11px;outline:none;background:#fff;">
@@ -8896,9 +8911,10 @@ async function downloadExcel() {
     const hTableHead = sheet.addRow(['City','Check In','Check Out','Nts','Hotel Name','Stars / Category','Room Type','Total Cost']);
     hTableHead.eachCell(c => { c.fill = headerFill; c.font = boldFont; c.border = borderStyle; });
     currentPlan.forEach(item => {
-        const cost = calculateHotelPrice(Number(item.hotel?.cost) || 0, item.nights);
+        const _nights = _nightsBetween(item.cin, item.cout) || item.nights || 1;
+        const cost = calculateHotelPrice(Number(item.hotel?.cost) || 0, _nights);
         const row  = sheet.addRow([
-            item.city.toUpperCase(), formatDate(item.cin), formatDate(item.cout), item.nights,
+            item.city.toUpperCase(), formatDate(item.cin), formatDate(item.cout), _nights,
             `${item.hotel?.name || '---'} (or Similar)`,
             item.hotel?.starRating || '',
             item.hotel?.roomType || item.hotel?.type || '',
@@ -8913,7 +8929,8 @@ async function downloadExcel() {
     const sTableHead = sheet.addRow(['Date','Planned Activities','City']);
     sTableHead.eachCell(c => { c.fill = headerFill; c.font = boldFont; c.border = borderStyle; });
     currentPlan.forEach(item => {
-        for (let d = 0; d <= item.nights; d++) {
+        const _nights = _nightsBetween(item.cin, item.cout) || item.nights || 1;
+        for (let d = 0; d <= _nights; d++) {
             const activities = item.sights.filter(s => s.assignedDay === d);
             const curDate    = new Date(item.cin); curDate.setDate(curDate.getDate() + d);
             const actsText   = activities.length > 0 ? activities.map(s => `• ${s.info}`).join('\n') : 'Free Day / Transfer';
