@@ -7437,7 +7437,7 @@ function openSightSwap(routeId, swapInstanceId, swapDay) {
 }
 
 function renderSightModalWrapper(route, paxCount) {
-    const allCitySights = (masterData.sights || []).filter(s => tourMatchesCity(s, route.city) && (swissPassEnabled || !isSwissPassTour(s.info)));
+    const allCitySights = (masterData.sights || []).filter(s => tourMatchesCity(s, route.city));
     const cityMaxPrice  = allCitySights.length > 0 ? Math.max(...allCitySights.map(s => Number(s.price) * paxCount)) : 50000;
     const cityMinPrice  = allCitySights.length > 0 ? Math.min(...allCitySights.map(s => Number(s.price) * paxCount)) : 0;
     const categories    = [...new Set(allCitySights.map(s => s.category).filter(Boolean))].sort();
@@ -7560,7 +7560,7 @@ function filterSightsInModal(routeId) {
     const maxPrice   = Number(document.getElementById('sightMaxPrice')?.value) || 999999;
     const catFilter  = document.getElementById('sightCategoryFilter')?.value || '';
 
-    const allCitySights = (masterData.sights || []).filter(s => tourMatchesCity(s, route.city) && (swissPassEnabled || !isSwissPassTour(s.info)));
+    const allCitySights = (masterData.sights || []).filter(s => tourMatchesCity(s, route.city));
     const alreadyPicked = new Set((route.sights || []).map(s => s.info));
 
     const filtered = allCitySights.filter(s => {
@@ -7755,7 +7755,7 @@ function openAddTourDirect(planIdx, dayIdx, city, dateStr) {
 
     window._addTourCtx = { planIdx, dayIdx, city };
 
-    const allCitySights = (masterData.sights || []).filter(s => tourMatchesCity(s, city) && (swissPassEnabled || !isSwissPassTour(s.info)));
+    const allCitySights = (masterData.sights || []).filter(s => tourMatchesCity(s, city));
     const paxCount      = getPaxCount();
     const cityMax = allCitySights.length > 0 ? Math.max(...allCitySights.map(s => Number(s.price) * paxCount)) : 50000;
     const cityMin = allCitySights.length > 0 ? Math.min(...allCitySights.map(s => Number(s.price) * paxCount)) : 0;
@@ -7808,7 +7808,7 @@ function renderAddTourList() {
     const minP      = Number(document.getElementById('addTourMin')?.value) || 0;
     const maxP      = Number(document.getElementById('addTourMax')?.value) || 999999;
 
-    const allCitySights = (masterData.sights || []).filter(s => tourMatchesCity(s, city) && (swissPassEnabled || !isSwissPassTour(s.info)));
+    const allCitySights = (masterData.sights || []).filter(s => tourMatchesCity(s, city));
     const alreadyPicked = new Set((currentPlan[planIdx]?.sights || []).map(s => s.info));
 
     const filtered = allCitySights.filter(s => {
@@ -7914,6 +7914,12 @@ function confirmAddTour(planIdx, dayIdx, info) {
     });
     toggleModal(false);
     renderTables();
+    // Swiss Pass: if the toggle is ON, re-apply the SPP override so a pass-eligible
+    // tour added from the picker (e.g. Titlis) shows its discounted price immediately —
+    // matching addActivityToDay and the Auto-Build add paths.
+    if (swissPassEnabled && window.swissPassData) {
+        applySwissPassToQuote(true, window.swissPassData);
+    }
     showToast("Tour added!", "success");
 }
 
