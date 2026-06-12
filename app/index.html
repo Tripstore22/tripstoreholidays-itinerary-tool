@@ -8560,15 +8560,13 @@ async function downloadAdobePDF(btnEl) {
     console.warn('[downloadAdobePDF] ensureSaved threw:', saveErr);
   }
 
-  // v18: prefer quoteId; fall back to legacy paxName only if no quoteId.
+  // Send BOTH quoteId (primary) and paxName (fallback). The PDF resolves the saved row
+  // from Saved_Itineraries by quoteId; paxName covers legacy rows without a quote_id col.
   var qid = window._lastQuoteId || null;
-  var params;
-  if (qid) {
-    params = 'quoteId=' + encodeURIComponent(qid);
-  } else {
-    var legacyName = (typeof _buildAutoSaveName === 'function') ? _buildAutoSaveName() : paxName;
-    params = 'paxName=' + encodeURIComponent(legacyName);
-  }
+  var paxKey = (typeof _buildAutoSaveName === 'function') ? _buildAutoSaveName() : paxName;
+  var params = '';
+  if (qid)    params += 'quoteId=' + encodeURIComponent(qid);
+  if (paxKey) params += (params ? '&' : '') + 'paxName=' + encodeURIComponent(paxKey);
   _updatePdfModal('Generating PDF…', 'Step 2 of 2 — about 15–20 seconds');
   try {
     var res  = await fetch(ADOBE_PDF_API + '?action=generatePDF&' + params, { method: 'GET' });
@@ -8577,8 +8575,8 @@ async function downloadAdobePDF(btnEl) {
       var code = data.error;
       var msg  = data.message || '';
       var human;
-      if (code === 'quoteid_not_found' || code === 'paxname_not_found') {
-        human = 'Quote not found on server. Try saving again.';
+      if (code === 'quoteid_not_found' || code === 'paxname_not_found' || code === 'no_saved_copy') {
+        human = 'No saved copy found — please save the quote, then download.';
       } else if (code === 'saved_itineraries_not_found') {
         human = 'Save incomplete — please check balance and save again.';
       } else if (code === 'pdf_generation_failed') {
@@ -8713,6 +8711,13 @@ function _captureSavedQuoteId(result) {
 // the Apps Script tries to look them up. Reuses _autoSaveTick guards otherwise.
 // Returns the quoteId (v18) so the caller can query the right record.
 async function _ensureSaved() {
+  // If a periodic auto-save is mid-flight, wait for it to settle so we don't send a
+  // stale quoteId — then force OUR save and use ITS freshly-written id.
+  var _waited = 0;
+  while (_autoSaveInFlight && _waited < 8000) {
+    await new Promise(function(r){ setTimeout(r, 150); });
+    _waited += 150;
+  }
   _autoSaveDirty = true; // override; let _autoSaveTick run its full path
   await _autoSaveTick(true); // force=true: a deliberate user save bypasses backoff
   return window._lastQuoteId;
