@@ -1,0 +1,64 @@
+  name: night-guardian
+  
+  # Nightly regression of the TripStore engine against the qa/ scenario bank.
+  # Runs the anonymous DEV pinned /exec (no secrets needed). Public repo => engine + pricing
+  # seams only; the data seam (sheet credentials) stays local. Alerts ONLY on a NEW failure
+  # by opening a GitHub Issue (GitHub emails the owner). Silent on green.
+
+  on:
+    schedule:
+      - cron: '30 20 * * *'     # 20:30 UTC = 02:00 IST
+    workflow_dispatch: {}        # manual run button for testing
+
+  permissions: 
+    contents: read
+    issues: write                # to open the failure issue (uses the built-in GITHUB_TOKEN)
+
+  jobs:
+    guardian:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+
+        - uses: actions/setup-python@v5
+          with:
+            python-version: '3.12'
+
+        # No pip install: nightly.py + invariants.py + smoke.py use only the Python stdlib.
+        # (gspread is imported lazily inside the data seam, which SKIPs in public CI.)
+        - name: Run Night Guardian
+          id: run
+          env: 
+            DEV_PINNED_DEPLOY_ID: ${{ vars.DEV_PINNED_DEPLOY_ID }}
+          run: |
+            set +e
+            python3 qa/nightly.py > /tmp/ng.txt 2>&1
+            echo "exit=$?" >> "$GITHUB_OUTPUT"
+            cat /tmp/ng.txt
+  
+        - name: Upload nightly report
+          if: always()
+          uses: actions/upload-artifact@v4
+          with:
+            name: night-guardian-report
+            path: qa/reports/*.md
+            if-no-files-found: ignore
+
+        - name: Open issue on NEW failure
+          if: steps.run.outputs.exit != '0'
+          uses: actions/github-script@v7
+          with:
+            script: |
+              const fs = require('fs');
+              const date = new Date().toISOString().slice(0, 10);
+              let log = '';
+              try { log = fs.readFileSync('/tmp/ng.txt', 'utf8').slice(-5000); } catch (e) {}
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `NIGHT GUARDIAN FAIL ${date}`,
+                labels: ['night-guardian'],
+                body: `A new engine/pricing regression (or a known issue beyond its baseline) was detected.\n\n` +
+                      `Each failure cites a MASTER_BUG_REGISTRY #. Known issues are NOT reported here.\n\n` +
+                      '```\n' + log + '\n```',
+              });
