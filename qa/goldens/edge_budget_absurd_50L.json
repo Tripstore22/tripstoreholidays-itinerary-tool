@@ -1,0 +1,185 @@
+{
+ "algorithm": "v4-premium",
+ "route": [
+  {
+   "city": "Paris",
+   "nights": 5,
+   "hotel": {
+    "name": "Paris Marriott Champs Elysees",
+    "star": "⭐⭐⭐⭐",
+    "category": "Ultra-Luxury",
+    "roomType": "Friends and Family Room",
+    "meals": "Breakfast",
+    "chain": "Marriott",
+    "totalCost": 2359855
+   },
+   "tours": [
+    {
+     "name": "Disneyland Paris Express Shuttle with Admission Ticket - 02 Park Ticket from Eiffel Tower",
+     "experience_id": null,
+     "canonical_id": "PARIS_DISNEYLAND",
+     "category": "Theme Park",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 59400,
+     "hours": 10
+    },
+    {
+     "name": "Paris: Mont Saint-Michel Full-Day Tour by Coach",
+     "experience_id": null,
+     "canonical_id": "PARIS_MONT",
+     "category": "Day Trip",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 23500,
+     "hours": 14
+    },
+    {
+     "name": "Eiffel Tower Summit Access",
+     "experience_id": null,
+     "canonical_id": "PARIS_EIFFEL",
+     "category": "Landmark",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 23186,
+     "hours": 2
+    },
+    {
+     "name": "Versailles Small-group trip from Paris by Minivan with Palace, Trianon & Gardens",
+     "experience_id": null,
+     "canonical_id": "PARIS_VERSAILLES",
+     "category": "Landmark",
+     "dayIdx": 3,
+     "dayType": "full",
+     "cost": 62568,
+     "hours": 2
+    },
+    {
+     "name": "Paris: Moulin Rouge Cabaret Show Ticket with Champagne",
+     "experience_id": null,
+     "canonical_id": "PARIS_MOULIN_ROUGE",
+     "category": "Evening Show",
+     "dayIdx": 4,
+     "dayType": "full",
+     "cost": 37700,
+     "hours": 2
+    },
+    {
+     "name": "Paris: Lunch Cruise with 3-course menu from the Eiffel Tower",
+     "experience_id": null,
+     "canonical_id": "PARIS_SEINE",
+     "category": "Cruise",
+     "dayIdx": 3,
+     "dayType": "full",
+     "cost": 29932,
+     "hours": 2
+    },
+    {
+     "name": "Louvre Museum Tour Mona Lisa & Iconic Masterpieces",
+     "experience_id": null,
+     "canonical_id": "PARIS_LOUVRE",
+     "category": "Museum & Gallery",
+     "dayIdx": 0,
+     "dayType": "arrival",
+     "cost": 21640,
+     "hours": 2
+    },
+    {
+     "name": "Perfume Making Workshop & Perfume Museum Guided Tour",
+     "experience_id": null,
+     "canonical_id": "PARIS_MUSEUM",
+     "category": "Museum",
+     "dayIdx": 4,
+     "dayType": "full",
+     "cost": 10682,
+     "hours": 2
+    },
+    {
+     "name": "Paris: Musée d'Orsay Skip-the-Line Entry Ticket",
+     "experience_id": null,
+     "canonical_id": "PARIS_MUSEEDORSAY",
+     "category": "Museum",
+     "dayIdx": 3,
+     "dayType": "full",
+     "cost": 6500,
+     "hours": 2
+    },
+    {
+     "name": "Arc de Triomphe Rooftop Tickets",
+     "experience_id": null,
+     "canonical_id": "PARIS_ARC_DE_TRIOMPHE",
+     "category": "Landmark",
+     "dayIdx": 4,
+     "dayType": "full",
+     "cost": 5034,
+     "hours": 2
+    },
+    {
+     "name": "Paris: Covered Passages Walking Tour",
+     "experience_id": null,
+     "canonical_id": "PARIS_WALKINGTOUR",
+     "category": "Walking Tour",
+     "dayIdx": 3,
+     "dayType": "full",
+     "cost": 8170,
+     "hours": 2
+    },
+    {
+     "name": "Paris: Big Bus Panoramic Night Tour by Open-Top Bus",
+     "experience_id": null,
+     "canonical_id": "PARIS_HOPONHOPOFF",
+     "category": "City Tour",
+     "dayIdx": 4,
+     "dayType": "full",
+     "cost": 7286,
+     "hours": 2
+    }
+   ]
+  }
+ ],
+ "selectedTransfers": [
+  {
+   "leg": "arrival",
+   "city": "Paris",
+   "vehicle": "Executive Sedan",
+   "vehicleType": "Executive Sedan",
+   "vehiclePrice": 22371,
+   "avgPrice": 22371,
+   "cost": 22371,
+   "schedule": "One way Transfer from CDG Airport to Aparthotel Adagio Paris in Sedan or Van or similar"
+  },
+  {
+   "leg": "departure",
+   "city": "Paris",
+   "vehicle": "Executive Sedan",
+   "vehicleType": "Executive Sedan",
+   "vehiclePrice": 20953,
+   "avgPrice": 20953,
+   "cost": 20953,
+   "schedule": "One way Transfer from Aparthotel Adagio Paris to CDG Airport in Sedan or Van or similar"
+  }
+ ],
+ "selectedIntercity": [],
+ "costSummary": {
+  "budgetPerPerson": 5000000,
+  "adults": 2,
+  "children": 0,
+  "adultEquivalents": 2,
+  "totalClientBudget": 10000000,
+  "netBudget": 8496177,
+  "multiplier": 1,
+  "markupAmount": 1274427,
+  "markupPct": 15,
+  "gstAmount": 229397,
+  "gstOnMarkupPct": 18,
+  "totalSpent": 2698777,
+  "utilisation": 32,
+  "breakdown": {
+   "hotels": 2359855,
+   "sightseeing": 295598,
+   "transfers": 43324,
+   "rail": 0
+  }
+ },
+ "warningFlags": []
+}

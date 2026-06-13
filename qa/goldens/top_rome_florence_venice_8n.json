@@ -1,0 +1,370 @@
+{
+ "algorithm": "v4-premium",
+ "route": [
+  {
+   "city": "Rome",
+   "nights": 3,
+   "hotel": {
+    "name": "Mercure Roma Centro Colosseo",
+    "star": "⭐⭐⭐⭐",
+    "category": "Superior",
+    "roomType": "Superior Double Room",
+    "meals": "Breakfast",
+    "chain": "Accor",
+    "totalCost": 96720
+   },
+   "tours": [
+    {
+     "name": "Rome Bike and eBike Rentals",
+     "experience_id": null,
+     "canonical_id": "ROME_HOPONHOPOFF",
+     "category": "Bike Tour",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 2196,
+     "hours": 2
+    },
+    {
+     "name": "Rome: Aqua World, enjoy a summer of fun in the water park",
+     "experience_id": null,
+     "canonical_id": "ROME_AQUA",
+     "category": "Family",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 4876,
+     "hours": 4
+    },
+    {
+     "name": "Rome: Colosseum Arena Floor, Palatine & Forum Guided Tour",
+     "experience_id": null,
+     "canonical_id": "ROME_COLOSSEUM",
+     "category": "Landmark",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 8644,
+     "hours": 2
+    },
+    {
+     "name": "Vatican Museums & St. Peter's Basilica Tour",
+     "experience_id": null,
+     "canonical_id": "ROME_VATICAN",
+     "category": "Museum & Gallery",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 21944,
+     "hours": 3
+    },
+    {
+     "name": "Rome: Award-Winning Roman Food Tours",
+     "experience_id": null,
+     "canonical_id": "ROME_FOODTOUR",
+     "category": "Food & Drinks",
+     "dayIdx": 0,
+     "dayType": "arrival",
+     "cost": 2216,
+     "hours": 1
+    },
+    {
+     "name": "Trevi Fountain Access Ticket & City Walking Tour",
+     "experience_id": null,
+     "canonical_id": "ROME_TREVIFOUNTAIN",
+     "category": "Hidden Gems",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 2882,
+     "hours": 2
+    },
+    {
+     "name": "Rome: Secrets Beneath San Clemente & the Pagan Underground",
+     "experience_id": null,
+     "canonical_id": "ROME_BENEATH",
+     "category": "Hidden Gems",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 3990,
+     "hours": 2
+    },
+    {
+     "name": "Ice Club Roma Entry Ticket",
+     "experience_id": null,
+     "canonical_id": "ROME_PUBCRAWL",
+     "category": "Family",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 3952,
+     "hours": 2
+    },
+    {
+     "name": "Welcome To Rome Immersive Multimedia Show",
+     "experience_id": null,
+     "canonical_id": "ROME_IMMERSIVE",
+     "category": "Family",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 3990,
+     "hours": 2
+    },
+    {
+     "name": "ROME: Piano Love",
+     "experience_id": null,
+     "canonical_id": "ROME_LOVE",
+     "category": "Concert & Opera",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 7758,
+     "hours": 1
+    }
+   ]
+  },
+  {
+   "city": "Florence",
+   "nights": 2,
+   "hotel": {
+    "name": "C Hotels Club",
+    "star": "⭐⭐⭐⭐",
+    "category": "Superior",
+    "roomType": "Smart Double",
+    "meals": "Breakfast",
+    "chain": "Independent",
+    "totalCost": 46630
+   },
+   "tours": [
+    {
+     "name": "Florence: Full day Tour to Cinque Terre and Pisa",
+     "experience_id": null,
+     "canonical_id": "COMBO_CINQUETERRE_PISA",
+     "category": "Day Trip",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 14554,
+     "hours": 12
+    },
+    {
+     "name": "Florence Duomo Cathedral Guided Tour Santa Maria del Fiore",
+     "experience_id": null,
+     "canonical_id": "FLORENCE_DUOMO",
+     "category": "Museum",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 1826,
+     "hours": 1
+    },
+    {
+     "name": "Florence: Accademia Reserved Ticket & Michelangelo's David",
+     "experience_id": null,
+     "canonical_id": "FLORENCE_ACCADEMIA_GALLERY",
+     "category": "Sightseeing",
+     "dayIdx": 0,
+     "dayType": "arrival",
+     "cost": 6594,
+     "hours": 1
+    },
+    {
+     "name": "Uffizi Gallery Ticket Entrance Ticket",
+     "experience_id": null,
+     "canonical_id": "FLORENCE_UFFIZI_GALLERY",
+     "category": "Museum",
+     "dayIdx": 0,
+     "dayType": "arrival",
+     "cost": 8292,
+     "hours": 2
+    }
+   ]
+  },
+  {
+   "city": "Venice",
+   "nights": 3,
+   "hotel": {
+    "name": "Hotel Casanova Venezia",
+    "star": "⭐⭐⭐⭐",
+    "category": "Superior",
+    "roomType": "Superior Double or Twin Room, 1 Bedroom-1 Double Bed",
+    "meals": "Breakfast",
+    "chain": "Independent",
+    "totalCost": 82248
+   },
+   "tours": [
+    {
+     "name": "Punta Sabbioni - Venice at Sunset: Boat Tour with Aperitif",
+     "experience_id": null,
+     "canonical_id": "VENICE_GONDOLA",
+     "category": "Food & Drinks",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 7758,
+     "hours": 4
+    },
+    {
+     "name": "Venice: Lords of the Night Prison’s Palace Cells & Tortures",
+     "experience_id": null,
+     "canonical_id": "VENICE_COMBO_DOGES_PALACE_ST_MARKS_BASILICA",
+     "category": "Museum",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 2194,
+     "hours": 2
+    },
+    {
+     "name": "Lido di Venezia: Cycling Between the Sea and the Lagoon",
+     "experience_id": null,
+     "canonical_id": "VENICE_LAKE",
+     "category": "Bike Tour",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 4432,
+     "hours": 2
+    },
+    {
+     "name": "Murano:Boat Ride, Glassblowing Demonstration & Factory Visit",
+     "experience_id": null,
+     "canonical_id": "VENICE_MURANO",
+     "category": "Cruise",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 8866,
+     "hours": 2
+    },
+    {
+     "name": "Venice: From Train Station to Rialto Guided Walking Tour",
+     "experience_id": null,
+     "canonical_id": "VENICE_RIALTO_BRIDGE",
+     "category": "Hidden Gems",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 6208,
+     "hours": 2
+    },
+    {
+     "name": "The Majestic Teatro La Fenice: Guided Tour in Venice",
+     "experience_id": null,
+     "canonical_id": "VENICE_GUIDEDTOUR",
+     "category": "Museum",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 5542,
+     "hours": 1
+    },
+    {
+     "name": "Venice: Guided Visit to the Jewish Ghetto in English with Aperitif",
+     "experience_id": null,
+     "canonical_id": "VENICE_APERITIF",
+     "category": "Food & Drinks",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 8866,
+     "hours": 1
+    },
+    {
+     "name": "Venice Mestre: M9 Museum Permanent Exhibition Entry Ticket",
+     "experience_id": null,
+     "canonical_id": "VENICE_MUSEUM",
+     "category": "Entry Tickets",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 2660,
+     "hours": 2
+    },
+    {
+     "name": "Venice: Crimes, Legends, and Mysteries Sunset Tour",
+     "experience_id": null,
+     "canonical_id": "VENICE_CRIMES",
+     "category": "Popular",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 8644,
+     "hours": 2
+    },
+    {
+     "name": "Wine Tasting in Venice",
+     "experience_id": null,
+     "canonical_id": "VENICE_WINETASTING",
+     "category": "Food & Drinks",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 8644,
+     "hours": 1
+    },
+    {
+     "name": "Venice: MandolinVenice Quartet concert in the church of St. George",
+     "experience_id": null,
+     "canonical_id": "VENICE_CHURCH",
+     "category": "Entry Tickets",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 7758,
+     "hours": 2
+    }
+   ]
+  }
+ ],
+ "selectedTransfers": [
+  {
+   "leg": "arrival",
+   "city": "Rome",
+   "vehicle": "Executive Sedan",
+   "vehicleType": "Executive Sedan",
+   "vehiclePrice": 19697,
+   "avgPrice": 19697,
+   "cost": 19697,
+   "schedule": "One way Transfer from FCO Airport to Mercure Roma Centro Colosseo in Sedan or Van or similar"
+  },
+  {
+   "leg": "departure",
+   "city": "Venice",
+   "vehicle": "Executive Sedan",
+   "vehicleType": "Executive Sedan",
+   "vehiclePrice": 45140,
+   "avgPrice": 45140,
+   "cost": 45140,
+   "schedule": "One way Transfer from Hotel Monaco And Grand Canal to VCE Airport in Sedan or Van or similar"
+  }
+ ],
+ "selectedIntercity": [
+  {
+   "from": "Rome",
+   "to": "Florence",
+   "fromTo": "Rome to Florence",
+   "mode": "Train",
+   "classType": "economy",
+   "price": 8000,
+   "perPax": 8000,
+   "cost": 16000,
+   "notes": ""
+  },
+  {
+   "from": "Florence",
+   "to": "Venice",
+   "fromTo": "Florence to Venice",
+   "mode": "Train",
+   "classType": "economy",
+   "price": 9100,
+   "perPax": 9100,
+   "cost": 18200,
+   "notes": ""
+  }
+ ],
+ "costSummary": {
+  "budgetPerPerson": 300000,
+  "adults": 2,
+  "children": 0,
+  "adultEquivalents": 2,
+  "totalClientBudget": 600000,
+  "netBudget": 509771,
+  "multiplier": 1,
+  "markupAmount": 76466,
+  "markupPct": 15,
+  "gstAmount": 13764,
+  "gstOnMarkupPct": 18,
+  "totalSpent": 489921,
+  "utilisation": 96,
+  "breakdown": {
+   "hotels": 225598,
+   "sightseeing": 165286,
+   "transfers": 64837,
+   "rail": 34200
+  }
+ },
+ "warningFlags": [
+  "tours_over_cap: Venice day 3 had 6/4"
+ ]
+}

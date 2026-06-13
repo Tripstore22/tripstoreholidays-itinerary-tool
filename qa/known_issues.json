@@ -1,0 +1,58 @@
+{
+  "_doc": "Known-issue allowlist. A FAIL matching an entry is reclassified KNOWN (yellow, tracked) — counted and listed separately, NEVER silent-passed and NEVER red. Every entry MUST cite a registry_ref. Match fields are ANDed; only listed fields are compared. RATCHET: an entry with max_count stays KNOWN only while the finding count <= max_count; a NEW occurrence beyond that baseline escalates back to a red FAIL. Remove/shrink an entry as the underlying issue is fixed. These are pre-existing states accepted on 2026-06-13; none are new regressions.",
+  "known": [
+    {
+      "registry_ref": "T07",
+      "match": { "check": "E02_full_caps", "canonical_id": "PARIS_MONT" },
+      "note": "Mont Saint-Michel Full-Day Tour by Coach is a genuine ~14h Paris coach day-trip; exceeds the 13h single-anchor cap. Known budget-eater (T07). 13h cap stays enforced for every other tour. Product decision (offer MSM as default anchor?) deferred."
+    },
+    {
+      "registry_ref": "E13",
+      "match": { "check": "E02_full_caps", "scenario_id": "top_rome_florence_venice_8n" },
+      "note": "Venice full day packs 6 short museum-hops (9.0h total, within the hour cap) — exceeds the 4-tour/day count cap. New finding catalogued as E13. Accepted as known pending an engine decision on the tour-count cap for short-tour cities."
+    },
+    {
+      "registry_ref": "T05",
+      "match": { "check": "T05_hours_lt_0.25" },
+      "max_count": 2,
+      "note": "2 sub-15-min experiences on LIVE Sightseeing: 'Amsterdam Adventure Ride' (4 min — the original T05 0.07h parser-bug row) and 'London: Typhoon Simulator' (6 min). Data-cleanup tracked; a 3rd short row escalates to FAIL."
+    },
+    {
+      "registry_ref": "T04",
+      "match": { "check": "T04_hours_gt_14" },
+      "max_count": 2,
+      "note": "2 genuine ~15h full-day coach trips ('Troy from Istanbul', 'Florence+Pisa from Milan') — real long tours, not the Madrid 70h parser bug. A new >14h row beyond these 2 escalates to FAIL."
+    },
+    {
+      "registry_ref": "T15",
+      "match": { "check": "T15_no_sightseeing_v2" },
+      "max_count": 13,
+      "note": "13 stale 'Sightseeing_v2' refs in clasp-live/Code.gs — fallback-guarded (getSheetByName('Sightseeing_v2') || 'Sightseeing'), so they work, but the refs + error strings are dead/misleading. Cleanup ticket; a new ref escalates to FAIL."
+    },
+    {
+      "registry_ref": "D08",
+      "match": { "check": "D08_no_debug_markers" },
+      "max_count": 1,
+      "note": "testAgentProfileLookup() still in clasp-live/PDFGenerator.gs — TRUTH pending #5 (strip debug past the bedding window). A 2nd debug marker escalates to FAIL."
+    },
+    {
+      "registry_ref": "T08",
+      "match": { "check": "T08_combo_a1_self_ref" },
+      "max_count": 134,
+      "note": "134 combo rows (Is_Combo=YES) where Attraction_1 == own Canonical_ID. Engine reads col P so dedup is unaffected; this is data-hygiene backlog. A growth beyond 134 escalates to FAIL (the count must not grow)."
+    },
+
+    { "registry_ref": "E02", "match": { "check": "E02_full_caps", "scenario_id": "top_milan_4n_couple" },
+      "note": "15h single-anchor day-trip in Milan (the 'Florence+Pisa from Milan' 15h tour, cf. T04) — same long-anchor class as T07. Instance-keyed: any change to this scenario's response re-fails; other scenarios unaffected. Pending engine ruling on the >13h single-anchor exception." },
+    { "registry_ref": "E02", "match": { "check": "E02_full_caps", "scenario_id": "edge_thin_milan_pressure" },
+      "note": "Same 15h Milan single-anchor surfaced under thin-pool pressure. Instance-keyed; pending the single-anchor cap ruling." },
+    { "registry_ref": "E13", "match": { "check": "E02_full_caps", "scenario_id": "top_venice_3n_couple" },
+      "note": "Venice full day packs 5 short tours (>4-tour count cap, within hour cap) — E13 class. Instance-keyed; pending the tour-count cap ruling for tour-dense cities." },
+    { "registry_ref": "E13", "match": { "check": "E02_full_caps", "scenario_id": "top_berlin_4n_couple" },
+      "note": "Berlin full day packs 5 short tours (E13 class). Instance-keyed; pending the tour-count cap ruling." },
+    { "registry_ref": "E13", "match": { "check": "E02_full_caps", "scenario_id": "top_italy_couple_6n" },
+      "note": "Italy-couple route: 5 short tours on a full day (E13 class). Instance-keyed; pending the tour-count cap ruling." },
+    { "registry_ref": "E05", "match": { "check": "E05_daytrip_guard", "scenario_id": "top_swiss_montreux_7n" },
+      "note": "'Glacier 3000 and Montreux Riviera from Geneva' day-trips to Montreux, which IS a route city, UNFLAGGED — genuine day-trip-guard gap (guard keyed on the 'from <origin>' city, missed the destination). Real ticket, NOT accept-forever; KNOWN only to keep nightly signal clean until the guard is fixed." }
+  ]
+}

@@ -1,0 +1,135 @@
+{
+ "algorithm": "v4-premium",
+ "route": [
+  {
+   "city": "Paris",
+   "nights": 5,
+   "hotel": {
+    "name": "Mercure Paris Centre Tour Eiffel",
+    "star": "⭐⭐⭐⭐",
+    "category": "Superior",
+    "roomType": "Classic Double Room",
+    "meals": "Breakfast",
+    "chain": "Accor",
+    "totalCost": 148390
+   },
+   "tours": [
+    {
+     "name": "Disneyland Paris 1-Day 1-Park Ticket",
+     "experience_id": null,
+     "canonical_id": "PARIS_DISNEYLAND",
+     "category": "Theme Park",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 26000,
+     "hours": 10
+    },
+    {
+     "name": "Paris: Mont Saint-Michel Full-Day Tour by Coach",
+     "experience_id": null,
+     "canonical_id": "PARIS_MONT",
+     "category": "Day Trip",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 23500,
+     "hours": 14
+    },
+    {
+     "name": "Eiffel Tower Access to the Second Floor",
+     "experience_id": null,
+     "canonical_id": "PARIS_EIFFEL",
+     "category": "Sightseeing",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 9826,
+     "hours": 2
+    },
+    {
+     "name": "Versailles Palace and Gardens Skip-the-Line Tour from Paris",
+     "experience_id": null,
+     "canonical_id": "PARIS_VERSAILLES",
+     "category": "Landmark",
+     "dayIdx": 3,
+     "dayType": "full",
+     "cost": 12146,
+     "hours": 2
+    },
+    {
+     "name": "Paris: Moulin Rouge Cabaret Show Ticket with Champagne",
+     "experience_id": null,
+     "canonical_id": "PARIS_MOULIN_ROUGE",
+     "category": "Evening Show",
+     "dayIdx": 4,
+     "dayType": "full",
+     "cost": 37700,
+     "hours": 2
+    },
+    {
+     "name": "Paris: Lunch Cruise with 3-course menu from the Eiffel Tower",
+     "experience_id": null,
+     "canonical_id": "PARIS_SEINE",
+     "category": "Cruise",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 29932,
+     "hours": 2
+    },
+    {
+     "name": "Montmartre Highlights Walking Tour with a Local Guide",
+     "experience_id": null,
+     "canonical_id": "PARIS_MONTMARTRE",
+     "category": "Walking Tour",
+     "dayIdx": 3,
+     "dayType": "full",
+     "cost": 8186,
+     "hours": 2
+    }
+   ]
+  }
+ ],
+ "selectedTransfers": [
+  {
+   "leg": "arrival",
+   "city": "Paris",
+   "vehicle": "Executive Sedan",
+   "vehicleType": "Executive Sedan",
+   "vehiclePrice": 22371,
+   "avgPrice": 22371,
+   "cost": 22371,
+   "schedule": "One way Transfer from CDG Airport to Aparthotel Adagio Paris in Sedan or Van or similar"
+  },
+  {
+   "leg": "departure",
+   "city": "Paris",
+   "vehicle": "Executive Sedan",
+   "vehicleType": "Executive Sedan",
+   "vehiclePrice": 20953,
+   "avgPrice": 20953,
+   "cost": 20953,
+   "schedule": "One way Transfer from Aparthotel Adagio Paris to CDG Airport in Sedan or Van or similar"
+  }
+ ],
+ "selectedIntercity": [],
+ "costSummary": {
+  "budgetPerPerson": 200000,
+  "adults": 2,
+  "children": 0,
+  "adultEquivalents": 2,
+  "totalClientBudget": 400000,
+  "netBudget": 339847,
+  "multiplier": 1,
+  "markupAmount": 50977,
+  "markupPct": 15,
+  "gstAmount": 9176,
+  "gstOnMarkupPct": 18,
+  "totalSpent": 339004,
+  "utilisation": 100,
+  "breakdown": {
+   "hotels": 148390,
+   "sightseeing": 147290,
+   "transfers": 43324,
+   "rail": 0
+  }
+ },
+ "warningFlags": []
+}

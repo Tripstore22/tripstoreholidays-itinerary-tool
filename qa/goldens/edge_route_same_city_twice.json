@@ -1,0 +1,198 @@
+{
+ "algorithm": "v4-premium",
+ "route": [
+  {
+   "city": "Paris",
+   "nights": 2,
+   "hotel": {
+    "name": "Citadines Tour Eiffel Paris",
+    "star": "⭐⭐⭐⭐",
+    "category": "Superior",
+    "roomType": "Apartment, 1 Bedroom-1 Double Bed and 1 Twin Sofa Bed",
+    "meals": "Breakfast",
+    "chain": "Independent",
+    "totalCost": 99552
+   },
+   "tours": [
+    {
+     "name": "Disneyland Paris Parks Admission Tickets - 1-Day/2-Parks Ticket",
+     "experience_id": null,
+     "canonical_id": "PARIS_DISNEYLAND",
+     "category": "Theme Park",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 33000,
+     "hours": 10
+    },
+    {
+     "name": "Big Bus Paris Hop-On Hop-Off Tour 48 Hour Ticket",
+     "experience_id": null,
+     "canonical_id": "PARIS_HOPONHOPOFF",
+     "category": "City Tour",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 13690,
+     "hours": 4
+    }
+   ]
+  },
+  {
+   "city": "Nice",
+   "nights": 2,
+   "hotel": {
+    "name": "Holiday Inn Nice, An Ihg Hotel",
+    "star": "⭐⭐⭐⭐",
+    "category": "Superior",
+    "roomType": "Standard Room, King Bed",
+    "meals": "Breakfast",
+    "chain": "IHG",
+    "totalCost": 48230
+   },
+   "tours": [
+    {
+     "name": "Nice: 1 or 2-Day Hop-On Hop-Off Bus Tour",
+     "experience_id": null,
+     "canonical_id": "NICE_RIVIERA",
+     "category": "City Tour",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 5192,
+     "hours": 4
+    },
+    {
+     "name": "From Nice: Follow a guide in a mini electric Fiat on the French Riviera",
+     "experience_id": null,
+     "canonical_id": "NICE_ELECTRIC",
+     "category": "Adventure & Outdoor",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 12906,
+     "hours": 2
+    },
+    {
+     "name": "Nice: Perfume Workshop in Grasse Half-Day",
+     "experience_id": null,
+     "canonical_id": "NICE_PERFUME",
+     "category": "Cultural",
+     "dayIdx": 0,
+     "dayType": "arrival",
+     "cost": 15200,
+     "hours": 2
+    },
+    {
+     "name": "Nice: Riviera Bar Crawl Party, Free Shots & Vip Club Entry",
+     "experience_id": null,
+     "canonical_id": "NICE_CLUB",
+     "category": "Food & Culture",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 3656,
+     "hours": 5
+    }
+   ]
+  },
+  {
+   "city": "Paris",
+   "nights": 2,
+   "hotel": {
+    "name": "Citadines Tour Eiffel Paris",
+    "star": "⭐⭐⭐⭐",
+    "category": "Superior",
+    "roomType": "Apartment, 1 Bedroom-1 Double Bed and 1 Twin Sofa Bed",
+    "meals": "Breakfast",
+    "chain": "Independent",
+    "totalCost": 99552
+   },
+   "tours": [
+    {
+     "name": "Disneyland Paris Parks Admission Tickets - 1-Day/2-Parks Ticket",
+     "experience_id": null,
+     "canonical_id": "PARIS_DISNEYLAND",
+     "category": "Theme Park",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 33000,
+     "hours": 10
+    },
+    {
+     "name": "Big Bus Paris Hop-On Hop-Off Tour 48 Hour Ticket",
+     "experience_id": null,
+     "canonical_id": "PARIS_HOPONHOPOFF",
+     "category": "City Tour",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 13690,
+     "hours": 4
+    }
+   ]
+  }
+ ],
+ "selectedTransfers": [
+  {
+   "leg": "arrival",
+   "city": "Paris",
+   "vehicle": "Executive Sedan",
+   "vehicleType": "Executive Sedan",
+   "vehiclePrice": 22371,
+   "avgPrice": 22371,
+   "cost": 22371,
+   "schedule": "One way Transfer from CDG Airport to Aparthotel Adagio Paris in Sedan or Van or similar"
+  },
+  {
+   "leg": "departure",
+   "city": "Paris",
+   "vehicle": "Executive Sedan",
+   "vehicleType": "Executive Sedan",
+   "vehiclePrice": 20953,
+   "avgPrice": 20953,
+   "cost": 20953,
+   "schedule": "One way Transfer from Aparthotel Adagio Paris to CDG Airport in Sedan or Van or similar"
+  }
+ ],
+ "selectedIntercity": [
+  {
+   "from": "Paris",
+   "to": "Nice",
+   "fromTo": "Paris to Nice",
+   "mode": "Train",
+   "classType": "economy",
+   "price": 16600,
+   "perPax": 16600,
+   "cost": 33200,
+   "notes": ""
+  },
+  {
+   "from": "Nice",
+   "to": "Paris",
+   "fromTo": "Nice to Paris",
+   "mode": "Train",
+   "classType": "economy",
+   "price": 16600,
+   "perPax": 16600,
+   "cost": 33200,
+   "notes": ""
+  }
+ ],
+ "costSummary": {
+  "budgetPerPerson": 280000,
+  "adults": 2,
+  "children": 0,
+  "adultEquivalents": 2,
+  "totalClientBudget": 560000,
+  "netBudget": 475786,
+  "multiplier": 1,
+  "markupAmount": 71368,
+  "markupPct": 15,
+  "gstAmount": 12846,
+  "gstOnMarkupPct": 18,
+  "totalSpent": 466968,
+  "utilisation": 98,
+  "breakdown": {
+   "hotels": 225628,
+   "sightseeing": 131616,
+   "transfers": 43324,
+   "rail": 66400
+  }
+ },
+ "warningFlags": []
+}

@@ -1,0 +1,212 @@
+{
+ "algorithm": "v4-premium",
+ "route": [
+  {
+   "city": "London",
+   "nights": 4,
+   "hotel": {
+    "name": "Citadines Trafalgar Square London",
+    "star": "⭐⭐⭐⭐",
+    "category": "Superior",
+    "roomType": "1 Bedroom Standard Double Apartment With Extra Bed",
+    "meals": "Breakfast",
+    "chain": "Independent",
+    "totalCost": 131208
+   },
+   "tours": [
+    {
+     "name": "London: Windsor, Stonehenge, Bath, and Roman Baths Day Trip",
+     "experience_id": null,
+     "canonical_id": "COMBO_WINDSOR_STONEHENGE_BATH",
+     "category": "Day Trip",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 23020,
+     "hours": 11
+    },
+    {
+     "name": "Small-Group Cotswolds Tour (From London",
+     "experience_id": null,
+     "canonical_id": "LONDON_COTSWOLDS",
+     "category": "Day Trip",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 20926,
+     "hours": 10
+    },
+    {
+     "name": "London: Westminster to Tower Bridge River Thames Cruise",
+     "experience_id": null,
+     "canonical_id": "COMBO_LONDON_EYE_RIVER_CRUISE",
+     "category": "Popular",
+     "dayIdx": 3,
+     "dayType": "full",
+     "cost": 3496,
+     "hours": 1
+    },
+    {
+     "name": "London: London Eye and Madame Tussauds Combo Ticket",
+     "experience_id": null,
+     "canonical_id": "COMBO_LONDON_EYE_MADAME_TUSSAUDS",
+     "category": "Sightseeing",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 13442,
+     "hours": 2
+    },
+    {
+     "name": "London: Tower of London Tour with Crown Jewels & Beefeaters",
+     "experience_id": null,
+     "canonical_id": "LONDON_TOWER_OF_LONDON",
+     "category": "Sightseeing",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 11970,
+     "hours": 2
+    },
+    {
+     "name": "London: Warner Bros. Studio Harry Potter Tour & Branded Bus .",
+     "experience_id": null,
+     "canonical_id": "LONDON_BROSHARRY",
+     "category": "Transfer",
+     "dayIdx": 3,
+     "dayType": "full",
+     "cost": 26378,
+     "hours": 8
+    }
+   ]
+  },
+  {
+   "city": "Paris",
+   "nights": 4,
+   "hotel": {
+    "name": "Mercure Paris Tour Eiffel Grenelle",
+    "star": "⭐⭐⭐⭐",
+    "category": "Superior",
+    "roomType": "Privilege, Superior Room, 1 Double Bed",
+    "meals": "Breakfast",
+    "chain": "Accor",
+    "totalCost": 111176
+   },
+   "tours": [
+    {
+     "name": "Disneyland Paris 1-Day 1-Park Ticket",
+     "experience_id": null,
+     "canonical_id": "PARIS_DISNEYLAND",
+     "category": "Theme Park",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 26000,
+     "hours": 10
+    },
+    {
+     "name": "Paris: Mont Saint-Michel Full-Day Tour by Coach",
+     "experience_id": null,
+     "canonical_id": "PARIS_MONT",
+     "category": "Day Trip",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 23500,
+     "hours": 14
+    },
+    {
+     "name": "Eiffel Tower Access to the Second Floor",
+     "experience_id": null,
+     "canonical_id": "PARIS_EIFFEL",
+     "category": "Sightseeing",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 9826,
+     "hours": 2
+    },
+    {
+     "name": "Versailles Palace and Gardens Skip-the-Line Tour from Paris",
+     "experience_id": null,
+     "canonical_id": "PARIS_VERSAILLES",
+     "category": "Landmark",
+     "dayIdx": 3,
+     "dayType": "full",
+     "cost": 12146,
+     "hours": 2
+    },
+    {
+     "name": "Seine River Dinner Cruise with Live Music",
+     "experience_id": null,
+     "canonical_id": "PARIS_SEINE",
+     "category": "Cruise",
+     "dayIdx": 3,
+     "dayType": "full",
+     "cost": 25500,
+     "hours": 2
+    },
+    {
+     "name": "Orsay Museum Entry Ticket & Audio Tour",
+     "experience_id": null,
+     "canonical_id": "PARIS_MUSEEDORSAY",
+     "category": "Museum & Gallery",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 5300,
+     "hours": 2
+    }
+   ]
+  }
+ ],
+ "selectedTransfers": [
+  {
+   "leg": "arrival",
+   "city": "London",
+   "vehicle": "Executive Sedan",
+   "vehicleType": "Executive Sedan",
+   "vehiclePrice": 30147,
+   "avgPrice": 30147,
+   "cost": 30147,
+   "schedule": "One way Transfer from LHR Airport to Holiday Inn Express London Southwark in Sedan or Van or similar"
+  },
+  {
+   "leg": "departure",
+   "city": "Paris",
+   "vehicle": "Executive Sedan",
+   "vehicleType": "Executive Sedan",
+   "vehiclePrice": 20953,
+   "avgPrice": 20953,
+   "cost": 20953,
+   "schedule": "One way Transfer from Aparthotel Adagio Paris to CDG Airport in Sedan or Van or similar"
+  }
+ ],
+ "selectedIntercity": [
+  {
+   "from": "London",
+   "to": "Paris",
+   "fromTo": "London to Paris",
+   "mode": "Train",
+   "classType": "economy",
+   "price": 23900,
+   "perPax": 23900,
+   "cost": 47800,
+   "notes": ""
+  }
+ ],
+ "costSummary": {
+  "budgetPerPerson": 320000,
+  "adults": 2,
+  "children": 0,
+  "adultEquivalents": 2,
+  "totalClientBudget": 640000,
+  "netBudget": 543755,
+  "multiplier": 1,
+  "markupAmount": 81563,
+  "markupPct": 15,
+  "gstAmount": 14681,
+  "gstOnMarkupPct": 18,
+  "totalSpent": 542788,
+  "utilisation": 100,
+  "breakdown": {
+   "hotels": 242384,
+   "sightseeing": 201504,
+   "transfers": 51100,
+   "rail": 47800
+  }
+ },
+ "warningFlags": []
+}

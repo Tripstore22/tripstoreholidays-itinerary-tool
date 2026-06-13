@@ -1,0 +1,165 @@
+{
+ "algorithm": "v4-premium",
+ "route": [
+  {
+   "city": "Amsterdam",
+   "nights": 4,
+   "hotel": {
+    "name": "NH Amsterdam Caransa",
+    "star": "⭐⭐⭐⭐",
+    "category": "Superior",
+    "roomType": "Standard Double Room",
+    "meals": "Breakfast",
+    "chain": "Independent",
+    "totalCost": 130184
+   },
+   "tours": [
+    {
+     "name": "From Amsterdam: Zaanse Schans, Volendam, and Marken Day Trip",
+     "experience_id": null,
+     "canonical_id": "COMBO_ZAANSESCHANS_VOLENDAM_MARKEN",
+     "category": "Day Trip",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 8700,
+     "hours": 8
+    },
+    {
+     "name": "Amsterdam: Giethoorn Day Trip, Boat Tour, and Walking Tour",
+     "experience_id": null,
+     "canonical_id": "GIETHOORN_VILLAGE",
+     "category": "Day Trip",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 17870,
+     "hours": 8
+    },
+    {
+     "name": "Anne Frank House & Jewish Quarter Tour",
+     "experience_id": "AMSTERDAM_ANNE_FRANK_HOUSE",
+     "canonical_id": "AMSTERDAM_ANNE_FRANK_HOUSE",
+     "category": "Historical & Cultural",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 2514,
+     "hours": 2
+    },
+    {
+     "name": "Amsterdam: Van Gogh Museum Tickets & Small Group Guided Tour",
+     "experience_id": null,
+     "canonical_id": "AMSTERDAM_VAN_GOGH_MUSEUM",
+     "category": "Museum",
+     "dayIdx": 3,
+     "dayType": "full",
+     "cost": 28268,
+     "hours": 2
+    },
+    {
+     "name": "Amsterdam: Heineken Experience Brewery Tour",
+     "experience_id": null,
+     "canonical_id": "AMSTERDAM_HEINEKEN",
+     "category": "Culture",
+     "dayIdx": 3,
+     "dayType": "full",
+     "cost": 7700,
+     "hours": 2
+    },
+    {
+     "name": "Amsterdam: A'DAM Lookout Entry Ticket with Burger and Fries",
+     "experience_id": null,
+     "canonical_id": "AMSTERDAM_ADAM_LOOKOUT",
+     "category": "Sightseeing",
+     "dayIdx": 0,
+     "dayType": "arrival",
+     "cost": 7618,
+     "hours": 2
+    },
+    {
+     "name": "Amsterdam:: Bike Rental with Free Self-Guided Tour",
+     "experience_id": null,
+     "canonical_id": "AMSTERDAM_BIKETOUR",
+     "category": "Tours on Wheels",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 2616,
+     "hours": 1
+    },
+    {
+     "name": "Amsterdam Amaze- Immersive Audiovisual Experience",
+     "experience_id": null,
+     "canonical_id": "AMSTERDAM_AUDIOVISUAL",
+     "category": "Sightseeing",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 5952,
+     "hours": 1
+    },
+    {
+     "name": "Amsterdam Historical Walking Tour",
+     "experience_id": "AMSTERDAM_HISTORICAL_WALKING_TOUR",
+     "canonical_id": "AMSTERDAM_HISTORICAL_WALKING_TOUR",
+     "category": "Walking Tour",
+     "dayIdx": 3,
+     "dayType": "full",
+     "cost": 31302,
+     "hours": 2
+    },
+    {
+     "name": "Amsterdam Red Light District Walking Tour",
+     "experience_id": "AMSTERDAM_RED_LIGHT_DISTRICT",
+     "canonical_id": "AMSTERDAM_RED_LIGHT_DISTRICT",
+     "category": "Walking Tour",
+     "dayIdx": 3,
+     "dayType": "full",
+     "cost": 10010,
+     "hours": 2
+    }
+   ]
+  }
+ ],
+ "selectedTransfers": [
+  {
+   "leg": "arrival",
+   "city": "Amsterdam",
+   "vehicle": "Executive Sedan",
+   "vehicleType": "Executive Sedan",
+   "vehiclePrice": 16197,
+   "avgPrice": 16197,
+   "cost": 16197,
+   "schedule": "One way Transfer from AMS Airport to Blue Mansion Hotel in Sedan or Van or similar"
+  },
+  {
+   "leg": "departure",
+   "city": "Amsterdam",
+   "vehicle": "Executive Sedan",
+   "vehicleType": "Executive Sedan",
+   "vehiclePrice": 15819,
+   "avgPrice": 15819,
+   "cost": 15819,
+   "schedule": "One way Transfer from Blue Mansion Hotel to AMS Airport in Sedan or Van or similar"
+  }
+ ],
+ "selectedIntercity": [],
+ "costSummary": {
+  "budgetPerPerson": 170000,
+  "adults": 2,
+  "children": 0,
+  "adultEquivalents": 2,
+  "totalClientBudget": 340000,
+  "netBudget": 288870,
+  "multiplier": 1,
+  "markupAmount": 43331,
+  "markupPct": 15,
+  "gstAmount": 7799,
+  "gstOnMarkupPct": 18,
+  "totalSpent": 284750,
+  "utilisation": 99,
+  "breakdown": {
+   "hotels": 130184,
+   "sightseeing": 122550,
+   "transfers": 32016,
+   "rail": 0
+  }
+ },
+ "warningFlags": []
+}

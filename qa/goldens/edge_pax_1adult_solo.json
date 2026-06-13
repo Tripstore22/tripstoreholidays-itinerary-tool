@@ -1,0 +1,135 @@
+{
+ "algorithm": "v4-premium",
+ "route": [
+  {
+   "city": "Paris",
+   "nights": 4,
+   "hotel": {
+    "name": "Hotel Boris V",
+    "star": "⭐⭐⭐⭐",
+    "category": "Superior",
+    "roomType": "Classic Room",
+    "meals": "Breakfast",
+    "chain": "Independent",
+    "totalCost": 68112
+   },
+   "tours": [
+    {
+     "name": "Disneyland Paris 1-Day 1-Park Ticket",
+     "experience_id": null,
+     "canonical_id": "PARIS_DISNEYLAND",
+     "category": "Theme Park",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 13000,
+     "hours": 10
+    },
+    {
+     "name": "Paris: Mont Saint-Michel Full-Day Tour by Coach",
+     "experience_id": null,
+     "canonical_id": "PARIS_MONT",
+     "category": "Day Trip",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 11750,
+     "hours": 14
+    },
+    {
+     "name": "Eiffel Tower Access to the Second Floor",
+     "experience_id": null,
+     "canonical_id": "PARIS_EIFFEL",
+     "category": "Sightseeing",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 4913,
+     "hours": 2
+    },
+    {
+     "name": "Versailles Palace and Gardens Skip-the-Line Tour from Paris",
+     "experience_id": null,
+     "canonical_id": "PARIS_VERSAILLES",
+     "category": "Landmark",
+     "dayIdx": 3,
+     "dayType": "full",
+     "cost": 6073,
+     "hours": 2
+    },
+    {
+     "name": "Paris Capitaine Fracasse 3 Course Seine River Dinner Cruise",
+     "experience_id": null,
+     "canonical_id": "PARIS_SEINE",
+     "category": "Dinner Cruise",
+     "dayIdx": 3,
+     "dayType": "full",
+     "cost": 6261,
+     "hours": 2
+    },
+    {
+     "name": "Louvre Museum Tour Mona Lisa & Iconic Masterpieces",
+     "experience_id": null,
+     "canonical_id": "PARIS_LOUVRE",
+     "category": "Museum & Gallery",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 10820,
+     "hours": 2
+    },
+    {
+     "name": "Paris: Big Bus Panoramic Night Tour by Open-Top Bus",
+     "experience_id": null,
+     "canonical_id": "PARIS_HOPONHOPOFF",
+     "category": "City Tour",
+     "dayIdx": 3,
+     "dayType": "full",
+     "cost": 3643,
+     "hours": 2
+    }
+   ]
+  }
+ ],
+ "selectedTransfers": [
+  {
+   "leg": "arrival",
+   "city": "Paris",
+   "vehicle": "Executive Sedan",
+   "vehicleType": "Executive Sedan",
+   "vehiclePrice": 22371,
+   "avgPrice": 22371,
+   "cost": 22371,
+   "schedule": "One way Transfer from CDG Airport to Aparthotel Adagio Paris in Sedan or Van or similar"
+  },
+  {
+   "leg": "departure",
+   "city": "Paris",
+   "vehicle": "Economy Sedan",
+   "vehicleType": "Economy Sedan",
+   "vehiclePrice": 5801,
+   "avgPrice": 5801,
+   "cost": 5801,
+   "schedule": "One way Transfer from Aparthotel Adagio Paris to CDG Airport in Sedan or Van or similar"
+  }
+ ],
+ "selectedIntercity": [],
+ "costSummary": {
+  "budgetPerPerson": 180000,
+  "adults": 1,
+  "children": 0,
+  "adultEquivalents": 1,
+  "totalClientBudget": 180000,
+  "netBudget": 152931,
+  "multiplier": 1,
+  "markupAmount": 22940,
+  "markupPct": 15,
+  "gstAmount": 4129,
+  "gstOnMarkupPct": 18,
+  "totalSpent": 152744,
+  "utilisation": 100,
+  "breakdown": {
+   "hotels": 68112,
+   "sightseeing": 56460,
+   "transfers": 28172,
+   "rail": 0
+  }
+ },
+ "warningFlags": []
+}

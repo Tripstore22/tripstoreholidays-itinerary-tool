@@ -1,0 +1,2648 @@
+{
+  "version": 1,
+  "count": 95,
+  "scenarios": [
+    {
+      "id": "top_paris_5n_couple",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        5
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 200000,
+      "month": 7,
+      "golden": true,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_london_4n_couple",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "London"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 180000,
+      "month": 6,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_rome_5n_couple",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Rome"
+      ],
+      "nights": [
+        5
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 190000,
+      "month": 5,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_amsterdam_4n_couple",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Amsterdam"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 170000,
+      "month": 9,
+      "golden": true,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_barcelona_5n_couple",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Barcelona"
+      ],
+      "nights": [
+        5
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 175000,
+      "month": 6,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_prague_4n_couple",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Prague"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 150000,
+      "month": 5,
+      "golden": false,
+      "live_safe": true,
+      "flags": {}
+    },
+    {
+      "id": "top_budapest_4n_couple",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Budapest"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 145000,
+      "month": 4,
+      "golden": false,
+      "live_safe": true,
+      "flags": {}
+    },
+    {
+      "id": "top_vienna_4n_couple",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Vienna"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 165000,
+      "month": 5,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_madrid_5n_couple",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Madrid"
+      ],
+      "nights": [
+        5
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 175000,
+      "month": 6,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_lisbon_4n_couple",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Lisbon"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 150000,
+      "month": 9,
+      "golden": false,
+      "live_safe": true,
+      "flags": {}
+    },
+    {
+      "id": "top_milan_4n_couple",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Milan"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 185000,
+      "month": 6,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_florence_4n_couple",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Florence"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 180000,
+      "month": 5,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_venice_3n_couple",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Venice"
+      ],
+      "nights": [
+        3
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 175000,
+      "month": 6,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_berlin_4n_couple",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Berlin"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 150000,
+      "month": 7,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_zurich_3n_couple",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Zurich"
+      ],
+      "nights": [
+        3
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 200000,
+      "month": 7,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_paris_amsterdam_7n",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Paris",
+        "Amsterdam"
+      ],
+      "nights": [
+        4,
+        3
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 260000,
+      "month": 7,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_rome_florence_venice_8n",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Rome",
+        "Florence",
+        "Venice"
+      ],
+      "nights": [
+        3,
+        2,
+        3
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 300000,
+      "month": 6,
+      "golden": true,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_swiss_classic_10n",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Zurich",
+        "Lucerne",
+        "Interlaken",
+        "Geneva"
+      ],
+      "nights": [
+        2,
+        3,
+        3,
+        2
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 1050000,
+      "month": 7,
+      "golden": true,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_paris_swiss_9n",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Paris",
+        "Zurich",
+        "Interlaken"
+      ],
+      "nights": [
+        4,
+        2,
+        3
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 500000,
+      "month": 7,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_london_paris_8n",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "London",
+        "Paris"
+      ],
+      "nights": [
+        4,
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 320000,
+      "month": 8,
+      "golden": true,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_barcelona_madrid_8n",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Barcelona",
+        "Madrid"
+      ],
+      "nights": [
+        4,
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 290000,
+      "month": 6,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_prague_vienna_budapest",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Prague",
+        "Vienna",
+        "Budapest"
+      ],
+      "nights": [
+        3,
+        3,
+        3
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 280000,
+      "month": 5,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_amsterdam_paris_rome",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Amsterdam",
+        "Paris",
+        "Rome"
+      ],
+      "nights": [
+        3,
+        3,
+        3
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 330000,
+      "month": 9,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_italy_grand_10n",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Rome",
+        "Florence",
+        "Venice",
+        "Milan"
+      ],
+      "nights": [
+        3,
+        2,
+        2,
+        3
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 360000,
+      "month": 6,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_lisbon_madrid_barcelona",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Lisbon",
+        "Madrid",
+        "Barcelona"
+      ],
+      "nights": [
+        3,
+        3,
+        3
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 300000,
+      "month": 9,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_paris_family_6n",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        6
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 2
+      },
+      "budget": 240000,
+      "month": 7,
+      "golden": true,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_london_family_5n",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "London"
+      ],
+      "nights": [
+        5
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 1
+      },
+      "budget": 220000,
+      "month": 8,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_swiss_family_8n",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Zurich",
+        "Lucerne",
+        "Interlaken"
+      ],
+      "nights": [
+        2,
+        3,
+        3
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 2
+      },
+      "budget": 600000,
+      "month": 7,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_rome_family_5n",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Rome"
+      ],
+      "nights": [
+        5
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 2
+      },
+      "budget": 230000,
+      "month": 6,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_amsterdam_family_4n",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Amsterdam"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 1
+      },
+      "budget": 200000,
+      "month": 9,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_barcelona_family_6n",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Barcelona"
+      ],
+      "nights": [
+        6
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 3
+      },
+      "budget": 240000,
+      "month": 6,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_paris_disney_family",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        5
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 2
+      },
+      "budget": 260000,
+      "month": 4,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_prague_family_4n",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Prague"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 1
+      },
+      "budget": 170000,
+      "month": 5,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_madrid_family_5n",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Madrid"
+      ],
+      "nights": [
+        5
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 2
+      },
+      "budget": 220000,
+      "month": 6,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_euro_whirlwind_10n",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "London",
+        "Paris",
+        "Amsterdam",
+        "Rome",
+        "Barcelona"
+      ],
+      "nights": [
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 400000,
+      "month": 7,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_paris_7n_couple_lux",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        7
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 400000,
+      "month": 7,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_swiss_montreux_7n",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Geneva",
+        "Montreux",
+        "Zurich"
+      ],
+      "nights": [
+        2,
+        2,
+        3
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 450000,
+      "month": 7,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_italy_couple_6n",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Rome",
+        "Venice"
+      ],
+      "nights": [
+        3,
+        3
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 250000,
+      "month": 6,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_london_5n_lux",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "London"
+      ],
+      "nights": [
+        5
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 320000,
+      "month": 6,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "top_vienna_budapest_6n",
+      "category": "top",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "E03",
+        "E09",
+        "E11",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Vienna",
+        "Budapest"
+      ],
+      "nights": [
+        3,
+        3
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 240000,
+      "month": 5,
+      "golden": false,
+      "live_safe": false,
+      "flags": {}
+    },
+    {
+      "id": "edge_pax_1adult_solo",
+      "category": "pax_rooms",
+      "registry_refs": [
+        "E08",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 1,
+        "children": 0
+      },
+      "budget": 180000,
+      "golden": true,
+      "flags": {},
+      "month": 7
+    },
+    {
+      "id": "edge_pax_2a4c",
+      "category": "pax_rooms",
+      "registry_refs": [
+        "P01",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        5
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 4,
+        "child_ages": [
+          3,
+          5,
+          7,
+          9
+        ]
+      },
+      "budget": 240000,
+      "flags": {},
+      "month": 7
+    },
+    {
+      "id": "edge_pax_child_age_1",
+      "category": "pax_rooms",
+      "registry_refs": [
+        "P01"
+      ],
+      "cities": [
+        "Rome"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 1,
+        "child_ages": [
+          1
+        ]
+      },
+      "budget": 200000,
+      "flags": {
+        "child_boundary": "low"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_pax_child_age_17",
+      "category": "pax_rooms",
+      "registry_refs": [
+        "P01"
+      ],
+      "cities": [
+        "Rome"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 1,
+        "child_ages": [
+          17
+        ]
+      },
+      "budget": 200000,
+      "flags": {
+        "child_boundary": "high"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_pax_6adults_3rooms",
+      "category": "pax_rooms",
+      "registry_refs": [
+        "E08",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Amsterdam"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 6,
+        "children": 0
+      },
+      "budget": 180000,
+      "flags": {
+        "rooms_expected": 3
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_pax_3adults_oddroom",
+      "category": "pax_rooms",
+      "registry_refs": [
+        "E08",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Barcelona"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 3,
+        "children": 0
+      },
+      "budget": 180000,
+      "flags": {
+        "odd_adults": true
+      },
+      "month": 7
+    },
+    {
+      "id": "pair_child_01_a",
+      "category": "pax_rooms",
+      "registry_refs": [
+        "P01"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        5
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 200000,
+      "month": 7,
+      "flags": {
+        "pair": "child_01",
+        "pair_role": "base_2A"
+      }
+    },
+    {
+      "id": "pair_child_01_b",
+      "category": "pax_rooms",
+      "registry_refs": [
+        "P01"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        5
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 1,
+        "child_ages": [
+          8
+        ]
+      },
+      "budget": 200000,
+      "month": 7,
+      "flags": {
+        "pair": "child_01",
+        "pair_role": "plus_1C",
+        "expect_ratio_vs_base": 1.25
+      }
+    },
+    {
+      "id": "pair_child_02_a",
+      "category": "pax_rooms",
+      "registry_refs": [
+        "P01"
+      ],
+      "cities": [
+        "Rome"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 190000,
+      "month": 6,
+      "flags": {
+        "pair": "child_02",
+        "pair_role": "base_2A"
+      }
+    },
+    {
+      "id": "pair_child_02_b",
+      "category": "pax_rooms",
+      "registry_refs": [
+        "P01"
+      ],
+      "cities": [
+        "Rome"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 1,
+        "child_ages": [
+          8
+        ]
+      },
+      "budget": 190000,
+      "month": 6,
+      "flags": {
+        "pair": "child_02",
+        "pair_role": "plus_1C",
+        "expect_ratio_vs_base": 1.25
+      }
+    },
+    {
+      "id": "pair_child_03_a",
+      "category": "pax_rooms",
+      "registry_refs": [
+        "P01"
+      ],
+      "cities": [
+        "Prague"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 150000,
+      "month": 5,
+      "flags": {
+        "pair": "child_03",
+        "pair_role": "base_2A"
+      }
+    },
+    {
+      "id": "pair_child_03_b",
+      "category": "pax_rooms",
+      "registry_refs": [
+        "P01"
+      ],
+      "cities": [
+        "Prague"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 1,
+        "child_ages": [
+          8
+        ]
+      },
+      "budget": 150000,
+      "month": 5,
+      "flags": {
+        "pair": "child_03",
+        "pair_role": "plus_1C",
+        "expect_ratio_vs_base": 1.25
+      }
+    },
+    {
+      "id": "edge_nights_1n",
+      "category": "nights",
+      "registry_refs": [
+        "E01",
+        "E09"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        1
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 120000,
+      "flags": {
+        "zero_full_days": true,
+        "expect": "no_crash_no_tours_on_only_day"
+      },
+      "golden": true,
+      "month": 7
+    },
+    {
+      "id": "edge_nights_2n",
+      "category": "nights",
+      "registry_refs": [
+        "E01",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Rome"
+      ],
+      "nights": [
+        2
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 140000,
+      "flags": {},
+      "month": 7
+    },
+    {
+      "id": "edge_nights_14n",
+      "category": "nights",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        14
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 500000,
+      "flags": {
+        "long_tail": true
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_nights_mismatch",
+      "category": "nights",
+      "registry_refs": [
+        "E01"
+      ],
+      "cities": [
+        "Paris",
+        "Rome"
+      ],
+      "nights": [
+        3,
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 260000,
+      "flags": {
+        "note": "city-nights sum=7; assert engine echoes per-city nights consistently"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_budget_below_floor",
+      "category": "budget",
+      "registry_refs": [
+        "P10"
+      ],
+      "cities": [
+        "Zurich",
+        "Interlaken"
+      ],
+      "nights": [
+        3,
+        3
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 40000,
+      "flags": {
+        "expect": "graceful_fail_or_flag",
+        "not": "garbage"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_budget_absurd_50L",
+      "category": "budget",
+      "registry_refs": [
+        "E02",
+        "P03",
+        "P10"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        5
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 5000000,
+      "flags": {
+        "expect": "caps_still_bind"
+      },
+      "golden": true,
+      "month": 7
+    },
+    {
+      "id": "edge_budget_boundary",
+      "category": "budget",
+      "registry_refs": [
+        "P10",
+        "P03"
+      ],
+      "cities": [
+        "Rome"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 120000,
+      "flags": {
+        "expect": "at_or_near_min_feasible"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_route_same_city_twice",
+      "category": "route_shape",
+      "registry_refs": [
+        "E04",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Paris",
+        "Nice",
+        "Paris"
+      ],
+      "nights": [
+        3,
+        2,
+        2
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 280000,
+      "flags": {
+        "same_city_repeat": "Paris",
+        "note": "E04 dedup must allow legit same-city repeat (split stay)"
+      },
+      "golden": true,
+      "month": 7
+    },
+    {
+      "id": "edge_route_single_7n",
+      "category": "route_shape",
+      "registry_refs": [
+        "E01",
+        "E02",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        7
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 300000,
+      "flags": {},
+      "month": 7
+    },
+    {
+      "id": "edge_route_5city_10n",
+      "category": "route_shape",
+      "registry_refs": [
+        "E04",
+        "E09",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "London",
+        "Paris",
+        "Amsterdam",
+        "Rome",
+        "Barcelona"
+      ],
+      "nights": [
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 400000,
+      "flags": {},
+      "month": 7
+    },
+    {
+      "id": "edge_route_zero_tour_city",
+      "category": "route_shape",
+      "registry_refs": [
+        "E09"
+      ],
+      "cities": [
+        "Hallstatt"
+      ],
+      "nights": [
+        3
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 180000,
+      "flags": {
+        "thin_inventory": true,
+        "expect": "empty_days_flagged_not_silent"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_route_not_whitelisted",
+      "category": "route_shape",
+      "registry_refs": [
+        "E09",
+        "E10"
+      ],
+      "cities": [
+        "Reykjavik"
+      ],
+      "nights": [
+        3
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 180000,
+      "flags": {
+        "expect": "graceful_fail_or_empty_flagged"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_date_month_boundary",
+      "category": "dates",
+      "registry_refs": [
+        "P07"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        5
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 220000,
+      "month": 5,
+      "travelStartDate": "2026-05-29",
+      "flags": {
+        "spans": "May->June",
+        "assert": "which_rule_applies_seasonal_switch"
+      }
+    },
+    {
+      "id": "edge_date_dec31_jan1",
+      "category": "dates",
+      "registry_refs": [
+        "P07",
+        "F04"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 220000,
+      "month": 12,
+      "travelStartDate": "2026-12-31",
+      "flags": {
+        "year_rollover": true,
+        "spread": "0.80_vs_1.15"
+      }
+    },
+    {
+      "id": "edge_date_leap_feb29",
+      "category": "dates",
+      "registry_refs": [
+        "F04"
+      ],
+      "cities": [
+        "Rome"
+      ],
+      "nights": [
+        3
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 190000,
+      "month": 2,
+      "travelStartDate": "2028-02-29",
+      "flags": {
+        "leap_day": true
+      }
+    },
+    {
+      "id": "edge_date_booking_eq_travel",
+      "category": "dates",
+      "registry_refs": [
+        "F04"
+      ],
+      "cities": [
+        "Amsterdam"
+      ],
+      "nights": [
+        3
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 170000,
+      "month": 7,
+      "travelStartDate": "2026-07-15",
+      "flags": {
+        "booking_eq_travel": true
+      }
+    },
+    {
+      "id": "pair_season_01_apr",
+      "category": "dates",
+      "registry_refs": [
+        "P07"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        5
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 220000,
+      "month": 4,
+      "travelStartDate": "2026-04-15",
+      "flags": {
+        "pair": "season_01",
+        "pair_role": "april_1.00"
+      }
+    },
+    {
+      "id": "pair_season_01_jun",
+      "category": "dates",
+      "registry_refs": [
+        "P07"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        5
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 220000,
+      "month": 6,
+      "travelStartDate": "2026-06-15",
+      "flags": {
+        "pair": "season_01",
+        "pair_role": "june_1.20",
+        "expect_ratio_vs_april": 1.2
+      }
+    },
+    {
+      "id": "pair_season_02_apr",
+      "category": "dates",
+      "registry_refs": [
+        "P07"
+      ],
+      "cities": [
+        "Rome"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 200000,
+      "month": 4,
+      "travelStartDate": "2026-04-15",
+      "flags": {
+        "pair": "season_02",
+        "pair_role": "april_1.00"
+      }
+    },
+    {
+      "id": "pair_season_02_jun",
+      "category": "dates",
+      "registry_refs": [
+        "P07"
+      ],
+      "cities": [
+        "Rome"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 200000,
+      "month": 6,
+      "travelStartDate": "2026-06-15",
+      "flags": {
+        "pair": "season_02",
+        "pair_role": "june_1.20",
+        "expect_ratio_vs_april": 1.2
+      }
+    },
+    {
+      "id": "pair_season_03_apr",
+      "category": "dates",
+      "registry_refs": [
+        "P07"
+      ],
+      "cities": [
+        "Barcelona"
+      ],
+      "nights": [
+        5
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 210000,
+      "month": 4,
+      "travelStartDate": "2026-04-15",
+      "flags": {
+        "pair": "season_03",
+        "pair_role": "april_1.00"
+      }
+    },
+    {
+      "id": "pair_season_03_jun",
+      "category": "dates",
+      "registry_refs": [
+        "P07"
+      ],
+      "cities": [
+        "Barcelona"
+      ],
+      "nights": [
+        5
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 210000,
+      "month": 6,
+      "travelStartDate": "2026-06-15",
+      "flags": {
+        "pair": "season_03",
+        "pair_role": "june_1.20",
+        "expect_ratio_vs_april": 1.2
+      }
+    },
+    {
+      "id": "edge_swisspass_no_swiss_cities",
+      "category": "swiss_pass",
+      "registry_refs": [
+        "P12"
+      ],
+      "cities": [
+        "Paris",
+        "Rome"
+      ],
+      "nights": [
+        3,
+        3
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 260000,
+      "flags": {
+        "swiss_pass": true,
+        "expect": "no_discount_leak_non_swiss"
+      },
+      "golden": true,
+      "month": 7
+    },
+    {
+      "id": "edge_swisspass_with_swiss",
+      "category": "swiss_pass",
+      "registry_refs": [
+        "P12"
+      ],
+      "cities": [
+        "Zurich",
+        "Interlaken"
+      ],
+      "nights": [
+        3,
+        3
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 500000,
+      "flags": {
+        "swiss_pass": true,
+        "expect": "discount_applies"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_swisspass_toggle_midedit",
+      "category": "swiss_pass",
+      "registry_refs": [
+        "F02",
+        "P12"
+      ],
+      "cities": [
+        "Lucerne"
+      ],
+      "nights": [
+        3
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 300000,
+      "flags": {
+        "swiss_pass": "toggle",
+        "scope": "fe_state",
+        "deferred": "fe_harness"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_swisspass_class_toggle",
+      "category": "swiss_pass",
+      "registry_refs": [
+        "P12"
+      ],
+      "cities": [
+        "Interlaken"
+      ],
+      "nights": [
+        3
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 300000,
+      "flags": {
+        "swiss_pass": "1st_2nd_class",
+        "scope": "future",
+        "deferred": "feature_unshipped"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_state_two_agents_same_name",
+      "category": "concurrency_state",
+      "registry_refs": [
+        "S04"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 200000,
+      "flags": {
+        "scope": "fe_state",
+        "deferred": "fe_harness",
+        "note": "ownership filter"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_state_approve_while_edit",
+      "category": "concurrency_state",
+      "registry_refs": [
+        "S02"
+      ],
+      "cities": [
+        "Rome"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 200000,
+      "flags": {
+        "scope": "fe_state",
+        "deferred": "fe_harness"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_state_save_during_pdf",
+      "category": "concurrency_state",
+      "registry_refs": [
+        "S01",
+        "D01"
+      ],
+      "cities": [
+        "Amsterdam"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 200000,
+      "flags": {
+        "scope": "fe_state",
+        "deferred": "fe_harness"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_poison_hours_null",
+      "category": "data_poison",
+      "registry_refs": [
+        "T04",
+        "T05"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 200000,
+      "flags": {
+        "poison": "hours_null",
+        "scope": "data_poison",
+        "requires_dev_write": true,
+        "deferred": "read_only_brief_cannot_inject"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_poison_price_str_NA",
+      "category": "data_poison",
+      "registry_refs": [
+        "E11",
+        "P10"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 200000,
+      "flags": {
+        "poison": "price_str_NA",
+        "scope": "data_poison",
+        "requires_dev_write": true,
+        "deferred": "read_only_brief_cannot_inject"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_poison_negative_price",
+      "category": "data_poison",
+      "registry_refs": [
+        "E11",
+        "P10"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 200000,
+      "flags": {
+        "poison": "negative_price",
+        "scope": "data_poison",
+        "requires_dev_write": true,
+        "deferred": "read_only_brief_cannot_inject"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_poison_emoji_tour_name",
+      "category": "data_poison",
+      "registry_refs": [
+        "E11",
+        "P10"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 200000,
+      "flags": {
+        "poison": "emoji_tour_name",
+        "scope": "data_poison",
+        "requires_dev_write": true,
+        "deferred": "read_only_brief_cannot_inject"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_poison_hotel_name_500char",
+      "category": "data_poison",
+      "registry_refs": [
+        "E11",
+        "P10"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 200000,
+      "flags": {
+        "poison": "hotel_name_500char",
+        "scope": "data_poison",
+        "requires_dev_write": true,
+        "deferred": "read_only_brief_cannot_inject"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_wallet_balance_99",
+      "category": "wallet",
+      "registry_refs": [
+        "S03"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 200000,
+      "flags": {
+        "wallet_balance": 99,
+        "scope": "billing",
+        "deferred": "fe_harness"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_wallet_balance_0",
+      "category": "wallet",
+      "registry_refs": [
+        "S03",
+        "S09"
+      ],
+      "cities": [
+        "Rome"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 200000,
+      "flags": {
+        "wallet_balance": 0,
+        "scope": "billing",
+        "deferred": "fe_harness",
+        "expect": "clean_block_no_halfsave"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_wallet_double_click_save",
+      "category": "wallet",
+      "registry_refs": [
+        "S03"
+      ],
+      "cities": [
+        "Madrid"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 200000,
+      "flags": {
+        "double_click_save": true,
+        "scope": "billing",
+        "deferred": "fe_harness",
+        "expect": "idempotent"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_whatsapp_emoji_name",
+      "category": "whatsapp",
+      "registry_refs": [
+        "D06"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 200000,
+      "flags": {
+        "pax_name": "Riya 🌸 \"VIP\"",
+        "scope": "whatsapp",
+        "deferred": "send_harness"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_whatsapp_long_name",
+      "category": "whatsapp",
+      "registry_refs": [
+        "D06"
+      ],
+      "cities": [
+        "Rome"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 200000,
+      "flags": {
+        "pax_name": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "scope": "whatsapp",
+        "deferred": "send_harness",
+        "expect": "truncation_safe"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_thin_milan_pressure",
+      "category": "route_shape",
+      "registry_refs": [
+        "E12",
+        "E02",
+        "P06",
+        "P08",
+        "P09",
+        "P10"
+      ],
+      "cities": [
+        "Milan"
+      ],
+      "nights": [
+        6
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 600000,
+      "flags": {
+        "thin_pool": true,
+        "expect": "caps_hold_util_may_drop"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_anchor_disney_paris",
+      "category": "route_shape",
+      "registry_refs": [
+        "E06",
+        "E02"
+      ],
+      "cities": [
+        "Paris"
+      ],
+      "nights": [
+        5
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 260000,
+      "flags": {
+        "expect_anchor": "full_day_>=7h"
+      },
+      "month": 7
+    },
+    {
+      "id": "edge_xroute_swiss_daytrip",
+      "category": "route_shape",
+      "registry_refs": [
+        "E04",
+        "E05"
+      ],
+      "cities": [
+        "Zurich",
+        "Lucerne",
+        "Interlaken"
+      ],
+      "nights": [
+        2,
+        3,
+        3
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 900000,
+      "flags": {
+        "expect": "no_daytrip_to_route_city,no_cross_city_dup"
+      },
+      "golden": true,
+      "month": 7
+    },
+    {
+      "id": "edge_algo_assert",
+      "category": "route_shape",
+      "registry_refs": [
+        "E10"
+      ],
+      "cities": [
+        "Prague"
+      ],
+      "nights": [
+        4
+      ],
+      "pax": {
+        "adults": 2,
+        "children": 0
+      },
+      "budget": 170000,
+      "flags": {
+        "assert_algorithm": "v4-premium"
+      },
+      "month": 7
+    }
+  ]
+}

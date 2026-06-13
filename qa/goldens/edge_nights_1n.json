@@ -1,0 +1,95 @@
+{
+ "algorithm": "v4-premium",
+ "route": [
+  {
+   "city": "Paris",
+   "nights": 1,
+   "hotel": {
+    "name": "Le Méridien Paris Arc De Triomphe",
+    "star": "⭐⭐⭐⭐",
+    "category": "Luxury",
+    "roomType": "Superior King Room",
+    "meals": "Room Only",
+    "chain": "Independent",
+    "totalCost": 115480
+   },
+   "tours": [
+    {
+     "name": "Eiffel Tower Summit Access",
+     "experience_id": null,
+     "canonical_id": "PARIS_EIFFEL",
+     "category": "Landmark",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 23186,
+     "hours": 2
+    },
+    {
+     "name": "Versailles Palace and Gardens Skip-the-Line Tour from Paris",
+     "experience_id": null,
+     "canonical_id": "PARIS_VERSAILLES",
+     "category": "Landmark",
+     "dayIdx": 0,
+     "dayType": "arrival",
+     "cost": 12146,
+     "hours": 2
+    },
+    {
+     "name": "Paris: Seine River Cruise from Bateaux Mouches",
+     "experience_id": null,
+     "canonical_id": "PARIS_SEINE",
+     "category": "Cruise",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 5700,
+     "hours": 1
+    }
+   ]
+  }
+ ],
+ "selectedTransfers": [
+  {
+   "leg": "arrival",
+   "city": "Paris",
+   "vehicle": "Executive Sedan",
+   "vehicleType": "Executive Sedan",
+   "vehiclePrice": 22371,
+   "avgPrice": 22371,
+   "cost": 22371,
+   "schedule": "One way Transfer from CDG Airport to Aparthotel Adagio Paris in Sedan or Van or similar"
+  },
+  {
+   "leg": "departure",
+   "city": "Paris",
+   "vehicle": "Executive Sedan",
+   "vehicleType": "Executive Sedan",
+   "vehiclePrice": 20953,
+   "avgPrice": 20953,
+   "cost": 20953,
+   "schedule": "One way Transfer from Aparthotel Adagio Paris to CDG Airport in Sedan or Van or similar"
+  }
+ ],
+ "selectedIntercity": [],
+ "costSummary": {
+  "budgetPerPerson": 120000,
+  "adults": 2,
+  "children": 0,
+  "adultEquivalents": 2,
+  "totalClientBudget": 240000,
+  "netBudget": 203908,
+  "multiplier": 1,
+  "markupAmount": 30586,
+  "markupPct": 15,
+  "gstAmount": 5506,
+  "gstOnMarkupPct": 18,
+  "totalSpent": 199836,
+  "utilisation": 98,
+  "breakdown": {
+   "hotels": 115480,
+   "sightseeing": 41032,
+   "transfers": 43324,
+   "rail": 0
+  }
+ },
+ "warningFlags": []
+}

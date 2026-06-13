@@ -1,0 +1,145 @@
+{
+ "algorithm": "v4-premium",
+ "route": [
+  {
+   "city": "Paris",
+   "nights": 6,
+   "hotel": {
+    "name": "Radisson Blu Hotel Paris, Marne-La- Vallee",
+    "star": "⭐⭐⭐⭐",
+    "category": "Superior",
+    "roomType": "Standard Room,1 Queen Bed,NonSmoking",
+    "meals": "Breakfast",
+    "chain": "Radisson",
+    "totalCost": 272765
+   },
+   "tours": [
+    {
+     "name": "Disneyland Paris 1-Day 1-Park Ticket",
+     "experience_id": null,
+     "canonical_id": "PARIS_DISNEYLAND",
+     "category": "Theme Park",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 52000,
+     "hours": 10
+    },
+    {
+     "name": "Paris: Mont Saint-Michel Full-Day Tour by Coach",
+     "experience_id": null,
+     "canonical_id": "PARIS_MONT",
+     "category": "Day Trip",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 47000,
+     "hours": 14
+    },
+    {
+     "name": "Eiffel Tower Access to the Second Floor",
+     "experience_id": null,
+     "canonical_id": "PARIS_EIFFEL",
+     "category": "Sightseeing",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 19652,
+     "hours": 2
+    },
+    {
+     "name": "Versailles Palace and Gardens Skip-the-Line Tour from Paris",
+     "experience_id": null,
+     "canonical_id": "PARIS_VERSAILLES",
+     "category": "Landmark",
+     "dayIdx": 3,
+     "dayType": "full",
+     "cost": 24292,
+     "hours": 2
+    },
+    {
+     "name": "Paris: Moulin Rouge Cabaret Show Ticket with Champagne",
+     "experience_id": null,
+     "canonical_id": "PARIS_MOULIN_ROUGE",
+     "category": "Evening Show",
+     "dayIdx": 4,
+     "dayType": "full",
+     "cost": 75400,
+     "hours": 2
+    },
+    {
+     "name": "Paris: 1 Hour Seine River Cruise Ticket",
+     "experience_id": null,
+     "canonical_id": "PARIS_SEINE",
+     "category": "Cruise",
+     "dayIdx": 5,
+     "dayType": "full",
+     "cost": 8012,
+     "hours": 1
+    },
+    {
+     "name": "Louvre Museum Tour Mona Lisa & Iconic Masterpieces",
+     "experience_id": null,
+     "canonical_id": "PARIS_LOUVRE",
+     "category": "Museum & Gallery",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 43280,
+     "hours": 2
+    },
+    {
+     "name": "2 Hours Paris VIP Private Segway Tour",
+     "experience_id": null,
+     "canonical_id": "PARIS_SEGWAYTOUR",
+     "category": "City Tour",
+     "dayIdx": 3,
+     "dayType": "full",
+     "cost": 27936,
+     "hours": 2
+    }
+   ]
+  }
+ ],
+ "selectedTransfers": [
+  {
+   "leg": "arrival",
+   "city": "Paris",
+   "vehicle": "Premium Van",
+   "vehicleType": "Premium Van",
+   "vehiclePrice": 18837,
+   "avgPrice": 18837,
+   "cost": 18837,
+   "schedule": "One way Transfer from CDG Airport to Aparthotel Adagio Paris in Sedan or Van or similar"
+  },
+  {
+   "leg": "departure",
+   "city": "Paris",
+   "vehicle": "Premium Van",
+   "vehicleType": "Premium Van",
+   "vehiclePrice": 17551,
+   "avgPrice": 17551,
+   "cost": 17551,
+   "schedule": "One way Transfer from Aparthotel Adagio Paris to CDG Airport in Sedan or Van or similar"
+  }
+ ],
+ "selectedIntercity": [],
+ "costSummary": {
+  "budgetPerPerson": 240000,
+  "adults": 2,
+  "children": 2,
+  "adultEquivalents": 3,
+  "totalClientBudget": 720000,
+  "netBudget": 611725,
+  "multiplier": 1,
+  "markupAmount": 91759,
+  "markupPct": 15,
+  "gstAmount": 16517,
+  "gstOnMarkupPct": 18,
+  "totalSpent": 606725,
+  "utilisation": 99,
+  "breakdown": {
+   "hotels": 272765,
+   "sightseeing": 297572,
+   "transfers": 36388,
+   "rail": 0
+  }
+ },
+ "warningFlags": []
+}

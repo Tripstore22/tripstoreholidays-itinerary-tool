@@ -1,0 +1,222 @@
+{
+ "algorithm": "v4-premium",
+ "route": [
+  {
+   "city": "Paris",
+   "nights": 3,
+   "hotel": {
+    "name": "Hotel La Comtesse",
+    "star": "⭐⭐⭐⭐",
+    "category": "Superior",
+    "roomType": "Double Room Baronne - Eiffel Tower Side View",
+    "meals": "Breakfast",
+    "chain": "Independent",
+    "totalCost": 116769
+   },
+   "tours": [
+    {
+     "name": "Disneyland Paris 1-Day 1-Park Ticket",
+     "experience_id": null,
+     "canonical_id": "PARIS_DISNEYLAND",
+     "category": "Theme Park",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 26000,
+     "hours": 10
+    },
+    {
+     "name": "Paris: Mont Saint-Michel Full-Day Tour by Coach",
+     "experience_id": null,
+     "canonical_id": "PARIS_MONT",
+     "category": "Day Trip",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 23500,
+     "hours": 14
+    },
+    {
+     "name": "Eiffel Tower Access to the Second Floor",
+     "experience_id": null,
+     "canonical_id": "PARIS_EIFFEL",
+     "category": "Sightseeing",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 9826,
+     "hours": 2
+    },
+    {
+     "name": "Versailles Palace and Gardens Skip-the-Line Tour from Paris",
+     "experience_id": null,
+     "canonical_id": "PARIS_VERSAILLES",
+     "category": "Landmark",
+     "dayIdx": 0,
+     "dayType": "arrival",
+     "cost": 12146,
+     "hours": 2
+    }
+   ]
+  },
+  {
+   "city": "Rome",
+   "nights": 3,
+   "hotel": {
+    "name": "Golden Tulip Rome Piram",
+    "star": "⭐⭐⭐⭐",
+    "category": "Superior",
+    "roomType": "Standard Double Room",
+    "meals": "Breakfast",
+    "chain": "Independent",
+    "totalCost": 85503
+   },
+   "tours": [
+    {
+     "name": "Rome Bike and eBike Rentals",
+     "experience_id": null,
+     "canonical_id": "ROME_HOPONHOPOFF",
+     "category": "Bike Tour",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 2196,
+     "hours": 2
+    },
+    {
+     "name": "Rome: Aqua World, enjoy a summer of fun in the water park",
+     "experience_id": null,
+     "canonical_id": "ROME_AQUA",
+     "category": "Family",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 4876,
+     "hours": 4
+    },
+    {
+     "name": "Rome: Colosseum Arena Floor, Palatine & Forum Guided Tour",
+     "experience_id": null,
+     "canonical_id": "ROME_COLOSSEUM",
+     "category": "Landmark",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 8644,
+     "hours": 2
+    },
+    {
+     "name": "Vatican: Museums & Sistine Chapel Entrance Ticket",
+     "experience_id": null,
+     "canonical_id": "ROME_VATICAN",
+     "category": "Landmark",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 8756,
+     "hours": 2
+    },
+    {
+     "name": "Rome: Award-Winning Roman Food Tours",
+     "experience_id": null,
+     "canonical_id": "ROME_FOODTOUR",
+     "category": "Food & Drinks",
+     "dayIdx": 0,
+     "dayType": "arrival",
+     "cost": 2216,
+     "hours": 1
+    },
+    {
+     "name": "Vatican: St.Peter's Basilica,Dome Climb & Papal Tombs Tour",
+     "experience_id": null,
+     "canonical_id": "ROME_STPETERSBASILICA",
+     "category": "Museum",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 5786,
+     "hours": 2
+    },
+    {
+     "name": "Trevi Fountain Access Ticket & City Walking Tour",
+     "experience_id": null,
+     "canonical_id": "ROME_TREVIFOUNTAIN",
+     "category": "Hidden Gems",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 2882,
+     "hours": 2
+    },
+    {
+     "name": "Rome: Vespa Ride in the Streets with Photography",
+     "experience_id": null,
+     "canonical_id": "ROME_PHOTOGRAPHY",
+     "category": "Hidden Gems",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 16624,
+     "hours": 2
+    },
+    {
+     "name": "Rome: Combo Pizza and Pasta Cooking Class with Wine",
+     "experience_id": null,
+     "canonical_id": "ROME_COOKINGCLASS",
+     "category": "Food & Culture",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 10950,
+     "hours": 3
+    }
+   ]
+  }
+ ],
+ "selectedTransfers": [
+  {
+   "leg": "arrival",
+   "city": "Paris",
+   "vehicle": "Executive Sedan",
+   "vehicleType": "Executive Sedan",
+   "vehiclePrice": 22371,
+   "avgPrice": 22371,
+   "cost": 22371,
+   "schedule": "One way Transfer from CDG Airport to Aparthotel Adagio Paris in Sedan or Van or similar"
+  },
+  {
+   "leg": "departure",
+   "city": "Rome",
+   "vehicle": "Executive Sedan",
+   "vehicleType": "Executive Sedan",
+   "vehiclePrice": 18988,
+   "avgPrice": 18988,
+   "cost": 18988,
+   "schedule": "One way Transfer from Mercure Roma Centro Colosseo to FCO Airport in Sedan or Van or similar"
+  }
+ ],
+ "selectedIntercity": [
+  {
+   "from": "Paris",
+   "to": "Rome",
+   "fromTo": "Paris to Rome",
+   "mode": "Train",
+   "classType": "economy",
+   "price": 24200,
+   "perPax": 24200,
+   "cost": 48400,
+   "notes": ""
+  }
+ ],
+ "costSummary": {
+  "budgetPerPerson": 260000,
+  "adults": 2,
+  "children": 0,
+  "adultEquivalents": 2,
+  "totalClientBudget": 520000,
+  "netBudget": 441801,
+  "multiplier": 1,
+  "markupAmount": 66270,
+  "markupPct": 15,
+  "gstAmount": 11929,
+  "gstOnMarkupPct": 18,
+  "totalSpent": 426433,
+  "utilisation": 97,
+  "breakdown": {
+   "hotels": 202272,
+   "sightseeing": 134402,
+   "transfers": 41359,
+   "rail": 48400
+  }
+ },
+ "warningFlags": []
+}

@@ -1,0 +1,344 @@
+{
+ "algorithm": "v4-premium",
+ "route": [
+  {
+   "city": "Zurich",
+   "nights": 2,
+   "hotel": {
+    "name": "Neues Schloss Privat Hotel Zurich, Autograph Collection",
+    "star": "⭐⭐⭐⭐⭐",
+    "category": "Luxury",
+    "roomType": "Superior King Room",
+    "meals": "Breakfast",
+    "chain": "Marriott - Autograph Collection",
+    "totalCost": 395892
+   },
+   "tours": [
+    {
+     "name": "Lindt Home of Chocolate (An interactive journey of Chocolate discovery)",
+     "experience_id": null,
+     "canonical_id": "ZURICH_HOMECHOCOLATE",
+     "category": "Museum",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 3460,
+     "hours": 2
+    },
+    {
+     "name": "Rhine Falls and Stein am Rhein",
+     "experience_id": null,
+     "canonical_id": "ZURICH_FALLSSTEIN",
+     "category": "Cruise",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 19424,
+     "hours": 5
+    },
+    {
+     "name": "Zurich Old Town Self-Guided Walking Tour",
+     "experience_id": null,
+     "canonical_id": "ZURICH_WALKINGTOUR",
+     "category": "Walking Tour",
+     "dayIdx": 0,
+     "dayType": "arrival",
+     "cost": 1186,
+     "hours": 2
+    },
+    {
+     "name": "Zurich City Tour with Lake Cruise",
+     "experience_id": null,
+     "canonical_id": "ZURICH_LAKE",
+     "category": "Cruise",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 10198,
+     "hours": 4
+    }
+   ]
+  },
+  {
+   "city": "Lucerne",
+   "nights": 3,
+   "hotel": {
+    "name": "Hotel Schweizerhof Luzern",
+    "star": "⭐⭐⭐⭐⭐",
+    "category": "Heritage & Palace",
+    "roomType": "Classic Room",
+    "meals": "Breakfast",
+    "chain": "Independent",
+    "totalCost": 241107
+   },
+   "tours": [
+    {
+     "name": "Lake Lucerne 1-Hour Catamaran Cruise",
+     "experience_id": null,
+     "canonical_id": "LUCERNE_LAKE",
+     "category": "Cruise",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 654,
+     "hours": 1
+    },
+    {
+     "name": "Mt. Titlis - year-round snow, panoramic Alpine views, and the world's first revolving cable car, the TITLIS ROTAIR",
+     "experience_id": null,
+     "canonical_id": "MT_TITLIS",
+     "category": "Mountain Tour",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 26240,
+     "hours": 5
+    },
+    {
+     "name": "Fondue Tuk city tour with the Tuk Tuk in Lucerne",
+     "experience_id": null,
+     "canonical_id": "LUCERNE_FONDUE",
+     "category": "City Tour",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 58116,
+     "hours": 1
+    },
+    {
+     "name": "3 Hour Lucerne City Walking Tour with Local Guide",
+     "experience_id": null,
+     "canonical_id": "LUCERNE_WALKINGTOUR",
+     "category": "Walking Tour",
+     "dayIdx": 0,
+     "dayType": "arrival",
+     "cost": 13752,
+     "hours": 3
+    },
+    {
+     "name": "CabriO World's first Open Top Cable Car Ticket to Mt Stanserhorn",
+     "experience_id": null,
+     "canonical_id": "LUCERNE_CABLE",
+     "category": "Popular",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 19444,
+     "hours": 6
+    }
+   ]
+  },
+  {
+   "city": "Interlaken",
+   "nights": 3,
+   "hotel": {
+    "name": "Victoria-Jungfrau Grand Hotel & Spa",
+    "star": "⭐⭐⭐⭐⭐",
+    "category": "Heritage & Palace",
+    "roomType": "Classic Room",
+    "meals": "Breakfast",
+    "chain": "Independent",
+    "totalCost": 351450
+   },
+   "tours": [
+    {
+     "name": "Jungfraujoch - Top of Europe (high-altitude tourist attraction in Switzerland)",
+     "experience_id": null,
+     "canonical_id": "JUNGFRAUJOCH",
+     "category": "Mountain Tour",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 60254,
+     "hours": 5
+    },
+    {
+     "name": "Grindelwald First (any 1 activity - First Flyer zipline, First Glider, and seasonal mountain carts.)",
+     "experience_id": null,
+     "canonical_id": "GRINDELWALD_FIRST",
+     "category": "Mountain Tour",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 20894,
+     "hours": 6
+    },
+    {
+     "name": "Tandem paragliding flight from Beatenberg to Interlaken (Apr - Oct)",
+     "experience_id": null,
+     "canonical_id": "BEATENBERG_PARAGLIDING",
+     "category": "Adventure",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 41096,
+     "hours": 1
+    },
+    {
+     "name": "Day Sledding in Interlaken",
+     "experience_id": null,
+     "canonical_id": "INTERLAKEN_SLEDDING",
+     "category": "Adventure",
+     "dayIdx": 0,
+     "dayType": "arrival",
+     "cost": 25600,
+     "hours": 3
+    },
+    {
+     "name": "Scenic E-Bike Tour Winter (exploring alpine lakes, along tranquil rivers and through rustic villages)",
+     "experience_id": null,
+     "canonical_id": "INTERLAKEN_BIKETOUR",
+     "category": "Adventure",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 26744,
+     "hours": 2
+    },
+    {
+     "name": "Jetboat Interlaken",
+     "experience_id": null,
+     "canonical_id": "INTERLAKEN_JETBOAT",
+     "category": "Adventure",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 28216,
+     "hours": 1
+    },
+    {
+     "name": "Ropes Park Interlaken",
+     "experience_id": null,
+     "canonical_id": "INTERLAKEN_ROPES_PARK",
+     "category": "Entry Ticket",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 10670,
+     "hours": 2
+    },
+    {
+     "name": "Admission Ticket to the Swiss Selfie Museum in Interlaken",
+     "experience_id": null,
+     "canonical_id": "INTERLAKEN_MUSEUM",
+     "category": "Entry Ticket",
+     "dayIdx": 2,
+     "dayType": "full",
+     "cost": 4980,
+     "hours": 2
+    }
+   ]
+  },
+  {
+   "city": "Geneva",
+   "nights": 2,
+   "hotel": {
+    "name": "Four Seasons Hotel des Bergues Geneva",
+    "star": "⭐⭐⭐⭐⭐",
+    "category": "Ultra Luxury",
+    "roomType": "Classic Room",
+    "meals": "Breakfast",
+    "chain": "Four Seasons",
+    "totalCost": 206022
+   },
+   "tours": [
+    {
+     "name": "Glacier 3000 and Montreux Riviera from Geneva",
+     "experience_id": null,
+     "canonical_id": "GLACIER_3000",
+     "category": "Day Tour",
+     "dayIdx": 1,
+     "dayType": "full",
+     "cost": 29736,
+     "hours": 10
+    },
+    {
+     "name": "Chocolate tour of Geneva",
+     "experience_id": null,
+     "canonical_id": "GENEVA_CHOCOLATE",
+     "category": "Food & Culture",
+     "dayIdx": 0,
+     "dayType": "full",
+     "cost": 36858,
+     "hours": 1
+    },
+    {
+     "name": "Best of Geneva City Tour with optional boat cruise",
+     "experience_id": null,
+     "canonical_id": "GENEVA_CRUISE",
+     "category": "City Tour",
+     "dayIdx": 0,
+     "dayType": "arrival",
+     "cost": 13752,
+     "hours": 3
+    }
+   ]
+  }
+ ],
+ "selectedTransfers": [
+  {
+   "leg": "arrival",
+   "city": "Zurich",
+   "vehicle": "Executive Sedan",
+   "vehicleType": "Executive Sedan",
+   "vehiclePrice": 18560,
+   "avgPrice": 18560,
+   "cost": 18560,
+   "schedule": "One way Transfer from ZRH Airport to Visionapartments Zurich Rotachstrasse in Sedan or Van or similar"
+  },
+  {
+   "leg": "departure",
+   "city": "Geneva",
+   "vehicle": "Executive Sedan",
+   "vehicleType": "Executive Sedan",
+   "vehiclePrice": 18452,
+   "avgPrice": 18452,
+   "cost": 18452,
+   "schedule": "One way Transfer from Appart'city Collection Geneve Aeroport Vernier to GVA Airport in Sedan or Van or similar"
+  }
+ ],
+ "selectedIntercity": [
+  {
+   "from": "Zurich",
+   "to": "Lucerne",
+   "fromTo": "Zurich to Lucerne",
+   "mode": "Train",
+   "classType": "economy",
+   "price": 5500,
+   "perPax": 5500,
+   "cost": 11000,
+   "notes": ""
+  },
+  {
+   "from": "Lucerne",
+   "to": "Interlaken",
+   "fromTo": "Lucerne to Interlaken",
+   "mode": "Train",
+   "classType": "economy",
+   "price": 6900,
+   "perPax": 6900,
+   "cost": 13800,
+   "notes": ""
+  },
+  {
+   "from": "Interlaken",
+   "to": "Geneva",
+   "fromTo": "Interlaken to Geneva",
+   "mode": "Train",
+   "classType": "economy",
+   "price": 10000,
+   "perPax": 10000,
+   "cost": 20000,
+   "notes": ""
+  }
+ ],
+ "costSummary": {
+  "budgetPerPerson": 1050000,
+  "adults": 2,
+  "children": 0,
+  "adultEquivalents": 2,
+  "totalClientBudget": 2100000,
+  "netBudget": 1784197,
+  "multiplier": 1,
+  "markupAmount": 267630,
+  "markupPct": 15,
+  "gstAmount": 48173,
+  "gstOnMarkupPct": 18,
+  "totalSpent": 1727556,
+  "utilisation": 97,
+  "breakdown": {
+   "hotels": 1194471,
+   "sightseeing": 451274,
+   "transfers": 37012,
+   "rail": 44800
+  }
+ },
+ "warningFlags": []
+}
