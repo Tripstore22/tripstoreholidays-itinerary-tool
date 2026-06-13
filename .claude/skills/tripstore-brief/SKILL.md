@@ -20,7 +20,7 @@ Claude (this chat) is the architect: think, plan, verify, write the brief, decid
 - **E — Evidence-first output.** Tag every claim: `[VERIFIED]` (read the source, can cite path), `[INFERRED]` (state the chain), `[GUESSING]` (say so). "Probably / likely / I think / should be" = GUESSING; upgrade or label.
 
 ## THE #1 BRIEF FAILURE: line numbers and invented names
-Briefs drift. Files move. Line numbers in a brief are stale within hours (caught off by 270 and by ~2000 in real sessions). Variable names get assumed wrong (`ctx.cities` vs the real `cityNames`; v4 has 5 pick sites, not 2). Invented helper names (`qAdultInc`, `_fmtDateISO`) duplicate existing ones (`qqStep`, `formatDateISO`).
+Briefs drift. Files move. Line numbers in a brief are stale within hours (caught off by 270 and by ~2000 in real sessions). Variable names get assumed wrong (`ctx.cities` vs the real `cityNames`; v4 has more pick sites than a brief assumes — verify against TRUTH.md). Invented helper names (`qAdultInc`, `_fmtDateISO`) duplicate existing ones (`qqStep`, `formatDateISO`).
 
 **Rules:**
 - **Anchor on strings, never line numbers.** "Find `const API_URL`" not "line 3046."
