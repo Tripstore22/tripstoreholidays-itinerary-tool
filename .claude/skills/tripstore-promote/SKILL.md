@@ -7,6 +7,17 @@ description: TripStore DEV-to-LIVE promotion ritual for the fit.tripstoreholiday
 
 The single most expensive workflow on this project. Read this before any LIVE change.
 
+## QA GATE — Night Guardian (run before AND after every promote)
+- **Before promote — must be GREEN:** `python3 ~/Desktop/Itinerary-Create/qa/smoke.py --seam all --env dev`
+  Engine + pricing + data seams over the 12 goldens. GREEN = 0 FAIL (KNOWN/SKIP are fine).
+  A new FAIL blocks the promote until triaged — fix it, or add a registry-cited entry to
+  `qa/known_issues.json` (instance- or count-keyed, never a class-wide pattern).
+- **After promote — LIVE smoke (read-only):** `python3 ~/Desktop/Itinerary-Create/qa/smoke.py --seam engine --env live`
+  Runs ONLY the 3 `live_safe` scenarios against LIVE. VERIFIED write-nothing (a bare
+  computeItinerary POST creates 0 Quote_Log / 0 Saved_Itineraries rows).
+- Between promotes, the `night-guardian` Action runs the full bank nightly (02:00 IST) and
+  opens an Issue only on a NEW failure.
+
 ## VOLATILE VALUES — never trust numbers in this file, read these first
 - `~/Desktop/tripstore-pipeline/.deployment_ids` — canonical deploy IDs + current @version numbers.
 - `TRUTH.md` (state) and `DECISIONS.md` (policy) — current LIVE @version, divergences, landmines.
