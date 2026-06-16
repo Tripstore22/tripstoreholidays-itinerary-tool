@@ -1,6 +1,6 @@
 ---
 name: tripstore-session
-description: TripStore session and memory ritual — the open/close discipline that stops state rot between sessions. Use this skill at the start of any TripStore session, at the end (when Sumit says bye/done/closing/that's all), and whenever updating TRUTH.md, DECISIONS.md, SESSIONS.md, or CLAUDE.md. It locks the MEMORY CHECK header on every response, reading SESSIONS.md silently at start, the canonical doc hierarchy (TRUTH state, DECISIONS policy), the end-of-session checklist, mirroring TRUTH.md to both paths, the 10-message auto memory update, and the never-tell-Sumit-to-wait rule. Consult so memory files stay current and the next session starts from truth, not a stale doc.
+description: TripStore session and memory ritual — the open/close discipline that stops state rot between sessions. Use this skill at the start of any TripStore session, at the end (when Sumit says bye/done/closing/that's all), and whenever updating TRUTH.md, DECISIONS.md, SESSIONS.md, or CLAUDE.md. It locks the MEMORY CHECK header on every response, reading SESSIONS.md silently at start, the canonical doc hierarchy (TRUTH state, DECISIONS policy), the end-of-session checklist, writing docs once to docs/ (canonical — no mirror), the 10-message auto memory update, and the never-tell-Sumit-to-wait rule. Consult so memory files stay current and the next session starts from truth, not a stale doc.
 ---
 
 # TripStore — Session & Memory Ritual
@@ -35,7 +35,7 @@ If session_start.sh hasn't run, remind Sumit to run it. Don't silently skip the 
 ## SESSION CLOSE (on bye / done / closing / that's all / goodbye)
 Do this silently, then say goodbye. Checklist:
 - [ ] Update **TRUTH.md** — files changed, decisions, pending/broken items.
-- [ ] **Mirror TRUTH.md** to BOTH `~/Desktop/tripstore-pipeline/TRUTH.md` AND `~/Desktop/TripStore/TRUTH.md` (same content).
+- [ ] **Write TRUTH.md / DECISIONS.md / SESSIONS.md ONCE to `~/Desktop/TripStore/docs/`** (single canonical home since the 2026-06-16 cutover — **NO mirror**; the old root + `tripstore-pipeline/` copies are retired orphans, re-mirroring rebuilds the drift).
 - [ ] Update **SESSIONS.md** — overwrite the `## Latest Session` block only; ≤15 bullets, one line each (completed / pending / date).
 - [ ] Append decisions to **DECISIONS.md**.
 - [ ] If `.gs` changed → promote per `tripstore-promote` (clasp push -f + deploy BOTH live IDs).
