@@ -1,203 +1,267 @@
-# TripStore Daily Code Review — 2026-06-14
+# TripStore Daily Code Review — 2026-06-17
 
-**Files reviewed:** app/index.html, write_to_sheets.py, archive_to_input.py, check_pipeline.py, check_html.py, qa/nightly.py, qa/smoke.py, qa/invariants.py, qa/gen_scenarios.py, .github/workflows/night-guardian.yml
-**Files listed but absent from repo:** Code.gs, Pipeline.gs, Quote_Intelligence.gs, extract_itineraries.py, write_inputs_to_sheets.py, cleanup_sheet.py, clean_pipeline_data.py, cross_reference.py, enrich_hotels.py, enrich_hotels_booking.py
-
-**Previous review:** 2026-06-13 — 12 issues found (2 CRITICAL, 5 MODERATE, 5 MINOR)
-**Night Guardian last nightly (2026-06-13):** PASS 1050 / KNOWN 29 / SKIP 195 / FAIL 0 — GREEN
-**New commits since last review:** 3 (night-guardian.yml, QA harness c54ec94, skills updates)
+**Files reviewed:** app/index.html, write_to_sheets.py, archive_to_input.py, check_html.py, check_pipeline.py, qa/smoke.py, qa/invariants.py, qa/nightly.py, qa/gen_scenarios.py
+**Files absent from repo (cannot inspect):** Code.gs, Pipeline.gs, Quote_Intelligence.gs, extract_itineraries.py, write_inputs_to_sheets.py, cleanup_sheet.py, clean_pipeline_data.py, cross_reference.py, enrich_hotels.py, enrich_hotels_booking.py
 
 ---
 
 ## Summary
 
-| Severity | New | Carried Forward | Total |
-|----------|-----|-----------------|-------|
-| CRITICAL | 0 | 2 | 2 |
-| MODERATE | 2 | 5 | 7 |
-| MINOR    | 3 | 5 | 8 |
-| **Total**| **5** | **12** | **17** |
+| Severity | Count | New Today | Carried From 2026-06-16 |
+|----------|-------|-----------|--------------------------|
+| CRITICAL | 3     | 0 new     | C1, C2, C3 all carried open |
+| MODERATE | 8     | 1 new     | M1–M7 carried |
+| MINOR    | 12    | 2 new     | N1–N10 carried |
+| **Total**| **23**| **3 new** | **20 still open** |
 
-None of the 12 issues from the 2026-06-13 review have been fixed. All are carried forward below.
+> Zero fixes have landed since the first report. All 20 prior issues remain open. C3 (DEV credentials exposed on live site) is now four days open. M8 is a new escalation: the live smoke gate is silently running two of its three live_safe scenarios with past travel dates right now.
 
 ---
 
-## NEW FINDINGS (2026-06-14)
+## CRITICAL
 
-### NEW-M1 — Stale past travel dates in gen_scenarios.py corrupt the P07 seasonal pair test
-**File:** qa/gen_scenarios.py:169, 186-190
+### C1 (CARRIED) — Login handler missing from doPost in Code.gs
+**File:** Code.gs (not in repo)
 
-Several travelStartDate values are already in the past as of today (2026-06-14):
+doPost does not handle action=checkLogin. Any re-deploy of Code.gs as-is will lock all users out permanently. Fix before next re-deploy.
 
-- edge_date_month_boundary: "2026-05-29" — 16 days past
-- All pair_season_01_apr scenarios: "2026-04-15" — 2 months past
-- All pair_season_01_jun scenarios: "2026-06-15" — stale from tomorrow
-
-The P07 pair test checks that June totalSpent / April totalSpent ~= 1.20. When the engine receives a past date it may apply the current date's seasonal multiplier to both members, collapsing the ratio to ~1.0 and triggering the fill-to-budget SKIP guard. The test stops being a real assertion. The 195 SKIPs in the 2026-06-13 nightly are consistent with this already happening for the April scenarios.
-
-**Fix:** Use 2027 dates or make the year dynamic so scenarios stay in the future:
-```python
-import datetime
-_NEXT_APR = f"{datetime.date.today().year + 1}-04-15"
-_NEXT_JUN = f"{datetime.date.today().year + 1}-06-15"
+**Fix:**
+```javascript
+if (action === 'checkLogin') return checkLogin(data.user || '', data.pass || '');
 ```
 
 ---
 
-### NEW-M2 — Column count mismatch: make_hotel_row writes 25 columns into a 26-column INPUT_Hotels sheet
-**Files:** archive_to_input.py:232-242 vs check_pipeline.py:113
+### C2 (CARRIED) — Plaintext passwords in Google Sheet
+**File:** Code.gs (not in repo)
 
-check_pipeline.py's KNOWN_HEADERS['Hotels'] defines 26 columns including 'Meals' at index 6:
-```
-0:City  1:Hotel Name  2:Star  3:Category  4:Chain  5:Room  6:Meals
-7:Jan ... 18:Dec  19:Annual Avg  20:Added_By  21:Source  22:Notes
-23:Pipeline_Status  24:Error_Reason  25:Processed_Date
-```
+Passwords are stored and compared in plaintext. Any team member with sheet access can read all credentials.
 
-But make_hotel_row in archive_to_input.py omits Meals from its layout comment and creates only 25 columns:
-```python
-row = [""] * 25
-row[19] = ADDED_BY   # lands in Annual_Avg slot on the real 26-col sheet
-row[22] = STATUS     # lands in Notes_Input slot on the real 26-col sheet
-```
-
-Result: Pipeline.gs reads Pipeline_Status (col 23) as blank on every archive-imported hotel row — it never sees 'PENDING' and may skip or re-queue rows indefinitely.
-
-**Fix:** Update make_hotel_row to 26 columns:
-```python
-row = [""] * 26
-row[20] = ADDED_BY
-row[23] = STATUS
-```
+**Fix:** Hash with `Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password)` and compare digest only.
 
 ---
 
-### NEW-N1 — E_CHECKS / P_CHECKS duplicated verbatim between smoke.py and nightly.py
-**Files:** qa/smoke.py:146-165, qa/nightly.py:28-30
+### C3 (CARRIED — DAY 4, STILL NOT FIXED) — DEV credentials exposed in production HTML
+**File:** app/index.html:1-8
 
-The two check-name sets are copy-pasted. Adding a new invariant requires updating both files; missing one causes the nightly and smoke gates to silently test different subsets.
+Confirmed present again today (fourth consecutive day). Page source at fit.tripstoreholidays.com/app/ opens with a comment block showing the DEV Sheet ID (1iENrNwWTtU9O664hXYS8dBG1rbcHr2x9Xt294UeORM4) and the DEV API key.
 
-**Fix:** Define both sets as module-level constants in invariants.py and import them in both runners.
+**Fix:** Delete lines 1-8 from app/index.html and push to v2. Takes 2 minutes.
 
 ---
 
-### NEW-N2 — Year 2026 hardcoded in smoke.py fallback travelStartDate
-**File:** qa/smoke.py:73
+## MODERATE
 
+### M1 (CARRIED) — GST 0% silently replaced with 5%
+**File:** Quote_Intelligence.gs:119 (not in repo)
+
+`const gstPct = d.gst || 5;` treats gst=0 as falsy, billing 5% GST on zero-rated services.
+
+**Fix:** `const gstPct = d.gst != null ? Number(d.gst) : 5;`
+
+---
+
+### M2 (CARRIED) — logQuote infinite recursion risk
+**File:** Quote_Intelligence.gs:33-37 (not in repo)
+
+Recursive retry with no guard. If setupQuoteLog() fails, recursion continues until stack overflow.
+
+**Fix:** After setupQuoteLog(), look up the sheet again; if still null, log and return instead of recursing.
+
+---
+
+### M3 (CARRIED) — Formula injection via USER_ENTERED in both Python sheet writers
+**Files:** write_to_sheets.py:196, archive_to_input.py:390
+
+Both scripts write CSV data with value_input_option="USER_ENTERED". Any cell beginning with =, +, -, or @ executes as a Google Sheets formula.
+
+**Fix:** Use value_input_option="RAW" for all data rows in both scripts.
+
+---
+
+### M4 (CARRIED) — edge_date_month_boundary scenario has past travel date
+**File:** qa/gen_scenarios.py:168
+
+travelStartDate="2026-05-29" is 19 days in the past. Produces false PASS or false FAIL in nightly smoke.
+
+**Fix:** Change to "2027-05-29" or derive at runtime.
+
+---
+
+### M5 (CARRIED) — innerHTML injecting unescaped API/user data
+**File:** app/index.html:4900, 4903, 4908
+
+intel.nextCity, r.city inserted raw into innerHTML. The _e() escape helper exists but is not applied here.
+
+**Fix:** Apply _e() to every API/user value interpolated into innerHTML template literals.
+
+---
+
+### M6 (CARRIED) — Swiss Pass section injects five unescaped API strings into innerHTML
+**File:** app/index.html:5101, 5131, 5154, 5173
+
+Confirmed still present today. l.from, l.to, t.tour_name, m.tour_name, and data.pass_duration are all interpolated raw into innerHTML. A poisoned sheet row (e.g. a tour name containing a script tag) would execute in the browser for every user opening the Swiss Pass panel.
+
+**Fix:** Run all five values through _e() before interpolation, or switch the block to document.createElement + textContent.
+
+---
+
+### M7 (CARRIED) — All six P07 seasonal-pair scenarios have past travel dates
+**File:** qa/gen_scenarios.py:186-190
+
+Both 2026-04-15 (past since April 16) and 2026-06-15 (past since June 16) are now in the past. Seasonal comparison tests are producing unreliable signals.
+
+**Fix:** Update all six dates to future dates (e.g. April 2027 and June 2027), or generate dynamically.
+
+---
+
+### M8 (NEW) — Live smoke gate running 2 of 3 live_safe scenarios with past travel dates
+**File:** qa/smoke.py:73, qa/gen_scenarios.py:79
+
+smoke.py:73 generates the travel date for scenarios without an explicit travelStartDate:
 ```python
 "travelStartDate": scn.get("travelStartDate", f"2026-{scn.get('month', 7):02d}-15")
 ```
 
-From 2027 onwards all ~80 scenarios that rely on the fallback will silently send past dates to the engine. Seasonal lookups and date-boundary tests degrade without any warning.
+The three live_safe scenarios (the only ones run against the production engine):
+- top_prague_4n_couple: month=5 → generates "2026-05-15" — 32 days in the past
+- top_budapest_4n_couple: month=4 → generates "2026-04-15" — 63 days in the past
+- top_lisbon_4n_couple: month=9 → generates "2026-09-15" — still future (safe)
 
-**Fix:** `import datetime` at top of file, then use `datetime.date.today().year` in the f-string.
+Two of the three live safety checks are sending past dates to the production engine. If the engine applies past-date fallback logic or rejects them, these checks either false-PASS or false-SKIP. The production smoke gate is giving a false green.
+
+The same issue affects top_rome_florence_venice_8n (GOLDEN, month=6 → "2026-06-15" — 2 days past), meaning one of the six golden baselines is compromised.
+
+**Fix (immediate):** In gen_scenarios.py, add explicit travelStartDate to prague_4n_couple and budapest_4n_couple pointing to future dates (e.g. "2026-09-15"), OR fix smoke.py:73 to use datetime.date.today().year and advance by 1 year if the generated date is already past.
 
 ---
 
-### NEW-N3 — make_sightseeing_row writes archive total cost into Avg Price
-**File:** archive_to_input.py:253
+## MINOR
+
+### N1 (CARRIED) — checkLogin sends credentials in GET URL
+**File:** app/index.html:3713
+
+Credentials appear in Apps Script execution logs.
+
+**Fix:** Use POST with JSON body.
+
+---
+
+### N2 (CARRIED) — No brute-force protection on login
+**File:** Code.gs (not in repo). No rate limiting or lockout.
+
+**Fix:** Utilities.sleep(500) on every call; log repeated failures.
+
+---
+
+### N3 (CARRIED) — Dead code: ws.row_count == 0 always false
+**File:** write_to_sheets.py:168
+
+ws.row_count returns the sheet's grid dimension (default 1000), never 0.
+
+**Fix:** `sheet_is_empty = not ws.get_all_values()`
+
+---
+
+### N4 (CARRIED) — Hardcoded live Spreadsheet IDs
+**Files:** write_to_sheets.py:28, archive_to_input.py:32
+
+No safeguard against running these scripts against live data during testing.
+
+**Fix:** os.environ.get("SPREADSHEET_ID") with a fallback.
+
+---
+
+### N5 (CARRIED) — 7 Python scripts absent from repository
+Still missing: extract_itineraries.py, write_inputs_to_sheets.py, cleanup_sheet.py, clean_pipeline_data.py, cross_reference.py, enrich_hotels.py, enrich_hotels_booking.py. If actively used, commit them.
+
+---
+
+### N6 (CARRIED) — Hardcoded year 2026 in smoke.py default start date
+**File:** qa/smoke.py:73
+
+Months 1-6 are now generating past dates right now (escalated to M8 for the live_safe and GOLDEN impact; the root cause fix lives here).
+
+**Fix:** Use datetime.date.today().year and advance by 1 year when the generated date is already past.
+
+---
+
+### N7 (CARRIED) — ADOBE_PDF_API URL not validated by check_html.py
+**File:** app/index.html:8476, check_html.py:53-95
+
+If the PDF deployment is redeployed, PDF generation silently breaks with no validator catching it.
+
+**Fix:** Add the ADOBE_PDF_API URL fragment to the REQUIRED list in check_html.py.
+
+---
+
+### N8 (CARRIED) — check_pipeline.py hardcoded to Sumit's Mac path
+**File:** check_pipeline.py:16
 
 ```python
-row[5] = s.get("cost_inr", "")   # archive cost as a starting reference for Claude
+CLASP_LIVE_ROOT = os.path.expanduser('~/Desktop/tripstore-pipeline/clasp-live')
 ```
+Exits on any other machine.
 
-The archive's cost_inr is the per-person billed total for the trip, not a live GYG/Viator per-seat price. If Pipeline.gs's enrichment prompt treats a non-empty Avg Price as authoritative and skips overwriting it, the inflated archive cost persists in the Sightseeing master sheet and flows into future itinerary pricing.
-
-**Fix:** Leave row[5] blank. Write cost hint to row[12] (Notes_Input) where it cannot be mistaken for a market price.
-
----
-
-## CARRIED FORWARD — CRITICAL
-
-### C1 — Login is broken: checkLogin routed as POST but doPost doesn't handle it
-**Files:** app/index.html + Code.gs:doPost — **Status: UNRESOLVED**
-
-Frontend sends login as HTTP POST. doPost() only handles "signup" and "saveItinerary". checkLogin falls through to 'Invalid action' — every login returns "Invalid Credentials". Re-deploying Code.gs as-is locks all users out permanently.
-
-**Fix:** Add to doPost: `if (action === 'checkLogin') return checkLogin(data.user || '', data.pass || '');`
+**Fix:** Env-var override with the Mac path as fallback.
 
 ---
 
-### C2 — Passwords stored and compared in plaintext
-**File:** Code.gs:handleSignup, checkLogin — **Status: UNRESOLVED**
+### N9 (CARRIED) — API_URL comment says "DEV @18"
+**File:** app/index.html:3285
 
-Passwords are appended to the sheet as plaintext and compared with ===. Anyone with sheet read access sees all credentials.
+The API_URL in production HTML has a comment "DEV @18 — 2026-05-04 RBAC 5-role". Either the comment is stale or the production app is hitting the DEV backend. If the latter, all production saves go to the DEV sheet.
 
-**Fix:** Hash with Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password) before storage and comparison.
-
----
-
-## CARRIED FORWARD — MODERATE
-
-### M1 — GST 0% silently defaults to 5% (falsy check)
-**File:** Quote_Intelligence.gs:119 — `const gstPct = d.gst || 5;`
-**Status: UNRESOLVED** — Fix: `d.gst != null ? Number(d.gst) : 5`
-
-### M2 — logQuote can recurse infinitely if setupQuoteLog() fails
-**File:** Quote_Intelligence.gs:33-37 — **Status: UNRESOLVED**
-Guard: check the re-lookup is non-null before calling logQuote recursively.
-
-### M3 — Pipeline.gs risks Apps Script 6-minute execution kill on large backlogs
-**File:** Pipeline.gs:processSheet — **Status: UNRESOLVED**
-Fix: `if (Date.now() - startTime > 5 * 60 * 1000) break;` inside the batch loop.
-
-### M4 — callClaudeAPI crashes on unexpected response structure
-**File:** Pipeline.gs:callClaudeAPI — responseData.content[0].text throws when content is absent.
-**Status: UNRESOLVED** — Fix: `const text = responseData?.content?.[0]?.text; if (!text) throw new Error(...);`
-
-### M5 — innerHTML built from Google Sheet data without sanitization (stored XSS)
-**File:** app/index.html — multiple innerHTML assignments using sheet-sourced strings.
-**Status: UNRESOLVED** — Add esc() helper; escape all dynamic values before HTML injection.
+**Fix:** Open Apps Script → Deploy → Manage Deployments; confirm which environment this deployment ID belongs to. Update CLAUDE.md and the comment.
 
 ---
 
-## CARRIED FORWARD — MINOR
+### N10 (CARRIED) — nightly.py only compares pair_01 for P01 and P07
+**File:** qa/nightly.py:69-72
 
-### N4 — doGet checkLogin exposes credentials in URL and server logs
-**File:** Code.gs:doGet — **Status: UNRESOLVED** — Remove GET login; auth via POST body only.
+Three child pairs and three season pairs exist; only the first of each is pair-compared. pair_child_02/03 and pair_season_02/03 are fetched but never checked.
 
-### N5 — No brute-force protection on login
-**File:** Code.gs:checkLogin — **Status: UNRESOLVED** — Add Utilities.sleep(500) + failed-attempt logging.
-
-### N6 — ws.row_count == 0 is dead code
-**File:** write_to_sheets.py:168 — **Status: UNRESOLVED** — Remove; keep `not ws.get_all_values()`.
-
-### N7 — Hardcoded Spreadsheet IDs and credential paths
-**Files:** write_to_sheets.py:28, archive_to_input.py:32 — **Status: UNRESOLVED**
-Replace with os.environ.get(...).
-
-### N8 — 7 review-listed pipeline scripts absent from repo
-**Missing:** extract_itineraries.py, write_inputs_to_sheets.py, cleanup_sheet.py, clean_pipeline_data.py, cross_reference.py, enrich_hotels.py, enrich_hotels_booking.py — **Status: UNRESOLVED**
-Commit if in active use; document retirement if not.
+**Fix:** Extend the loop to include all six pairs (same gap exists in smoke.py seam_pricing).
 
 ---
 
-## Night Guardian Status
+### N11 (NEW) — edge_date_booking_eq_travel travel date expires in 28 days
+**File:** qa/gen_scenarios.py:179
 
-**Last run: 2026-06-13 — GREEN** (PASS 1050 / KNOWN 29 / SKIP 195 / FAIL 0)
+travelStartDate="2026-07-15" becomes past on July 16, 2026 — 28 days from now.
 
-All 29 KNOWN items tracked in qa/known_issues.json with registry refs and ratchets. No new regressions. The high SKIP count (195) is consistent with NEW-M1: April seasonal-pair scenarios are sending past travelStartDate values, causing the P07 ratio to collapse to ~1.0 and fall into the fill-to-budget SKIP guard. Those P07 assertions are not currently running in practice.
+**Fix:** Change to "2027-07-15" now, or generate dynamically.
+
+---
+
+### N12 (NEW) — smoke.py exception handler uses wrong check name for T08
+**File:** qa/smoke.py:313
+
+The exception path uses "T08_a1_self_ref" but the normal path uses the canonical "T08_combo_a1_self_ref". If the sheet scan raises an exception, the SKIP result has an inconsistent check key — any known_issues.json entry or log parser matching on check name will miss it.
+
+**Fix:** Change the exception path tuple to ("T08", "T08_combo_a1_self_ref").
 
 ---
 
 ## Action Items (Priority Order)
 
-1. [C1 — URGENT] Add checkLogin to doPost in Code.gs and redeploy.
-2. [C2 — URGENT] Hash passwords with SHA-256 in Code.gs before storage and comparison.
-3. [NEW-M1] Update seasonal pair travelStartDate values to 2027 in gen_scenarios.py; regenerate scenarios.json.
-4. [NEW-M2] Fix make_hotel_row to 26 columns in archive_to_input.py; update row[20]=ADDED_BY, row[23]=STATUS.
-5. [M1] Fix d.gst || 5 falsy bug in Quote_Intelligence.gs.
-6. [M2] Guard logQuote retry against infinite recursion.
-7. [M3] Add deadline guard to processSheet loop in Pipeline.gs.
-8. [M4] Null-check responseData.content[0] in callClaudeAPI.
-9. [M5] Escape all sheet data before innerHTML injection in app/index.html.
-10. [NEW-N1] Move E_CHECKS/P_CHECKS to invariants.py; import in both runners.
-11. [NEW-N2] Make fallback travelStartDate year dynamic in smoke.py.
-12. [NEW-N3] Clear row[5] in make_sightseeing_row; use Notes_Input (row[12]) for cost hint.
-13. [N6] Remove dead ws.row_count == 0 check in write_to_sheets.py.
-14. [N7] Replace hardcoded Spreadsheet IDs with environment variables.
-15. [N8] Commit or retire the 7 missing pipeline Python scripts.
+1. [C3 — URGENT, 4 DAYS OPEN] Delete lines 1-8 (DEV credentials block) from app/index.html and push to v2. 2-minute fix.
+2. [M8 — TODAY] Add explicit future travelStartDate to prague_4n_couple and budapest_4n_couple in gen_scenarios.py (or fix smoke.py:73 year logic). Two live_safe smoke checks are currently unreliable.
+3. [C1 — URGENT] Add checkLogin to doPost in Code.gs before any re-deploy.
+4. [C2 — HIGH] Hash passwords in Code.gs.
+5. [N9 — TODAY] Verify the API_URL deployment in Apps Script console. If DEV, critical data-integrity issue.
+6. [M7 + M4 — TODAY] Update all seven past travelStartDate values in gen_scenarios.py to 2027, regenerate scenarios.json, and commit.
+7. [N11 — BEFORE JULY 16] Update edge_date_booking_eq_travel to "2027-07-15".
+8. [M6 — THIS WEEK] Escape l.from, l.to, t.tour_name, m.tour_name, data.pass_duration in Swiss Pass innerHTML block.
+9. [N6 — THIS WEEK] Fix hardcoded 2026 year in smoke.py:73.
+10. [M3 — THIS WEEK] Change USER_ENTERED to RAW in write_to_sheets.py:196 and archive_to_input.py:390.
+11. [M5 — THIS WEEK] Apply _e() globally to all innerHTML interpolations in app/index.html.
+12. [N12] Fix wrong check name in smoke.py:313 exception handler (2-line fix).
+13. [N10] Add pair_02/03 comparisons to nightly.py and smoke.py.
+14. [N7] Add ADOBE_PDF_API URL check to check_html.py.
+15. [N3, N4, N8] Dead code, hardcoded IDs, CLASP path — low-effort cleanup.
+16. [N5] Commit the 7 missing Python scripts.
 
 ---
 
-*Generated automatically — 2026-06-14*
+*Generated automatically — 2026-06-17*
