@@ -1,27 +1,28 @@
-# TripStore Daily Code Review — 2026-06-20
+# TripStore Daily Code Review — 2026-06-21
 
-**Files reviewed:** app/index.html, write_to_sheets.py, archive_to_input.py, check_html.py, check_pipeline.py, qa/smoke.py, qa/invariants.py, qa/nightly.py, qa/gen_scenarios.py
+**Files reviewed:** app/index.html, write_to_sheets.py, archive_to_input.py, check_html.py, check_pipeline.py, Quote_Intelligence_Dashboard.html, qa/smoke.py, qa/invariants.py, qa/nightly.py, qa/gen_scenarios.py
 **Files absent from repo (cannot inspect):** Code.gs, Pipeline.gs, Quote_Intelligence.gs, extract_itineraries.py, write_inputs_to_sheets.py, cleanup_sheet.py, clean_pipeline_data.py, cross_reference.py, enrich_hotels.py, enrich_hotels_booking.py
 
 ---
 
 ## Summary
 
-| Severity | Count | New Today | Carried From 2026-06-19 |
-|----------|-------|-----------|--------------------------|
-| CRITICAL | 3     | 0         | C1, C2, C3 carried open  |
-| MODERATE | 8     | 0         | M1–M8 carried            |
-| MINOR    | 13    | 2 new (N13, N14) | N1–N12 carried    |
-| **Total**| **24**| **2 new** | **22 still open, zero fixes landed in 4 days** |
+| Severity | Count | New Today | Carried |
+|----------|-------|-----------|----------|
+| CRITICAL | 3     | 0         | C1, C2, C3 |
+| MODERATE | 9     | 1 new (M9)| M1–M8 |
+| MINOR    | 15    | 2 new (N15, N16) | N1–N14 |
+| **Total**| **27**| **3 new** | **24 still open — zero fixes in 5 days** |
 
-> ⚠️ **Zero fixes landed since the 2026-06-16 report (4 days).** All prior issues remain open.
+> ⚠️ **Zero fixes landed since the 2026-06-16 report (5 days).** All prior issues remain open.
 >
 > **Escalation watch:**
-> - **C3** is now **6 DAYS OPEN** — DEV Sheet ID and DEV API deployment key visible in production HTML source to any visitor. Confirmed still present in `app/index.html:1–8`. 2-minute fix.
-> - **M8** is now **5 DAYS OF ACTIVE BREAKAGE** — `smoke.py:73` hardcoded 2026 means all month ≤ 6 scenarios (including golden `rome_florence_venice_8n`) run against past travel dates. Engine may apply fallback logic silently — golden diffs are unreliable until fixed.
-> - **M4** is now **22 days stale.** `edge_date_month_boundary` fired May 29, 2026 — 22 days ago.
-> - **M7** worsens: April P07 dates are now **66 days** in the past; June P07 dates are **5 days** in the past.
-> - **N11** — `edge_date_booking_eq_travel` expires in **25 days** (July 15). Must be fixed before then.
+> - **C3** is now **7 DAYS OPEN** — DEV Sheet ID and DEV API deployment key visible in production HTML source to any visitor. Still present in `app/index.html:1–8`. 2-minute fix.
+> - **M8** is now **6 DAYS OF ACTIVE BREAKAGE** — `smoke.py:73` hardcoded 2026 means all month ≤ 6 scenarios run with past travel dates. Engine may apply fallback logic silently — golden diffs are unreliable.
+> - **M4** is now **23 DAYS STALE.** `edge_date_month_boundary` fired May 29, 2026.
+> - **M7 WORSENING:** April P07 dates are now **67 days** in the past; June P07 dates **6 days** in the past.
+> - **N11** — `edge_date_booking_eq_travel` expires in **24 days** (July 15).
+> - **M9 (NEW TODAY)** — `Quote_Intelligence_Dashboard.html` silently replaces a failed API call with demo data, hiding production outages from analysts.
 
 ---
 
@@ -48,7 +49,7 @@ Passwords stored and compared in plaintext. Any team member with sheet access ca
 
 ---
 
-### C3 (CARRIED — **6 DAYS OPEN**, STILL NOT FIXED) — DEV credentials exposed in production HTML
+### C3 (CARRIED — **7 DAYS OPEN**, STILL NOT FIXED) — DEV credentials exposed in production HTML
 **File:** `app/index.html:1–8` — CONFIRMED STILL PRESENT
 
 The production app at `fit.tripstoreholidays.com/app/` opens with the following comment visible to any user who views page source:
@@ -60,7 +61,7 @@ The production app at `fit.tripstoreholidays.com/app/` opens with the following 
   DEV API: AKfycbz3dpvTIrQ0gQWqmO3cGZ9fHoJ2oHOahZmvLBk-oy7x1ShyNacqhQhjsIVQJ2bYbXuqrQ
 -->
 ```
-Six days open. The DEV Sheet ID and DEV deployment key are fully public.
+Seven days open. The DEV Sheet ID and DEV deployment key are fully public.
 
 **Fix:** Delete lines 1–8 from `app/index.html` and push to v2. Takes 2 minutes.
 
@@ -95,10 +96,10 @@ Both use `value_input_option="USER_ENTERED"`. Any cell beginning with `=`, `+`, 
 
 ---
 
-### M4 (CARRIED — **22 DAYS STALE**) — `edge_date_month_boundary` travel date in the past
+### M4 (CARRIED — **23 DAYS STALE**) — `edge_date_month_boundary` travel date in the past
 **File:** `qa/gen_scenarios.py:168` — CONFIRMED STILL OPEN
 
-`travelStartDate="2026-05-29"` is now 22 days in the past. The engine may apply fallback logic, producing unreliable smoke signals.
+`travelStartDate="2026-05-29"` is now 23 days in the past. The engine may apply fallback logic, producing unreliable smoke signals.
 
 **Fix:** Change to `"2027-05-29"` or derive at runtime.
 
@@ -125,20 +126,20 @@ Both use `value_input_option="USER_ENTERED"`. Any cell beginning with `=`, `+`, 
 ### M7 (CARRIED — WORSENING) — All six P07 seasonal-pair scenarios have past travel dates
 **File:** `qa/gen_scenarios.py:185–190` — CONFIRMED STILL OPEN
 
-`"2026-04-15"` is now **66 days** in the past; `"2026-06-15"` is now **5 days** in the past. Both P07 pair halves are now stale. The P07 ratio check is operating on stale dates across all three seasonal pairs, producing unreliable signals.
+`"2026-04-15"` is now **67 days** in the past; `"2026-06-15"` is now **6 days** in the past. The P07 ratio check is operating on stale dates across all three seasonal pairs.
 
-**Fix:** Update all six `travelStartDate` values to future dates (e.g. April 2027 / June 2027), or generate dynamically.
+**Fix:** Update all six `travelStartDate` values to `"2027-04-15"` / `"2027-06-15"`, or generate dynamically.
 
 ---
 
-### M8 (CARRIED — **ACTIVE FOR 5 DAYS**) — Hardcoded 2026 in `smoke.py` actively breaking scenarios
+### M8 (CARRIED — **ACTIVE FOR 6 DAYS**) — Hardcoded 2026 in `smoke.py` actively breaking scenarios
 **File:** `qa/smoke.py:73` — CONFIRMED STILL OPEN
 
 ```python
 "travelStartDate": scn.get("travelStartDate", f"2026-{scn.get('month', 7):02d}-15")
 ```
 
-As of today (June 20, 2026), every scenario with `month <= 6` and no explicit `travelStartDate` fires a past travel date. Actively broken for 5 days. Golden `rome_florence_venice_8n` (month=6) is affected — any golden diff captured since June 15 may reflect a stale or fallback-mode engine response.
+As of today (June 21, 2026), every scenario with `month <= 6` and no explicit `travelStartDate` fires a past travel date. Actively broken for 6 days. Golden `rome_florence_venice_8n` (month=6) is affected — golden diffs captured since June 15 may reflect stale or fallback-mode engine responses.
 
 **Fix (1 line):**
 ```python
@@ -146,6 +147,28 @@ import datetime
 yr = datetime.date.today().year
 "travelStartDate": scn.get("travelStartDate", f"{yr}-{scn.get('month', 7):02d}-15")
 ```
+
+---
+
+### M9 (NEW) — `Quote_Intelligence_Dashboard.html` silently falls back to demo data on API failure
+**File:** `Quote_Intelligence_Dashboard.html:155–168`
+
+```javascript
+async function loadData() {
+  try {
+    const res = await fetch(API_URL + '?action=getQuoteLog');
+    const live = await res.json();
+    allData = (Array.isArray(live) && live.length > 0) ? live : DEMO_DATA;
+    ...
+  } catch(e) {
+    document.getElementById('mainContent').innerHTML = '⚠️ Could not load data...' + e.message + ...
+  }
+}
+```
+
+If the API is reachable but returns an empty array (e.g. Quote_Log not yet populated, or a deploy clears it), `allData` silently becomes `DEMO_DATA` — 11 fabricated entries including a Dimple quote showing 578.5% utilisation and Q-10009 over budget. Analysts see fabricated data and may act on false signals. There is no visual indicator distinguishing "live data" from "demo fallback" once the dashboard renders.
+
+**Fix:** Show a distinct "Demo data — API returned no records" banner when falling back; never silently mix demo into the render path.
 
 ---
 
@@ -226,7 +249,7 @@ CLAUDE.md states the live URL fragment should be `AKfycbzAbIgzRoN_MNs377jm3u`. T
 
 ---
 
-### N11 (CARRIED — **25 DAYS TO EXPIRY**) — `edge_date_booking_eq_travel` travel date expires July 15
+### N11 (CARRIED — **24 DAYS TO EXPIRY**) — `edge_date_booking_eq_travel` travel date expires July 15
 **File:** `qa/gen_scenarios.py:179`
 
 ```python
@@ -242,14 +265,14 @@ On July 16, this date becomes past. Include in the same fix batch as M4 and M7.
 ### N12 (CARRIED) — Transfer dedup city key mismatch in `archive_to_input.py`
 **File:** `archive_to_input.py:155–161, 178–184, 220–225`
 
-`transfers_keys()` builds dedup keys using column 0 (e.g. `"London"`). But `parse_transfers_cell` derives city via a regex split of the "from" description that lacks full airport names ("heathrow", "gatwick", "schiphol", "orly", "bergamo", etc.). For any transfer written with a full airport name, the heuristic returns `"London Heathrow"` instead of `"London"`, breaking the dedup match and re-queuing already-enriched transfers.
+`transfers_keys()` builds dedup keys using column 0 (e.g. `"London"`). But `parse_transfers_cell` derives city via a regex split that lacks full airport names ("heathrow", "gatwick", "schiphol", "orly", "bergamo", etc.). For any transfer written with a full airport name, the heuristic returns `"London Heathrow"` instead of `"London"`, breaking the dedup match and re-queuing already-enriched transfers.
 
 **Fix (option A):** Add full airport names to the regex keyword list.
 **Fix (option B):** Use `(from_loc.lower(), to_loc.lower())` as the dedup key, matching the bidirectional pattern used for trains.
 
 ---
 
-### N13 (NEW) — T08 check name mismatch between exception path and success path in `smoke.py`
+### N13 (CARRIED) — T08 check name mismatch between exception path and success path in `smoke.py`
 **File:** `qa/smoke.py:291` (success path) vs `qa/smoke.py:313` (exception path)
 
 In the success path, T08 is reported as `"T08_combo_a1_self_ref"`:
@@ -260,13 +283,13 @@ In the exception-catch block, it is reported as `"T08_a1_self_ref"`:
 ```python
 ("T08", "T08_a1_self_ref"),
 ```
-If `known_issues.json` ever references `T08_combo_a1_self_ref`, the exception-path SKIP result won't be matched by the ratchet. The two names should be identical.
+If `known_issues.json` ever references `T08_combo_a1_self_ref`, the exception-path SKIP result won't be matched by the ratchet.
 
 **Fix:** Change `"T08_a1_self_ref"` on line 313 to `"T08_combo_a1_self_ref"`.
 
 ---
 
-### N14 (NEW) — `check_shape()` only validates the first tour's schema
+### N14 (CARRIED) — `check_shape()` only validates the first tour's schema
 **File:** `qa/invariants.py:82–86`
 
 ```python
@@ -278,7 +301,7 @@ for _, _, t in _city_tours(resp):
 return _r("shape", "shape", "PASS", sid)
 ```
 
-The `break` exits the outer loop after checking Tour 1. Tours 2..N are never validated. An engine regression where only later tours are malformed (missing `canonical_id`, etc.) would pass the shape check unchallenged.
+Tours 2..N are never validated. An engine regression where only later tours are malformed would pass the shape check unchallenged.
 
 **Fix:** Remove the `break` and return PASS only after the loop completes naturally:
 ```python
@@ -291,25 +314,51 @@ return _r("shape", "shape", "PASS", sid)
 
 ---
 
-## Action Items (Priority Order)
+### N15 (NEW) — `e.message` inserted into `innerHTML` in Quote Intelligence Dashboard
+**File:** `Quote_Intelligence_Dashboard.html:164–166`
 
-1. **[C3 — URGENT, 6 DAYS OPEN]** Delete lines 1–8 from `app/index.html`. Push to v2. 2 minutes.
-2. **[M8 — URGENT, 5 DAYS ACTIVE]** Fix hardcoded 2026 in `smoke.py:73` to use `datetime.date.today().year`. 1-line fix.
-3. **[C1 — URGENT]** Add `checkLogin` to `doPost` in Code.gs before any re-deploy.
-4. **[C2 — HIGH]** Hash passwords in Code.gs.
-5. **[N9 — TODAY]** Verify `AKfycbwP9KQH39...` in Apps Script console — confirm live vs. DEV environment.
-6. **[M4, M7, N11 — THIS WEEK]** Update all stale and near-expiry `travelStartDate` values in `gen_scenarios.py` to 2027. Re-run to regenerate `scenarios.json`.
-7. **[M6 — THIS WEEK]** Escape Swiss Pass innerHTML values with `_e()`.
-8. **[M5 — THIS WEEK]** Apply `_e()` globally to all unescaped `innerHTML` interpolations.
-9. **[M3 — THIS WEEK]** Change `USER_ENTERED` to `RAW` in `write_to_sheets.py:196` and `archive_to_input.py:390`.
-10. **[N13 — QUICK]** Fix T08 check name in `smoke.py:313` to `"T08_combo_a1_self_ref"`.
-11. **[N14 — QUICK]** Remove the `break` from `check_shape()` in `invariants.py:86`.
-12. **[N12]** Fix transfer dedup city key mismatch in `archive_to_input.py`.
-13. **[N10]** Add pair_02/03 comparisons to `nightly.py`.
-14. **[N7]** Add `ADOBE_PDF_API` URL check to `check_html.py`.
-15. **[N3, N4, N8]** Dead code, hardcoded IDs, CLASP path — low-effort fixes.
-16. **[N5]** Commit the 7 missing Python scripts.
+```javascript
+document.getElementById('mainContent').innerHTML =
+  '...⚠️ Could not load data...<small>' + e.message + '</small></div>';
+```
+
+`e.message` from a failed `fetch()` or `res.json()` call is injected directly into `innerHTML` without escaping. If a malicious proxy or server returns a response whose parse error contains HTML/script tags, this is an XSS vector. Low-probability in practice but trivial to fix.
+
+**Fix:** `document.createTextNode(e.message)` or sanitise with `.replace(/</g, '&lt;')` before inserting.
 
 ---
 
-*Generated automatically — 2026-06-20*
+### N16 (NEW) — Apparent real customer names and financial figures in public `DEMO_DATA`
+**File:** `Quote_Intelligence_Dashboard.html:139–150`
+
+The `DEMO_DATA` constant contains 11 entries with names (`Sumit`, `Fatema`, `Benson`, `Dimple`, `Arun`, `Aanchal`) and precise INR quote amounts (₹1.63L–₹5.28L). This file is committed to a public GitHub repository (GitHub Pages host). If any of these are real clients, their travel itinerary costs are publicly disclosed.
+
+**Fix:** Replace with clearly synthetic names (`Test_Client_A`, `Sample_User_B`, etc.) and round/scramble the financial figures.
+
+---
+
+## Action Items (Priority Order)
+
+1. **[C3 — URGENT, 7 DAYS OPEN]** Delete lines 1–8 from `app/index.html`. Push to v2. 2 minutes.
+2. **[M8 — URGENT, 6 DAYS ACTIVE]** Fix hardcoded 2026 in `smoke.py:73` to use `datetime.date.today().year`. 1-line fix.
+3. **[C1 — URGENT]** Add `checkLogin` to `doPost` in Code.gs before any re-deploy.
+4. **[C2 — HIGH]** Hash passwords in Code.gs.
+5. **[N16 — THIS WEEK]** Replace apparent real client names in `DEMO_DATA` with synthetic placeholders.
+6. **[M9 — THIS WEEK]** Add a visible "Demo fallback active" banner to `Quote_Intelligence_Dashboard.html` so analysts are never silently shown fabricated data.
+7. **[N9 — TODAY]** Verify `AKfycbwP9KQH39...` in Apps Script console — confirm live vs. DEV environment.
+8. **[M4, M7, N11 — THIS WEEK]** Update all stale and near-expiry `travelStartDate` values in `gen_scenarios.py` to 2027. Re-run to regenerate `scenarios.json`.
+9. **[M6 — THIS WEEK]** Escape Swiss Pass innerHTML values with `_e()`.
+10. **[M5 — THIS WEEK]** Apply `_e()` globally to all unescaped `innerHTML` interpolations.
+11. **[M3 — THIS WEEK]** Change `USER_ENTERED` to `RAW` in `write_to_sheets.py:196` and `archive_to_input.py:390`.
+12. **[N15 — QUICK]** Sanitise `e.message` before inserting into innerHTML in `Quote_Intelligence_Dashboard.html`.
+13. **[N13 — QUICK]** Fix T08 check name in `smoke.py:313` to `"T08_combo_a1_self_ref"`.
+14. **[N14 — QUICK]** Remove the `break` from `check_shape()` in `invariants.py:86`.
+15. **[N12]** Fix transfer dedup city key mismatch in `archive_to_input.py`.
+16. **[N10]** Add pair_02/03 comparisons to `nightly.py`.
+17. **[N7]** Add `ADOBE_PDF_API` URL check to `check_html.py`.
+18. **[N3, N4, N8]** Dead code, hardcoded IDs, CLASP path — low-effort fixes.
+19. **[N5]** Commit the 7 missing Python scripts.
+
+---
+
+*Generated automatically — 2026-06-21*
