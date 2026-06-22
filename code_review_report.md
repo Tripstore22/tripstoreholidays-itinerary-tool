@@ -1,364 +1,335 @@
-# TripStore Daily Code Review — 2026-06-21
+# TripStore Daily Code Review — 2026-06-22
 
-**Files reviewed:** app/index.html, write_to_sheets.py, archive_to_input.py, check_html.py, check_pipeline.py, Quote_Intelligence_Dashboard.html, qa/smoke.py, qa/invariants.py, qa/nightly.py, qa/gen_scenarios.py
-**Files absent from repo (cannot inspect):** Code.gs, Pipeline.gs, Quote_Intelligence.gs, extract_itineraries.py, write_inputs_to_sheets.py, cleanup_sheet.py, clean_pipeline_data.py, cross_reference.py, enrich_hotels.py, enrich_hotels_booking.py
+**Run by:** Automated (Claude Code · scheduled)
+**Branch:** v2 (commit `82578ce`)
+**Recent commits:**
+```
+82578ce Auto: daily code review 2026-06-21
+69003e4 Auto: daily code review 2026-06-20
+2109581 Auto: daily code review 2026-06-19
+15589d9 Auto: daily code review 2026-06-18
+d0473f8 Auto: daily code review 2026-06-16
+```
+
+---
+
+## Files Reviewed
+
+| File | Lines | Status |
+|------|-------|--------|
+| `app/index.html` | 10,056 | ✅ Reviewed |
+| `index.html` (landing page) | 2,073 | ✅ Reviewed |
+| `write_to_sheets.py` | ~220 | ✅ Reviewed |
+| `archive_to_input.py` | ~290 | ✅ Reviewed |
+| `check_html.py` | ~100 | ✅ Reviewed |
+| `check_pipeline.py` | ~180 | ✅ Reviewed |
+| `qa/invariants.py` | ~280 | ✅ Reviewed |
+| `qa/smoke.py` | ~260 | ✅ Reviewed |
+| `qa/nightly.py` | ~110 | ✅ Reviewed |
+| `qa/gen_scenarios.py` | ~170 | ✅ Reviewed |
+
+### ⚠️ Files NOT reviewable (not in this repo)
+
+The following files requested for review live at `~/Desktop/tripstore-pipeline/` on Sumit's local machine only — they are not committed to GitHub and are inaccessible from CI/remote sessions:
+
+- `Code.gs`, `Pipeline.gs`, `Quote_Intelligence.gs`, `Wallet.gs`
+- `extract_itineraries.py`, `write_inputs_to_sheets.py`, `cleanup_sheet.py`
+- `clean_pipeline_data.py`, `cross_reference.py`, `enrich_hotels.py`, `enrich_hotels_booking.py`
+
+**Action needed:** To include these in daily automated reviews, they need to be in a (private) repo or made available via CI secrets/path.
 
 ---
 
 ## Summary
 
-| Severity | Count | New Today | Carried |
-|----------|-------|-----------|----------|
-| CRITICAL | 3     | 0         | C1, C2, C3 |
-| MODERATE | 9     | 1 new (M9)| M1–M8 |
-| MINOR    | 15    | 2 new (N15, N16) | N1–N14 |
-| **Total**| **27**| **3 new** | **24 still open — zero fixes in 5 days** |
-
-> ⚠️ **Zero fixes landed since the 2026-06-16 report (5 days).** All prior issues remain open.
->
-> **Escalation watch:**
-> - **C3** is now **7 DAYS OPEN** — DEV Sheet ID and DEV API deployment key visible in production HTML source to any visitor. Still present in `app/index.html:1–8`. 2-minute fix.
-> - **M8** is now **6 DAYS OF ACTIVE BREAKAGE** — `smoke.py:73` hardcoded 2026 means all month ≤ 6 scenarios run with past travel dates. Engine may apply fallback logic silently — golden diffs are unreliable.
-> - **M4** is now **23 DAYS STALE.** `edge_date_month_boundary` fired May 29, 2026.
-> - **M7 WORSENING:** April P07 dates are now **67 days** in the past; June P07 dates **6 days** in the past.
-> - **N11** — `edge_date_booking_eq_travel` expires in **24 days** (July 15).
-> - **M9 (NEW TODAY)** — `Quote_Intelligence_Dashboard.html` silently replaces a failed API call with demo data, hiding production outages from analysts.
+| Severity | Count |
+|----------|-------|
+| 🔴 CRITICAL | 1 |
+| 🟠 MODERATE | 6 |
+| 🟡 MINOR | 5 |
 
 ---
 
-## CRITICAL
+## 🔴 CRITICAL Issues
 
-### C1 (CARRIED — 7+ DAYS OPEN) — Login handler missing from `doPost` in Code.gs
-**File:** `Code.gs` (not in repo)
-
-`doPost` does not handle `action=checkLogin`. Any re-deploy of Code.gs as-is will lock all users out permanently. **Fix before any next re-deploy.**
-
-**Fix:**
-```javascript
-if (action === 'checkLogin') return checkLogin(data.user || '', data.pass || '');
-```
-
----
-
-### C2 (CARRIED) — Plaintext passwords in Google Sheet
-**File:** `Code.gs` (not in repo)
-
-Passwords stored and compared in plaintext. Any team member with sheet access can read all credentials.
-
-**Fix:** Use `Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password)` and store/compare the digest.
-
----
-
-### C3 (CARRIED — **7 DAYS OPEN**, STILL NOT FIXED) — DEV credentials exposed in production HTML
-**File:** `app/index.html:1–8` — CONFIRMED STILL PRESENT
-
-The production app at `fit.tripstoreholidays.com/app/` opens with the following comment visible to any user who views page source:
-```html
-<!--
-  DEV FILE — index_fit.tripstore.DEV.html
-  DO NOT OVERWRITE WITH LIVE FILE. This has features live doesn't.
-  DEV Sheet: 1iENrNwWTtU9O664hXYS8dBG1rbcHr2x9Xt294UeORM4
-  DEV API: AKfycbz3dpvTIrQ0gQWqmO3cGZ9fHoJ2oHOahZmvLBk-oy7x1ShyNacqhQhjsIVQJ2bYbXuqrQ
--->
-```
-Seven days open. The DEV Sheet ID and DEV deployment key are fully public.
-
-**Fix:** Delete lines 1–8 from `app/index.html` and push to v2. Takes 2 minutes.
-
----
-
-## MODERATE
-
-### M1 (CARRIED) — GST 0% silently replaced with 5%
-**File:** `Quote_Intelligence.gs:119` (not in repo)
-
-`const gstPct = d.gst || 5;` treats `gst: 0` as falsy, silently billing 5% GST on zero-rated services.
-
-**Fix:** `const gstPct = d.gst != null ? Number(d.gst) : 5;`
-
----
-
-### M2 (CARRIED) — `logQuote` infinite recursion risk
-**File:** `Quote_Intelligence.gs:33–37` (not in repo)
-
-Recursive retry without a depth guard. If `setupQuoteLog()` fails, the function recurses until stack overflow.
-
-**Fix:** After `setupQuoteLog()`, look up the sheet again; if still null, log and return instead of recursing.
-
----
-
-### M3 (CARRIED) — Formula injection via `USER_ENTERED` in both sheet writers
-**Files:** `write_to_sheets.py:196`, `archive_to_input.py:390` — CONFIRMED STILL OPEN
-
-Both use `value_input_option="USER_ENTERED"`. Any cell beginning with `=`, `+`, `-`, or `@` executes as a formula in Google Sheets.
-
-**Fix:** Use `value_input_option="RAW"` for all data rows in both scripts.
-
----
-
-### M4 (CARRIED — **23 DAYS STALE**) — `edge_date_month_boundary` travel date in the past
-**File:** `qa/gen_scenarios.py:168` — CONFIRMED STILL OPEN
-
-`travelStartDate="2026-05-29"` is now 23 days in the past. The engine may apply fallback logic, producing unreliable smoke signals.
-
-**Fix:** Change to `"2027-05-29"` or derive at runtime.
-
----
-
-### M5 (CARRIED) — `innerHTML` injecting unescaped API/user data
-**File:** `app/index.html:4900, 4903, 4908` — CONFIRMED STILL OPEN
-
-`intel.nextCity` (line 4900) and `r.city` (lines 4903, 4908) injected raw into innerHTML template literals. `_e()` escape helper exists but is not applied.
-
-**Fix:** Apply `_e()` to every API/user value interpolated into innerHTML template literals.
-
----
-
-### M6 (CARRIED) — Swiss Pass injects five unescaped API strings into `innerHTML`
-**File:** `app/index.html:5101, 5131, 5154, 5173` — CONFIRMED STILL OPEN
-
-`l.from`, `l.to` (line 5101), `t.tour_name` (line 5131), `missingFlags[].tour_name` (line 5154), and `data.pass_duration` (line 5173) are all injected raw. A poisoned sheet row would trigger stored XSS for every user opening the Swiss Pass panel.
-
-**Fix:** Run all five values through `_e()` before interpolation, or switch to DOM construction.
-
----
-
-### M7 (CARRIED — WORSENING) — All six P07 seasonal-pair scenarios have past travel dates
-**File:** `qa/gen_scenarios.py:185–190` — CONFIRMED STILL OPEN
-
-`"2026-04-15"` is now **67 days** in the past; `"2026-06-15"` is now **6 days** in the past. The P07 ratio check is operating on stale dates across all three seasonal pairs.
-
-**Fix:** Update all six `travelStartDate` values to `"2027-04-15"` / `"2027-06-15"`, or generate dynamically.
-
----
-
-### M8 (CARRIED — **ACTIVE FOR 6 DAYS**) — Hardcoded 2026 in `smoke.py` actively breaking scenarios
-**File:** `qa/smoke.py:73` — CONFIRMED STILL OPEN
-
-```python
-"travelStartDate": scn.get("travelStartDate", f"2026-{scn.get('month', 7):02d}-15")
-```
-
-As of today (June 21, 2026), every scenario with `month <= 6` and no explicit `travelStartDate` fires a past travel date. Actively broken for 6 days. Golden `rome_florence_venice_8n` (month=6) is affected — golden diffs captured since June 15 may reflect stale or fallback-mode engine responses.
-
-**Fix (1 line):**
-```python
-import datetime
-yr = datetime.date.today().year
-"travelStartDate": scn.get("travelStartDate", f"{yr}-{scn.get('month', 7):02d}-15")
-```
-
----
-
-### M9 (NEW) — `Quote_Intelligence_Dashboard.html` silently falls back to demo data on API failure
-**File:** `Quote_Intelligence_Dashboard.html:155–168`
+### C1 — Password sent as GET query parameter
+**File:** `app/index.html:3713`
 
 ```javascript
-async function loadData() {
-  try {
-    const res = await fetch(API_URL + '?action=getQuoteLog');
-    const live = await res.json();
-    allData = (Array.isArray(live) && live.length > 0) ? live : DEMO_DATA;
-    ...
-  } catch(e) {
-    document.getElementById('mainContent').innerHTML = '⚠️ Could not load data...' + e.message + ...
-  }
+const res = await fetch(
+  `${API_URL}?action=checkLogin&user=${encodeURIComponent(user)}&pass=${encodeURIComponent(pass)}`
+);
+```
+
+Passwords are passed in the URL query string. This means every login attempt writes the plaintext password to:
+- **Browser history** (anyone at the computer can read it from the address bar)
+- **Google Apps Script server logs** (Apps Script logs incoming request URLs by default)
+- **Chrome DevTools Network panel** (visible to anyone who opens devtools)
+- **Any CDN or proxy access log** sitting in front of GAS
+
+The signup flow (line 3746) correctly uses `POST` with a JSON body — login should match.
+
+**Fix:** Change `checkLogin` to a POST request with credentials in the JSON body:
+```javascript
+const res = await fetch(API_URL, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ action: 'checkLogin', username: user, password: pass })
+});
+```
+Update the corresponding Apps Script `doPost()` handler to read `params.username` / `params.password`.
+
+---
+
+## 🟠 MODERATE Issues
+
+### M1 — Session token sent in GET URL
+**File:** `app/index.html:4302`
+
+```javascript
+const res = await fetch(
+  `${API_URL}?action=validateSession&user=${encodeURIComponent(s.username)}&token=${encodeURIComponent(s.token)}`
+);
+```
+
+Session tokens in URL query strings appear in server/CDN logs and browser history. A leaked token grants full impersonation for the token's lifetime.
+
+**Fix:** Move `validateSession` to a POST request (same pattern as the `computeItinerary` calls at line 6856).
+
+---
+
+### M2 — `e.message` injected into `innerHTML` without sanitization
+**File:** `app/index.html:9104, 5184`
+
+```javascript
+// line 9104
+el.innerHTML = `<div style="...">Error: ${e.message}</div>`;
+
+// line 5184
+detailsEl.innerHTML = '<span ...>Error loading pass data: ' + (e.message || e) + '</span>';
+```
+
+JavaScript `Error.message` can contain text derived from API response bodies (e.g., JSON parse errors, network error strings). If a malicious server response triggers an exception with a crafted message containing `<script>...</script>`, this is an XSS vector.
+
+Real-world risk is low given the controlled API, but it is worth fixing. Use `textContent` for the error message portion.
+
+**Fix (line 9104 example):**
+```javascript
+const div = document.createElement('div');
+div.style.cssText = 'text-align:center;padding:60px;color:#dc2626;';
+div.textContent = 'Error: ' + (e.message || e);
+el.innerHTML = '';
+el.appendChild(div);
+```
+
+---
+
+### M3 — Production `console.log` dumps full plan JSON and agent identity
+**File:** `app/index.html:6862, 6888–6890, 6906, 8544, 8732, 8754–8761`
+
+Several verbose debug `console.log` calls remain in production code:
+
+```javascript
+console.log('[engine response]', JSON.stringify(data, null, 2));   // full API payload
+console.log('[currentPlan]', JSON.stringify(currentPlan, null, 2)); // full pricing plan
+console.log('[autoSaveTick] POSTing saveItinerary as',
+  JSON.stringify({ paxName: saveName, savedBy: agent, payload_keys: Object.keys(payload||{}) }));
+```
+
+Any user (agent, customer, competitor) who opens DevTools → Console can see full itinerary pricing, agent names, plan structure, and payload keys.
+
+**Fix:** Remove or gate behind a debug flag:
+```javascript
+if (window._TRIPSTORE_DEBUG) console.log('[engine response]', ...);
+```
+
+---
+
+### M4 — No fetch timeout on any API call — UI hangs indefinitely on slow GAS
+**File:** `app/index.html` (all `fetch()` calls)
+
+No API call uses an `AbortController` or timeout signal. Apps Script cold starts can take 15–30 seconds; if the script errors or quota-limits, the fetch hangs indefinitely. The user sees a spinner with no recovery.
+
+**Fix (pattern to apply to all `fetch` calls):**
+```javascript
+const ctrl = new AbortController();
+const timer = setTimeout(() => ctrl.abort(), 30000);
+try {
+  const res = await fetch(url, { ..., signal: ctrl.signal });
+  clearTimeout(timer);
+  // ...
+} catch(e) {
+  clearTimeout(timer);
+  if (e.name === 'AbortError') showToast('Request timed out — try again.', 'error');
+  else throw e;
 }
 ```
 
-If the API is reachable but returns an empty array (e.g. Quote_Log not yet populated, or a deploy clears it), `allData` silently becomes `DEMO_DATA` — 11 fabricated entries including a Dimple quote showing 578.5% utilisation and Q-10009 over budget. Analysts see fabricated data and may act on false signals. There is no visual indicator distinguishing "live data" from "demo fallback" once the dashboard renders.
+---
 
-**Fix:** Show a distinct "Demo data — API returned no records" banner when falling back; never silently mix demo into the render path.
+### M5 — CLAUDE.md API URL patterns stale; "DEV @18" comment misleading on live URL
+**File:** `app/index.html:3285`, `CLAUDE.md`
+
+`CLAUDE.md` states:
+- Live URL contains: `AKfycbzAbIgzRoN_MNs377jm3u`
+- DEV URL contains: `AKfycbzFTBGVeZ6oQglrgULFCJ1ESHqxipL-QGCHLVL9hBk8`
+
+But `app/index.html:3285` has:
+```javascript
+const API_URL = "...AKfycbwP9KQH39hcBcLQsPsOL_c4hKIuV3TTlm1XW2CT2e72W-TYVP01-adjsVAKtAAArhGQWA/exec";
+// DEV @18 — 2026-05-04 RBAC 5-role + getAllUsers
+```
+
+This URL matches **neither** pattern in CLAUDE.md, and the comment says "DEV @18" — implying this might be a DEV deployment ID serving the live app. `check_html.py` validates this exact URL, so the URL itself is correct, but:
+
+1. CLAUDE.md documentation is stale and will cause confusion during incident response.
+2. The "DEV @18" comment suggests to any reader that the live app is running on a DEV deployment.
+
+**Fix:** Update CLAUDE.md with the current live URL fragment (`AKfycbwP9KQH39`…). Change the line 3285 comment from `// DEV @18` to `// LIVE @18 — 2026-05-04 RBAC 5-role`.
 
 ---
 
-## MINOR
+### M6 — `write_to_sheets.py`: dead `row_count` branch + no chunking on `append_rows`
+**File:** `write_to_sheets.py:168, 185`
 
-### N1 (CARRIED) — `doGet` login exposes password in URL
-**File:** `Code.gs` (not in repo). GET-based login bakes credentials into Apps Script execution logs. **Fix:** Remove GET login path; use `doPost` exclusively.
+**Issue A — Dead-code branch:**
+```python
+sheet_is_empty = ws.row_count == 0 or not ws.get_all_values()
+```
+When gspread creates a new worksheet via `add_worksheet(rows=1000)`, `ws.row_count` is 1000 — never 0. The first condition is dead code. The actual empty check is `not ws.get_all_values()`, which is also a redundant second API call (the same data is fetched again in `build_existing_keys()`).
 
----
+**Fix:** Cache the result of `get_all_values()` and pass it to both functions:
+```python
+all_values = ws.get_all_values()
+sheet_is_empty = not all_values
+if sheet_is_empty:
+    ws.append_row(headers, value_input_option="RAW")
+    apply_header_style(ws, len(headers))
+existing_keys = build_existing_keys_from_data(all_values, headers)
+```
 
-### N2 (CARRIED) — No brute-force protection on login
-**File:** `Code.gs` (not in repo). No rate limiting or lockout on failed attempts. **Fix:** `Utilities.sleep(500)` on every login call; log repeated failures.
+**Issue B — No chunking on `append_rows()`:**
+```python
+ws.append_rows(new_rows, value_input_option="USER_ENTERED")
+```
+Sheets API has a 10MB-per-request limit and rate quotas (~60 writes/minute). If `new_rows` is large, this call fails with a quota error and nothing is written — no partial progress, no retry.
 
----
-
-### N3 (CARRIED) — Dead code: `ws.row_count == 0` always false
-**File:** `write_to_sheets.py:168` — CONFIRMED STILL OPEN
-
-`ws.row_count` returns the sheet's grid dimension (default 1000), never 0. The first clause is dead.
-
-**Fix:** `sheet_is_empty = not ws.get_all_values()`
-
----
-
-### N4 (CARRIED) — Hardcoded live Spreadsheet IDs
-**Files:** `write_to_sheets.py:28`, `archive_to_input.py:32` — CONFIRMED STILL OPEN
-
-No safeguard against accidentally running against live data during testing.
-
-**Fix:** `os.environ.get("SPREADSHEET_ID")` with a fallback.
-
----
-
-### N5 (CARRIED) — 7 Python scripts absent from repository
-Still missing: `extract_itineraries.py`, `write_inputs_to_sheets.py`, `cleanup_sheet.py`, `clean_pipeline_data.py`, `cross_reference.py`, `enrich_hotels.py`, `enrich_hotels_booking.py`. If in active local use, commit them.
-
----
-
-### N7 (CARRIED) — `ADOBE_PDF_API` URL not validated by `check_html.py`
-**File:** `app/index.html`, `check_html.py:53–95`
-
-PDF deployment URL goes unchecked. If redeployed, PDF generation silently breaks.
-
-**Fix:** Add `ADOBE_PDF_API` fragment to the `REQUIRED` list in `check_html.py`.
+**Fix:** Chunk into batches of 500 rows:
+```python
+CHUNK = 500
+for i in range(0, len(new_rows), CHUNK):
+    ws.append_rows(new_rows[i:i+CHUNK], value_input_option="USER_ENTERED")
+    if i + CHUNK < len(new_rows):
+        time.sleep(1)
+```
 
 ---
 
-### N8 (CARRIED) — `check_pipeline.py` hardcoded to Sumit's Mac path
-**File:** `check_pipeline.py:16` — CONFIRMED STILL OPEN
+## 🟡 MINOR Issues
+
+### m1 — `ADOBE_PDF_API` URL has no validator guard in `check_html.py`
+**File:** `app/index.html:8476`, `check_html.py`
+
+```javascript
+const ADOBE_PDF_API = 'https://script.google.com/macros/s/AKfycbzHI5cG.../exec';
+```
+
+`check_html.py` validates the main `API_URL` constant, but `ADOBE_PDF_API` has no equivalent check. If this deployment is redeployed and the URL changes, PDFs silently break with no pre-commit guard to catch it.
+
+**Fix:** Add an entry to `check_html.py`'s `REQUIRED` list:
+```python
+("AKfycbzHI5cGHeknV7qlGNx3X62qtNH_STe3t6wRTBiJ0aEPU", "Adobe PDF API URL"),
+```
+
+---
+
+### m2 — `archive_to_input.py`: hardcoded LIVE sheet ID, no dry-run guard
+**File:** `archive_to_input.py:18`
+
+```python
+SPREADSHEET_ID = "1U3f6PhTpvbEO7JG937t2z9EW9dfB0gcIOUVA_GATIHM"  # LIVE sheet
+```
+
+Running this script accidentally in a DEV context writes to production INPUT sheets, which triggers the overnight enrichment pipeline on unvalidated data.
+
+**Fix:** Add a `--env` flag (or read `TRIPSTORE_ENV` env var), prompt for confirmation before any live write, and add `--dry-run` support.
+
+---
+
+### m3 — `check_pipeline.py`: `CLASP_LIVE_ROOT` not configurable via env var
+**File:** `check_pipeline.py:14`
 
 ```python
 CLASP_LIVE_ROOT = os.path.expanduser('~/Desktop/tripstore-pipeline/clasp-live')
 ```
-Exits on any other machine (cloud sessions, CI, second developer).
 
-**Fix:** `CLASP_LIVE_ROOT = os.environ.get('CLASP_LIVE_ROOT') or os.path.expanduser('~/Desktop/tripstore-pipeline/clasp-live')`
+The path is hardcoded. `smoke.py` correctly reads `TRIPSTORE_PIPELINE` from the environment. `check_pipeline.py` requires editing the file to run anywhere else.
 
----
-
-### N9 (CARRIED) — API URL comment says "DEV @18" in production file
-**File:** `app/index.html:3285` — CONFIRMED STILL OPEN
-
-```javascript
-const API_URL = "https://script.google.com/macros/s/AKfycbwP9KQH39hcBcLQsPsOL_c4hKIuV3TTlm1XW2CT2e72W-TYVP01-adjsVAKtAAArhGQWA/exec";
-// DEV @18 — 2026-05-04 RBAC 5-role + getAllUsers
+**Fix:**
+```python
+_pipe = os.environ.get('TRIPSTORE_PIPELINE', os.path.expanduser('~/Desktop/tripstore-pipeline'))
+CLASP_LIVE_ROOT = os.path.join(_pipe, 'clasp-live')
 ```
 
-CLAUDE.md states the live URL fragment should be `AKfycbzAbIgzRoN_MNs377jm3u`. The deployed URL does not contain that fragment and is labelled "DEV". Confirm this is intentional and update the comment and CLAUDE.md.
-
 ---
 
-### N10 (CARRIED) — `nightly.py` only compares `pair_01` for P01 and P07
-**File:** `qa/nightly.py:69–72` — CONFIRMED STILL OPEN
-
-`gen_scenarios.py` generates three pairs each for child (P01) and seasonal (P07), but `nightly.py` only runs the first pair of each. Pairs 02 and 03 are never compared nightly.
-
-**Fix:** Add pair_02/03 comparisons to the nightly loop.
-
----
-
-### N11 (CARRIED — **24 DAYS TO EXPIRY**) — `edge_date_booking_eq_travel` travel date expires July 15
-**File:** `qa/gen_scenarios.py:179`
+### m4 — `qa/invariants.py`: `import re` inside a per-tour helper function
+**File:** `qa/invariants.py`, `_word_in()` function
 
 ```python
-travelStartDate="2026-07-15"
+def _word_in(needle, hay):
+    import re    # imported on every call
+    return re.search(r"\b" + re.escape(needle) + r"\b", hay) is not None
 ```
 
-On July 16, this date becomes past. Include in the same fix batch as M4 and M7.
+Python caches modules so this doesn't re-parse the module, but it's non-idiomatic and incurs a dict lookup on each of potentially thousands of calls during a full scenario bank run.
 
-**Fix:** Change to `"2027-07-15"` or generate dynamically.
+**Fix:** Move `import re` to module top-level.
 
 ---
 
-### N12 (CARRIED) — Transfer dedup city key mismatch in `archive_to_input.py`
-**File:** `archive_to_input.py:155–161, 178–184, 220–225`
-
-`transfers_keys()` builds dedup keys using column 0 (e.g. `"London"`). But `parse_transfers_cell` derives city via a regex split that lacks full airport names ("heathrow", "gatwick", "schiphol", "orly", "bergamo", etc.). For any transfer written with a full airport name, the heuristic returns `"London Heathrow"` instead of `"London"`, breaking the dedup match and re-queuing already-enriched transfers.
-
-**Fix (option A):** Add full airport names to the regex keyword list.
-**Fix (option B):** Use `(from_loc.lower(), to_loc.lower())` as the dedup key, matching the bidirectional pattern used for trains.
-
----
-
-### N13 (CARRIED) — T08 check name mismatch between exception path and success path in `smoke.py`
-**File:** `qa/smoke.py:291` (success path) vs `qa/smoke.py:313` (exception path)
-
-In the success path, T08 is reported as `"T08_combo_a1_self_ref"`:
-```python
-results.append(_chk("T08", "T08_combo_a1_self_ref", t08, ...))
-```
-In the exception-catch block, it is reported as `"T08_a1_self_ref"`:
-```python
-("T08", "T08_a1_self_ref"),
-```
-If `known_issues.json` ever references `T08_combo_a1_self_ref`, the exception-path SKIP result won't be matched by the ratchet.
-
-**Fix:** Change `"T08_a1_self_ref"` on line 313 to `"T08_combo_a1_self_ref"`.
-
----
-
-### N14 (CARRIED) — `check_shape()` only validates the first tour's schema
-**File:** `qa/invariants.py:82–86`
+### m5 — `qa/smoke.py`: column fallback is silent; T04/T05 SKIP without alerting if column renamed
+**File:** `qa/smoke.py`, `_col()` helper
 
 ```python
-for _, _, t in _city_tours(resp):
-    for k in ("hours", "canonical_id", "name"):
-        if k not in t:
-            return _r("shape", "shape", "FAIL", ...)
-    break    # ← exits after the first tour only
-return _r("shape", "shape", "PASS", sid)
+ci_h = _col(hdr, "Duration", "Average Hours", "Avg_Duration", "Hours")
+if ci_h is not None:
+    # run T04/T05
+else:
+    results.append(inv._r("T04_hours_gt_14", "T04", "SKIP", "data", reason="Duration column not found"))
 ```
 
-Tours 2..N are never validated. An engine regression where only later tours are malformed would pass the shape check unchallenged.
+If the Sightseeing tab renames the Duration column to something not in the fallback list, T04 and T05 silently SKIP in every nightly run. The reports show SKIP without any alert that the column name changed. This is how a data quality regression can hide for weeks.
 
-**Fix:** Remove the `break` and return PASS only after the loop completes naturally:
+**Fix:** When `_col()` returns `None` for a critical column, emit a stderr warning:
 ```python
-for _, _, t in _city_tours(resp):
-    for k in ("hours", "canonical_id", "name"):
-        if k not in t:
-            return _r("shape", "shape", "FAIL", sid, expected=f"tour has {k}", got=sorted(t.keys()))
-return _r("shape", "shape", "PASS", sid)
+ci_h = _col(hdr, "Duration", "Average Hours", "Avg_Duration", "Hours")
+if ci_h is None:
+    print("WARNING: Duration column not found in Sightseeing tab — T04/T05 skipped", file=sys.stderr)
 ```
-
----
-
-### N15 (NEW) — `e.message` inserted into `innerHTML` in Quote Intelligence Dashboard
-**File:** `Quote_Intelligence_Dashboard.html:164–166`
-
-```javascript
-document.getElementById('mainContent').innerHTML =
-  '...⚠️ Could not load data...<small>' + e.message + '</small></div>';
-```
-
-`e.message` from a failed `fetch()` or `res.json()` call is injected directly into `innerHTML` without escaping. If a malicious proxy or server returns a response whose parse error contains HTML/script tags, this is an XSS vector. Low-probability in practice but trivial to fix.
-
-**Fix:** `document.createTextNode(e.message)` or sanitise with `.replace(/</g, '&lt;')` before inserting.
-
----
-
-### N16 (NEW) — Apparent real customer names and financial figures in public `DEMO_DATA`
-**File:** `Quote_Intelligence_Dashboard.html:139–150`
-
-The `DEMO_DATA` constant contains 11 entries with names (`Sumit`, `Fatema`, `Benson`, `Dimple`, `Arun`, `Aanchal`) and precise INR quote amounts (₹1.63L–₹5.28L). This file is committed to a public GitHub repository (GitHub Pages host). If any of these are real clients, their travel itinerary costs are publicly disclosed.
-
-**Fix:** Replace with clearly synthetic names (`Test_Client_A`, `Sample_User_B`, etc.) and round/scramble the financial figures.
 
 ---
 
 ## Action Items (Priority Order)
 
-1. **[C3 — URGENT, 7 DAYS OPEN]** Delete lines 1–8 from `app/index.html`. Push to v2. 2 minutes.
-2. **[M8 — URGENT, 6 DAYS ACTIVE]** Fix hardcoded 2026 in `smoke.py:73` to use `datetime.date.today().year`. 1-line fix.
-3. **[C1 — URGENT]** Add `checkLogin` to `doPost` in Code.gs before any re-deploy.
-4. **[C2 — HIGH]** Hash passwords in Code.gs.
-5. **[N16 — THIS WEEK]** Replace apparent real client names in `DEMO_DATA` with synthetic placeholders.
-6. **[M9 — THIS WEEK]** Add a visible "Demo fallback active" banner to `Quote_Intelligence_Dashboard.html` so analysts are never silently shown fabricated data.
-7. **[N9 — TODAY]** Verify `AKfycbwP9KQH39...` in Apps Script console — confirm live vs. DEV environment.
-8. **[M4, M7, N11 — THIS WEEK]** Update all stale and near-expiry `travelStartDate` values in `gen_scenarios.py` to 2027. Re-run to regenerate `scenarios.json`.
-9. **[M6 — THIS WEEK]** Escape Swiss Pass innerHTML values with `_e()`.
-10. **[M5 — THIS WEEK]** Apply `_e()` globally to all unescaped `innerHTML` interpolations.
-11. **[M3 — THIS WEEK]** Change `USER_ENTERED` to `RAW` in `write_to_sheets.py:196` and `archive_to_input.py:390`.
-12. **[N15 — QUICK]** Sanitise `e.message` before inserting into innerHTML in `Quote_Intelligence_Dashboard.html`.
-13. **[N13 — QUICK]** Fix T08 check name in `smoke.py:313` to `"T08_combo_a1_self_ref"`.
-14. **[N14 — QUICK]** Remove the `break` from `check_shape()` in `invariants.py:86`.
-15. **[N12]** Fix transfer dedup city key mismatch in `archive_to_input.py`.
-16. **[N10]** Add pair_02/03 comparisons to `nightly.py`.
-17. **[N7]** Add `ADOBE_PDF_API` URL check to `check_html.py`.
-18. **[N3, N4, N8]** Dead code, hardcoded IDs, CLASP path — low-effort fixes.
-19. **[N5]** Commit the 7 missing Python scripts.
+| # | Priority | File | Action |
+|---|----------|------|--------|
+| 1 | 🔴 CRITICAL | `app/index.html:3713` | Move `checkLogin` credentials to POST body — passwords in GET URL |
+| 2 | 🟠 MODERATE | `app/index.html:4302` | Move `validateSession` token to POST body |
+| 3 | 🟠 MODERATE | `app/index.html:9104,5184` | Replace `innerHTML = ...e.message` with `textContent` |
+| 4 | 🟠 MODERATE | `app/index.html` (all fetches) | Add 30s `AbortController` timeout to every `fetch()` call |
+| 5 | 🟠 MODERATE | `app/index.html:6862+` | Remove / gate production `console.log` dumps behind `window._TRIPSTORE_DEBUG` |
+| 6 | 🟠 MODERATE | `CLAUDE.md` + `app/index.html:3285` | Update CLAUDE.md API URL patterns; fix "DEV @18" comment to "LIVE @18" |
+| 7 | 🟠 MODERATE | `write_to_sheets.py:168,185` | Remove dead `row_count == 0` branch; add 500-row chunking to `append_rows` |
+| 8 | 🟡 MINOR | `check_html.py` | Add `ADOBE_PDF_API` URL fragment to REQUIRED list |
+| 9 | 🟡 MINOR | `archive_to_input.py` | Add `--env` flag and confirmation prompt before live writes |
+| 10 | 🟡 MINOR | `check_pipeline.py:14` | Make `CLASP_LIVE_ROOT` read from `TRIPSTORE_PIPELINE` env var |
+| 11 | 🟡 MINOR | `qa/invariants.py` | Move `import re` to module top-level |
+| 12 | 🟡 MINOR | `qa/smoke.py` | Add stderr warning when critical column not found in Sightseeing tab |
 
 ---
 
-*Generated automatically — 2026-06-21*
+## Not Changed This Run
+This report is read-only. No production code was modified. All items require Sumit's review before any fix is applied.
+
+*Generated: 2026-06-22 by automated daily code review routine.*
