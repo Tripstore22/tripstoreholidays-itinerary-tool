@@ -11,6 +11,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- F06 cache-bust: app logic is INLINE in this document, so the cache-bust target
+         is the HTML document itself (no external app-JS file exists to query-string).
+         GitHub Pages serves a strong ETag; "no-cache, must-revalidate" forces the browser
+         to revalidate the document on every load (cheap 304 when unchanged, fresh inline JS
+         the instant a promote changes the file) — kills the post-promote stale-JS bug. -->
+    <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Trip Store Holidays | Itinerary Builder</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -1532,6 +1540,15 @@ input[type="date"]#quickStartDate:focus {
           <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
             <input type="checkbox" id="swissPassToggle" onchange="toggleSwissPass(this.checked)" style="accent-color:var(--terra);">
             <span style="font-size:9px;font-weight:700;color:#92400e;">Enable</span>
+          </label>
+        </div>
+        <div id="swissPassClassRow" style="display:none;align-items:center;gap:10px;margin-bottom:6px;">
+          <span style="font-size:9px;font-weight:700;color:#92400e;">Pass class:</span>
+          <label style="display:flex;align-items:center;gap:3px;cursor:pointer;font-size:9px;font-weight:700;color:#92400e;">
+            <input type="radio" name="swissPassClass" value="2nd" checked onchange="onSwissPassClassChange(this.value)" style="accent-color:var(--terra);">2nd
+          </label>
+          <label style="display:flex;align-items:center;gap:3px;cursor:pointer;font-size:9px;font-weight:700;color:#92400e;">
+            <input type="radio" name="swissPassClass" value="1st" onchange="onSwissPassClassChange(this.value)" style="accent-color:var(--terra);">1st
           </label>
         </div>
         <div id="swissPassDetails" style="color:var(--ink3);"></div>
@@ -4535,6 +4552,7 @@ async function loadSavedList() {
             <th style="padding:11px 14px;text-align:left;font-size:10px;font-weight:700;color:#fff;letter-spacing:.5px;">CITIES</th>
             <th style="padding:11px 14px;text-align:right;font-size:10px;font-weight:700;color:#fff;letter-spacing:.5px;">HOTEL BUDGET</th>
             <th style="padding:11px 14px;text-align:right;font-size:10px;font-weight:700;color:#fff;letter-spacing:.5px;">LAND BUDGET</th>
+            <th style="padding:11px 14px;text-align:right;font-size:10px;font-weight:700;color:#fff;letter-spacing:.5px;" title="Actual quoted grand total from Quote_Log (incl. markup &amp; GST). '—' = no billed/manual save logged yet.">ACTUAL SPEND</th>
             <th style="padding:11px 14px;text-align:center;font-size:10px;font-weight:700;color:#fff;letter-spacing:.5px;">SAVED</th>
             <th style="padding:11px 14px;text-align:center;font-size:10px;font-weight:700;color:#fff;letter-spacing:.5px;">STATUS</th>
             <th style="padding:11px 14px;text-align:center;font-size:10px;font-weight:700;color:#fff;letter-spacing:.5px;">ACTIONS</th>
@@ -4552,6 +4570,8 @@ async function loadSavedList() {
             const savedDate = r.savedAt ? new Date(r.savedAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—';
             const hBudget   = r.hotelBudget ? '₹'+Number(r.hotelBudget).toLocaleString('en-IN') : '—';
             const sBudget   = r.sightBudget ? '₹'+Number(r.sightBudget).toLocaleString('en-IN') : '—';
+            const aSpend    = (r.actualSpend !== '' && r.actualSpend != null && Number(r.actualSpend) > 0)
+                              ? '₹'+Number(r.actualSpend).toLocaleString('en-IN') : '<span style="color:#94a3b8;">—</span>';
             const itinStatus = localStorage.getItem('itin_status_' + r.paxName) || 'pending';
             const statusColors = {pending:'#f59e0b',won:'#16a34a',lost:'#dc2626'};
             const statusBg = statusColors[itinStatus] || '#f59e0b';
@@ -4568,6 +4588,7 @@ async function loadSavedList() {
               <td style="padding:11px 14px;font-size:11px;color:#475569;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.cities}">${r.cities||'—'}</td>
               <td style="padding:11px 14px;text-align:right;font-size:12px;font-weight:600;">${hBudget}</td>
               <td style="padding:11px 14px;text-align:right;font-size:12px;font-weight:600;">${sBudget}</td>
+              <td style="padding:11px 14px;text-align:right;font-size:12px;font-weight:800;color:#b85c38;">${aSpend}</td>
               <td style="padding:11px 14px;text-align:center;font-size:10px;color:#64748b;white-space:nowrap;">${savedDate}</td>
               <td style="padding:8px 14px;text-align:center;">
                 <select onchange="setItineraryStatus(this,'${r.paxName.replace(/'/g,"\\'")}',this.value)"
@@ -5017,6 +5038,8 @@ function checkSwissPass() {
         swissPassEnabled = false;
         const toggle = document.getElementById('swissPassToggle');
         if (toggle) toggle.checked = false;
+        const classRow = document.getElementById('swissPassClassRow');
+        if (classRow) classRow.style.display = 'none';
         return;
     }
     card.classList.remove('hidden');
@@ -5074,6 +5097,7 @@ async function fetchSwissPassOptions() {
                   + `&nights=${swissNights}`
                   + `&adults=${adults}`
                   + `&children=${children}`
+                  + `&passClass=${getSwissPassClass()}`
                   + `&tours=${encodeURIComponent(JSON.stringify(selectedTours))}`;
         const res  = await fetch(url);
         const rawText = await res.text();
@@ -5171,7 +5195,7 @@ async function fetchSwissPassOptions() {
 
         detailsEl.innerHTML = `
             <div class="font-bold text-amber-800">${data.pass_duration}-day Swiss Travel Pass</div>
-            <div>2nd class: <b>${fmtInr(data.pass_price_per_adult_2nd)}/adult</b> &nbsp;·&nbsp; 1st class: <b>${fmtInr(data.pass_price_per_adult_1st)}/adult</b>
+            <div>2nd class: <b>${fmtInr(data.pass_price_per_adult_2nd)}/adult</b>${data.pass_class==='2nd' ? ' <span style="color:#16a34a;font-weight:700;">✓ applied</span>' : ''} &nbsp;·&nbsp; 1st class: <b>${fmtInr(data.pass_price_per_adult_1st)}/adult</b>${data.pass_class==='1st' ? ' <span style="color:#16a34a;font-weight:700;">✓ applied</span>' : ''}
               ${data.children_travel_free ? '&nbsp;·&nbsp; <span class="text-green-700">Children FREE</span>' : ''}
             </div>
             <div class="mt-1 text-[9px] text-slate-500 border-t border-amber-100 pt-1">
@@ -5228,7 +5252,9 @@ function applySwissPassToQuote(enabled, passData) {
             const cfg = (typeof getTravelConfigs === 'function') ? getTravelConfigs() : { adults: 2, totalPax: 2 };
             const adults = cfg.adults || 0;
             const totalPax = cfg.totalPax || 1;
-            const passCostTotal = (passData.pass_price_per_adult_2nd || 0) * adults;
+            // Pass line item uses the SELECTED class price (default 2nd = legacy).
+            // Server returns pass_price_per_adult_selected per the passClass param.
+            const passCostTotal = (passData.pass_price_per_adult_selected || passData.pass_price_per_adult_2nd || 0) * adults;
             const perPax = totalPax > 0 ? Math.round(passCostTotal / totalPax) : 0;
             selectedIntercity.push({
                 legId:    'swiss-pass-line',
@@ -5348,9 +5374,31 @@ function removePassCascadedTours() {
     });
 }
 
+// Swiss Pass class selector (1st/2nd). Default 2nd = pre-toggle behaviour.
+function getSwissPassClass() {
+    return document.querySelector('input[name="swissPassClass"]:checked')?.value === '1st' ? '1st' : '2nd';
+}
+
+// Re-fetch + re-apply when the class changes (only meaningful while pass is ON).
+function onSwissPassClassChange() {
+    if (!swissPassEnabled) return;
+    (async () => {
+        await fetchSwissPassOptions();
+        if (window.swissPassData) {
+            // Re-apply so the pass line item picks up the new class price.
+            applySwissPassToQuote(false, null);
+            applySwissPassToQuote(true, window.swissPassData);
+        } else {
+            renderTables();
+        }
+    })();
+}
+
 function toggleSwissPass(enabled) {
     swissPassEnabled = enabled;
     const detailsEl = document.getElementById('swissPassDetails');
+    const classRow  = document.getElementById('swissPassClassRow');
+    if (classRow) classRow.style.display = enabled ? 'flex' : 'none';
 
     if (!enabled) {
         // Reverse quote effects, clear panel
@@ -6443,6 +6491,12 @@ function calculateBudgetInvestment() {
     if (gstMode === '5pkg')  gstVal = (netTotal + markupVal) * 0.05;   // 5% on full package
     if (gstMode === '18svc') gstVal = markupVal * 0.18;                // 18% on service charge only
     const grandTotal = Math.round(netTotal + markupVal + gstVal);
+    // Persist the already-computed total so _buildCurrentPayload can STORE it on EVERY
+    // save (manual + silent auto-save) WITHOUT recomputing. It is excluded from the
+    // billing hash (computeFrontendHash / computePayloadHash_) like genId, so storing it
+    // never flips dirty-detection — no spurious version/bill, and the pre-grandTotal
+    // back-catalogue stays hash-stable on load. Feeds My Itineraries "Actual Spend".
+    window._lastGrandTotal = grandTotal;
 
     // Per Adult / Per Child split using separate pricing factors
     const otherCosts  = sNet + tNet + icNet + markupVal + gstVal;
@@ -8203,11 +8257,14 @@ function _canonicalJsonFE(value) {
 async function computeFrontendHash(payload) {
     // genId is join metadata, NOT plan content — exclude it from the dirty-detection
     // hash so adding/changing genId never makes an unchanged quote look "changed"
-    // (which would force spurious versions + bills). Backend computePayloadHash_
-    // strips it identically; the two hashes MUST stay in lockstep.
+    // (which would force spurious versions + bills). grandTotal is ALSO excluded — it's
+    // a derived display/storage value (My Itineraries "Actual Spend"), NOT plan content;
+    // excluding it lets us persist it on every save without flipping dirty-detection, and
+    // keeps the pre-grandTotal back-catalogue hash-stable on load. Backend
+    // computePayloadHash_ strips BOTH identically; the two hashes MUST stay in lockstep.
     const _src = payload || {};
     const _forHash = {};
-    Object.keys(_src).forEach(function(k){ if (k !== 'genId') _forHash[k] = _src[k]; });
+    Object.keys(_src).forEach(function(k){ if (k !== 'genId' && k !== 'grandTotal') _forHash[k] = _src[k]; });
     const canonical = _canonicalJsonFE(_forHash);
     const buf = new TextEncoder().encode(canonical);
     const digest = await crypto.subtle.digest('SHA-256', buf);
@@ -8232,6 +8289,11 @@ function _buildCurrentPayload() {
         // loading a saved quote (to its own stored id / null). Never fabricated: write
         // null when absent so a stale build id can't be inherited on load→resave.
         genId: window._lastGenId || null,
+        // grandTotal — the already-computed quote total (set by calculateBudgetInvestment),
+        // STORED on every save so My Itineraries "Actual Spend" has a value for every new
+        // quote (silent + manual). EXCLUDED from the billing hash (see computeFrontendHash),
+        // so persisting it is hash-neutral — no recompute, no spurious version/bill.
+        grandTotal: (typeof window._lastGrandTotal === 'number' ? window._lastGrandTotal : null),
         selectedRoute, currentPlan, selectedTransfers, selectedIntercity
     };
 }
