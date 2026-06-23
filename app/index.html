@@ -4895,10 +4895,28 @@ function addCityToRoute() {
     renderRouteInputs();
 }
 
+// Cascade check-in/out forward from the changed city after a start-date or nights edit.
+// Mutates ONLY selectedRoute — never currentPlan (dirty-hash + billing untouched) and never
+// calls onAutoBuildQuote (engine fires on the Auto-Build click only). cout = cin + nights;
+// each next city's cin = this city's cout. Inline 'T00:00:00' local-midnight (IST-safe,
+// matches handleQuickQuoteBuild) — no toISOString UTC shift. Reuses formatDateISO (no dup).
+function _cascadeRouteDates(changedIndex) {
+    for (let i = changedIndex; i < selectedRoute.length; i++) {
+        const cinMs = new Date(selectedRoute[i].cin + 'T00:00:00').getTime();
+        if (isNaN(cinMs)) continue; // missing/invalid cin → skip rather than emit NaN dates
+        const nights = parseInt(selectedRoute[i].nights) || 1;
+        selectedRoute[i].cout = formatDateISO(new Date(cinMs + nights * 86400000));
+        if (i + 1 < selectedRoute.length) {
+            selectedRoute[i + 1].cin = selectedRoute[i].cout;
+        }
+    }
+    renderRouteInputs(); // re-render all rows; its tail (suggestBudgets/checkSwissPass/updateAutoBuildBtn) re-runs
+}
+
 function renderRouteInputs() {
-    document.getElementById('routeList').innerHTML = selectedRoute.map(r => {
+    document.getElementById('routeList').innerHTML = selectedRoute.map((r, i) => {
         const fmt = d => d ? new Date(d).toLocaleDateString('en-GB', {day:'2-digit', month:'short'}) : '';
-        const dates = (r.cin && r.cout) ? fmt(r.cin) + ' – ' + fmt(r.cout) + ', ' : '';
+        const dates = (r.cin && r.cout) ? fmt(r.cin) + ' – ' + fmt(r.cout) : '';
         const intel = cityIntelligenceCache[r.city.toLowerCase()] || null;
         const _iq  = intel ? (parseInt(intel.quoteCount) || 0) : 0;
         const _fmtQ = _iq >= 100 ? (Math.ceil(_iq/50)*50)+'+'
@@ -4923,14 +4941,20 @@ function renderRouteInputs() {
             : (intel && !intel.found
                 ? `<div style="margin-top:6px;font-size:9px;color:var(--ink4);font-style:italic;">No archive data for ${r.city}</div>`
                 : `<div style="margin-top:6px;font-size:9px;color:var(--ink4);">Loading intelligence…</div>`);
+        // Editable nights on every card; editable start date on city-0 only (city 1+ cin is cascade-derived).
+        const _nightsField = `<label style="display:inline-flex;align-items:center;gap:4px;font-size:9px;color:var(--ink4);">Nights
+            <input type="number" min="1" max="30" value="${r.nights}" onchange="selectedRoute[${i}].nights=parseInt(this.value)||1; _cascadeRouteDates(${i})" style="width:46px;font-size:11px;padding:2px 5px;border:1px solid var(--border2);border-radius:6px;color:var(--ink);background:var(--white);"></label>`;
+        const _startField = (i === 0) ? `<label style="display:inline-flex;align-items:center;gap:4px;font-size:9px;color:var(--ink4);">Start
+            <input type="date" value="${r.cin || ''}" onchange="selectedRoute[0].cin=this.value; _cascadeRouteDates(0)" style="font-size:11px;padding:2px 5px;border:1px solid var(--border2);border-radius:6px;color:var(--ink);background:var(--white);"></label>` : '';
         return `<div style="background:var(--white);border:1px solid var(--border2);border-radius:10px;padding:10px 12px;margin-bottom:6px;box-shadow:0 1px 4px rgba(0,0,0,.05);">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
                 <div>
                     <span style="font-family:var(--serif);font-size:14px;font-weight:600;font-style:italic;color:var(--ink);">${r.city}</span>
-                    <span style="font-size:10px;color:var(--ink4);margin-left:5px;">${dates}${r.nights}N</span>
+                    <span style="font-size:10px;color:var(--ink4);margin-left:5px;">${dates}</span>
                 </div>
                 <button onclick="removeRoute(${r.id})" style="flex-shrink:0;color:var(--ink4);background:none;border:none;cursor:pointer;font-size:17px;line-height:1;padding:0;opacity:.6;" title="Remove city">×</button>
             </div>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:7px;flex-wrap:wrap;">${_startField}${_nightsField}</div>
             ${banner}
         </div>`;
     }).join('');
