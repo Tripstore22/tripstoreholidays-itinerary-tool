@@ -1,14 +1,14 @@
-# TripStore Daily Code Review — 2026-06-23
+# TripStore Daily Code Review — 2026-06-24
 
 **Run by:** Automated (Claude Code · scheduled)
-**Branch:** v2 (commit `a15f4a0`)
+**Branch:** v2 (commit `c4fe4db`)
 **Recent commits:**
 ```
+c4fe4db feat: F10 re-quote in place — editable nights + date cascade
+1085604 Auto: daily code review 2026-06-23
 a15f4a0 fix: remove dangling skill symlinks breaking Pages build
 ac55738 W1: A3 Actual Spend + Swiss 1st/2nd toggle + F06 cache-bust + billing-hash grandTotal lockstep (FE)
 b763f8a skills(session): write-once to docs/ replaces dual-mirror ritual
-68f3e4b Auto: daily code review 2026-06-22
-82578ce Auto: daily code review 2026-06-21
 ```
 
 ---
@@ -17,7 +17,7 @@ b763f8a skills(session): write-once to docs/ replaces dual-mirror ritual
 
 | File | Lines | Status |
 |------|-------|--------|
-| `app/index.html` | 10,118 | ✅ Reviewed |
+| `app/index.html` | 10,142 | ✅ Reviewed |
 | `write_to_sheets.py` | 208 | ✅ Reviewed |
 | `archive_to_input.py` | 409 | ✅ Reviewed |
 | `check_html.py` | 147 | ✅ Reviewed |
@@ -44,16 +44,16 @@ The following files live at `~/Desktop/tripstore-pipeline/` on Sumit's local mac
 | Severity | Count | New today | Carryover |
 |----------|-------|-----------|-----------|
 | 🔴 CRITICAL | 1 | 0 | 1 |
-| 🟠 MODERATE | 8 | 2 | 6 |
-| 🟡 MINOR | 7 | 2 | 5 |
+| 🟠 MODERATE | 9 | 1 | 8 |
+| 🟡 MINOR | 8 | 1 | 7 |
 
-**C1 is now 2 days old and still unresolved. It is a real credential-exposure risk.**
+**C1 is now DAY 3 and still unresolved — real credential-exposure risk on live production.**
 
 ---
 
 ## 🔴 CRITICAL Issues
 
-### C1 — Password sent as GET query parameter *(carryover — day 2)*
+### C1 — Password sent as GET query parameter *(carryover — DAY 3)*
 **File:** `app/index.html:3730`
 
 ```javascript
@@ -62,7 +62,7 @@ const res = await fetch(
 );
 ```
 
-Passwords appear in browser history, Apps Script server logs, DevTools Network panel, and any CDN/proxy log. The signup flow at line 3746 correctly uses `POST` with a JSON body.
+Passwords appear in browser history, Apps Script server logs, DevTools Network panel, and any CDN/proxy log. The signup flow at line 3746 correctly uses `POST` with a JSON body — the login flow should match.
 
 **Fix:** Change `checkLogin` to POST:
 ```javascript
@@ -77,7 +77,7 @@ const res = await fetch(API_URL, {
 
 ## 🟠 MODERATE Issues
 
-### M1 — Session token sent in GET URL *(carryover — day 2)*
+### M1 — Session token sent in GET URL *(carryover — day 3)*
 **File:** `app/index.html:4319`
 
 ```javascript
@@ -88,43 +88,43 @@ const res = await fetch(
 
 Session tokens in URLs appear in server/CDN logs and browser history. A leaked token grants full impersonation.
 
-**Fix:** Move `validateSession` to a POST request matching the pattern used by `computeItinerary`.
+**Fix:** Move `validateSession` to POST, matching the `computeItinerary` pattern.
 
 ---
 
-### M2 — `e.message` and API strings injected into `innerHTML` without sanitization *(carryover + new scope)*
-**File:** `app/index.html:5208, 5124–5126, 5155, 5196`
+### M2 — API-sourced strings injected into `innerHTML` without sanitization *(carryover + expanded scope)*
+**File:** `app/index.html:5179, 5202, 5232, 4939, 4942–4943, 9190`
 
-**Existing (line 5208):**
+**Confirmed existing locations (Swiss Pass feature):**
 ```javascript
-detailsEl.innerHTML = '<span ...>Error loading pass data: ' + (e.message || e) + '</span>';
+const renderTourRow = t => `<span>${t.tour_name}: <s …>${fmtInr(t.full_price)}</s> → …`; // line 5179
+detailsEl.innerHTML = '…Error loading pass data: ' + (e.message || e) + '</span>';       // line 5232
 ```
 
-**NEW from ac55738 — API response data in innerHTML (lines 5124–5126, 5155):**
+**NEW scope from F10 (c4fe4db) — City intelligence banner in `renderRouteInputs()`:**
 ```javascript
-// swiss_legs[] city names from API injected raw
-const legs = (data.swiss_legs || []).map(l =>
-    `<span>${l.from} → ${l.to}: ...</span>`
-).join('<br>');
+// line 4939 — intel.nextCity comes from the API response (Google Sheets data)
+`Often Paired With: <b …>${intel.nextCity}</b>`
 
-// tour names from API injected raw
-const renderTourRow = t => `<span>${t.tour_name}: ...`;
+// line 4942 — r.city comes from user input via autocomplete
+`No archive data for ${r.city}`
 ```
 
-All of `l.from`, `l.to`, and `t.tour_name` come from Google Apps Script, which reads from Google Sheets. If a sheet cell (city name or tour name) ever contained `<script>` or `<img onerror=…>` — whether entered by mistake or as a supply-chain attack — it would execute in the browser. The main `detailsEl.innerHTML` block at line 5196 injects `data.pass_duration`, `data.pass_price_per_adult_2nd`, etc. the same way.
+If a sheet cell (tour name, city pairing name) or a user's autocomplete input contains `<script>` or `<img onerror=…>`, it executes in the browser. `intel.nextCity` is read from Sheets via the API with no sanitization at rest.
 
-**Fix:** Use a small escape helper before all API-sourced strings go into innerHTML:
+**Fix:** Apply the `_esc()` helper to all API-sourced and user-input strings before innerHTML interpolation:
 ```javascript
 function _esc(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-// Then: `<span>${_esc(l.from)} → ${_esc(l.to)}: ...`
+// Then: `Often Paired With: <b>${_esc(intel.nextCity)}</b>`
+// And:  `No archive data for ${_esc(r.city)}`
 ```
 
 ---
 
-### M3 — Production `console.log` dumps full plan JSON *(carryover — day 2)*
-**File:** `app/index.html` — 22 occurrences including lines 6916, 6942–6944, 8817, 8823
+### M3 — Production `console.log` dumps full plan JSON *(carryover — day 3)*
+**File:** `app/index.html` — 22 occurrences including lines 6940, 6966–6968, 6984, 8630, 8818, 8840–8841, 8847, 9787
 
 Full plan JSON, agent names, pricing structures, and billing internals visible to anyone with DevTools open.
 
@@ -132,7 +132,7 @@ Full plan JSON, agent names, pricing structures, and billing internals visible t
 
 ---
 
-### M4 — No fetch timeout on any API call *(carryover — day 2)*
+### M4 — No fetch timeout on any API call *(carryover — day 3)*
 **File:** `app/index.html` — all `fetch()` calls
 
 Apps Script cold starts can take 15–30 s; a quota error or script failure causes the UI to hang indefinitely with no recovery path.
@@ -141,30 +141,30 @@ Apps Script cold starts can take 15–30 s; a quota error or script failure caus
 
 ---
 
-### M5 — `// DEV @18` comment on live API URL *(carryover — day 2)*
+### M5 — `// DEV @18` comment on live API URL *(carryover — day 3)*
 **File:** `app/index.html:3302`
 
 ```javascript
 const API_URL = "...AKfycbwP9KQH39.../exec"; // DEV @18 — 2026-05-04
 ```
 
-The comment says "DEV" on the live production URL. CLAUDE.md API URL fragments are also stale and don't match this URL. Misleading during incident response.
+The comment says "DEV" on the live production URL. Misleading during incident response.
 
-**Fix:** Change comment to `// LIVE @18 — 2026-05-04`. Update CLAUDE.md URL fragments.
+**Fix:** Change comment to `// LIVE @18 — 2026-05-04`.
 
 ---
 
-### M6 — `write_to_sheets.py`: dead `row_count` check + no chunking *(carryover — day 2)*
+### M6 — `write_to_sheets.py`: dead `row_count` check + no chunking *(carryover — day 3)*
 **File:** `write_to_sheets.py:168, 195`
 
-`ws.row_count == 0` is never true for a gspread worksheet (new sheets start at 1000 rows). `append_rows` has no chunking, so a large batch silently hits the Sheets API 10 MB / quota limits.
+`ws.row_count == 0` is never true for a gspread worksheet (new sheets start at 1000 rows by default). `append_rows` has no chunking, so a large batch silently hits the Sheets API 10 MB / quota limits.
 
 **Fix:** Cache `get_all_values()` result; chunk `append_rows` in 500-row batches.
 
 ---
 
-### M7 — Swiss Pass `fetchSwissPassOptions` sends full tour list as GET URL parameter *(NEW — ac55738)*
-**File:** `app/index.html:5094–5101`
+### M7 — Swiss Pass `fetchSwissPassOptions` sends full tour list as GET URL parameter *(carryover — day 3)*
+**File:** `app/index.html:5119–5125`
 
 ```javascript
 const url = `${API_URL}?action=getSwissPassOptions`
@@ -173,37 +173,60 @@ const url = `${API_URL}?action=getSwissPassOptions`
 const res = await fetch(url);
 ```
 
-`selectedTours` contains every tour in the current itinerary (name + price for each). A 10-city trip with 10+ tours per city produces a JSON blob of 3,000–10,000 characters URL-encoded. Many browsers and reverse proxies enforce a 2,048–8,192 byte URL limit; Apps Script itself can reject very long GET URLs. When this happens, the fetch returns an error page rather than JSON — the `catch` block at line 5208 shows a generic error with no indication that the URL was too long.
+A 10-city itinerary produces a JSON blob of 3,000–10,000+ characters URL-encoded. Many browsers and reverse proxies enforce a 2,048–8,192 byte URL limit. When this fails, the catch block shows a generic error with no indication the URL was too long.
 
-**Fix:** Convert `getSwissPassOptions` to a POST request (consistent with `computeItinerary` pattern):
-```javascript
-const res = await fetch(API_URL, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ action: 'getSwissPassOptions', cities: allCities, nights: swissNights,
-                         adults, children, passClass: getSwissPassClass(), tours: selectedTours })
-});
-```
+**Fix:** Convert `getSwissPassOptions` to POST (consistent with `computeItinerary` pattern).
 
 ---
 
-### M8 — `getSavedList` and `searchItinerary` send role/username in GET URL *(carryover scope)*
+### M8 — `getSavedList` and `searchItinerary` send username/role in GET URL *(carryover — day 3)*
 **File:** `app/index.html:4437, 4512`
 
 ```javascript
-fetch(`${API_URL}?action=search&name=...&username=${encodeURIComponent(window.currentUsername||'')}&role=...`);
-fetch(`${API_URL}?action=getSavedList&username=...&role=...`);
+fetch(`${API_URL}?action=search&username=…&role=…`);
+fetch(`${API_URL}?action=getSavedList&username=…&role=…`);
 ```
 
-Agent usernames and role strings appear in server logs and browser history on every tab switch. Role-in-URL is a minor privilege-enumeration risk (competitor or staff member can see colleague's role from shared screen/browser history).
+Agent usernames and role strings appear in server logs and browser history on every tab switch.
 
-**Fix:** Move these to POST bodies to match the session-validation fix scope.
+**Fix:** Move to POST bodies as part of the session-validation fix scope.
+
+---
+
+### M9 — Negative nights value accepted in F10 editable nights input *(NEW — c4fe4db)*
+**File:** `app/index.html:4946, 4907`
+
+The inline `onchange` handler uses `parseInt(this.value)||1`:
+```javascript
+onchange="selectedRoute[${i}].nights=parseInt(this.value)||1; _cascadeRouteDates(${i})"
+```
+
+`||1` only guards against `0` and `NaN` (falsy values). **Negative integers are truthy**, so `parseInt('-3') || 1 = -3`. A user who manually types `-3` into the nights field stores `-3` in `selectedRoute[i].nights`.
+
+Inside `_cascadeRouteDates`, the same pattern applies:
+```javascript
+const nights = parseInt(selectedRoute[i].nights) || 1;  // -3 passes through
+selectedRoute[i].cout = formatDateISO(new Date(cinMs + nights * 86400000));  // 3 days BEFORE cin
+```
+
+This computes a check-out date 3 days *before* check-in. The incorrect dates cascade forward to all subsequent cities, and the final `travelStartDate` passed to the engine will be invalid or contradictory. Engine behavior with backward dates is undefined.
+
+The HTML `min="1"` attribute is not enforced by browser on keystroke — only on form submit / steppers.
+
+**Fix:** Clamp the value on the JS side:
+```javascript
+onchange="selectedRoute[${i}].nights = Math.max(1, parseInt(this.value) || 1); _cascadeRouteDates(${i})"
+```
+And inside `_cascadeRouteDates`:
+```javascript
+const nights = Math.max(1, parseInt(selectedRoute[i].nights) || 1);
+```
 
 ---
 
 ## 🟡 MINOR Issues
 
-### m1 — `ADOBE_PDF_API` URL not validated by `check_html.py` *(carryover — day 2)*
+### m1 — `ADOBE_PDF_API` URL not validated by `check_html.py` *(carryover — day 3)*
 **File:** `app/index.html`, `check_html.py`
 
 PDF API deployment URL has no pre-commit guard. If the deployment is redeployed and the URL changes, PDFs silently break.
@@ -212,16 +235,16 @@ PDF API deployment URL has no pre-commit guard. If the deployment is redeployed 
 
 ---
 
-### m2 — `archive_to_input.py`: hardcoded LIVE sheet ID, no dry-run guard *(carryover — day 2)*
+### m2 — `archive_to_input.py`: hardcoded LIVE sheet ID, no dry-run guard *(carryover — day 3)*
 **File:** `archive_to_input.py:32`
 
-Running in any context writes directly to the production `INPUT_*` sheets, which triggers overnight enrichment pipeline on unvalidated data.
+Running in any context writes directly to the production `INPUT_*` sheets, which triggers the overnight enrichment pipeline on unvalidated data.
 
 **Fix:** Add `--env dev|live` flag and require confirmation before live writes.
 
 ---
 
-### m3 — `check_pipeline.py`: `CLASP_LIVE_ROOT` not configurable via env var *(carryover — day 2)*
+### m3 — `check_pipeline.py`: `CLASP_LIVE_ROOT` not configurable via env var *(carryover — day 3)*
 **File:** `check_pipeline.py:14–19`
 
 Path hardcoded to `~/Desktop/tripstore-pipeline/clasp-live`. `smoke.py` correctly reads `TRIPSTORE_PIPELINE` from the environment; `check_pipeline.py` should match.
@@ -230,16 +253,16 @@ Path hardcoded to `~/Desktop/tripstore-pipeline/clasp-live`. `smoke.py` correctl
 
 ---
 
-### m4 — `qa/invariants.py`: `import re` inside per-call helper *(carryover — day 2)*
+### m4 — `qa/invariants.py`: `import re` inside per-call helper *(carryover — day 3)*
 **File:** `qa/invariants.py`, `_word_in()` function
 
-`import re` inside a function called thousands of times per nightly run. Not a performance concern (module is cached), but non-idiomatic.
+`import re` inside a function called thousands of times per nightly run. Not a performance concern (module is cached by Python), but non-idiomatic.
 
 **Fix:** Move to module top-level.
 
 ---
 
-### m5 — `qa/smoke.py`: column fallback is silent *(carryover — day 2)*
+### m5 — `qa/smoke.py`: column fallback is silent *(carryover — day 3)*
 **File:** `qa/smoke.py`, `_col()` helper
 
 If the Sightseeing tab renames the Duration column, T04/T05 silently SKIP with no alert. A data quality regression can hide for weeks.
@@ -248,77 +271,102 @@ If the Sightseeing tab renames the Duration column, T04/T05 silently SKIP with n
 
 ---
 
-### m6 — `qa/gen_scenarios.py`: stale `travelStartDate` for seasonal pair scenarios *(NEW — review finding)*
-**File:** `qa/gen_scenarios.py:185–190`
+### m6 — `qa/gen_scenarios.py`: stale `travelStartDate` for seasonal pair scenarios *(carryover — day 3, getting worse)*
+**File:** `qa/gen_scenarios.py:179, 186, 189`
 
 ```python
-travelStartDate="2026-04-15"  # pair_season_01_apr  — 69 days in the past
-travelStartDate="2026-06-15"  # pair_season_01_jun  —  8 days in the past
+travelStartDate="2026-04-15"  # pair_season_01_apr  — 70 days in the past
+travelStartDate="2026-05-29"  # (separate scenario) — 26 days in the past  
+travelStartDate="2026-06-15"  # pair_season_01_jun  —  9 days in the past
 ```
 
-The P07 seasonal pair test (compare April vs June totalSpent to assert ~1.20× ratio) uses dates that have already passed. If the engine's seasonal multiplier logic uses travel date relative to booking date (or clamps to current month), the test may not exercise the intended edge. April is 69 days past, which is definitely stale.
+The P07 seasonal pair test (April vs June, expects ~1.20× totalSpent ratio) uses dates already in the past. The April date is now 70 days stale. The engine may not exercise the intended seasonal-multiplier path when travel dates are in the past (depending on whether the engine clamps to current-month rates).
 
-**Fix:** Bump both dates forward to be consistently in the future:
+**Fix:** Bump seasonal pair dates forward to 2027:
 ```python
 travelStartDate="2027-04-15"
+travelStartDate="2027-05-29"
 travelStartDate="2027-06-15"
 ```
 
 ---
 
-### m7 — Swiss Pass class selector not reset when itinerary is cleared or re-generated *(NEW — ac55738)*
-**File:** `app/index.html:5383–5395, 5397–5416`
+### m7 — Swiss Pass class radio not reset when optimizer runs without Swiss cities *(carryover — day 3)*
+**File:** `app/index.html:5406–5430`
 
-When an agent generates a new quote (city/route changed), `swissPassEnabled` is not reset and the 1st/2nd class radio button retains its prior state. If an agent previously set 1st class on a Swiss itinerary, then loads a non-Swiss itinerary, the class radio still shows 1st. When they later enable Swiss Pass on a different itinerary, `getSwissPassClass()` will return '1st' unexpectedly.
+When an agent loads a non-Swiss itinerary after having set 1st class on a Swiss one, `swissPassEnabled` is not reset and `getSwissPassClass()` returns '1st' unexpectedly on the next Swiss quote.
 
-**Affected path:** `runOptimizer()` → does not call `toggleSwissPass(false)` or reset `swissPassEnabled`.
+**Affected path:** `runOptimizer()` → does not call `toggleSwissPass(false)` when new route has no Swiss cities.
 
-**Fix:** In `runOptimizer()`, reset Swiss Pass state if the new route has no Swiss cities:
+**Fix:** In `runOptimizer()`, reset Swiss Pass state when the new route contains no Swiss cities.
+
+---
+
+### m8 — City intelligence banner injects API fields into `innerHTML` without escaping *(NEW — c4fe4db)*
+**File:** `app/index.html:4929, 4935–4939, 4942`
+
+In `renderRouteInputs()` (updated by F10), the city intelligence banner interpolates multiple API-sourced fields directly into innerHTML:
+
 ```javascript
-if (!selectedRoute.some(r => isSwissCityFE(r.city))) {
-    swissPassEnabled = false;
-    const row = document.getElementById('swissPassClassRow');
-    if (row) row.style.display = 'none';
-    const tog = document.getElementById('swissPassToggle');
-    if (tog) tog.checked = false;
-}
+// _pill helper — label is a literal, but val originates from intel (API data)
+const _pill = (label, val) => `… ${label}: <b>${val}</b> …`
+
+// line 4939 — intel.nextCity is a city name from Sheets
+`Often Paired With: <b>${intel.nextCity}</b>`
+
+// line 4942 — r.city is user input from the autocomplete field
+`No archive data for ${r.city}`
 ```
+
+`intel.nextCity` (from Google Sheets via API) and `r.city` (from user-typed autocomplete) are interpolated raw. This extends the M2 XSS surface to the city intelligence banner. While city names are unlikely to contain HTML, a corrupted or maliciously entered Sheets value could execute.
+
+**Fix:** Apply `_esc()` to `intel.nextCity` and `r.city` before interpolation. Note: numeric fields (`_fmtN`, `intel.avgHotelCostPerNight`, etc.) are already safe — they go through `Math.round()` / `Number().toLocaleString()` first.
 
 ---
 
 ## Action Items (Priority Order)
 
-| # | Priority | File | Action |
-|---|----------|------|--------|
-| 1 | 🔴 CRITICAL | `app/index.html:3730` | Move `checkLogin` credentials to POST body — **day 2, still open** |
-| 2 | 🟠 MODERATE | `app/index.html:4319` | Move `validateSession` token to POST body |
-| 3 | 🟠 MODERATE | `app/index.html:5094–5101` | **NEW** Convert `getSwissPassOptions` to POST (URL length risk) |
-| 4 | 🟠 MODERATE | `app/index.html:5124,5155,5196,5208` | Escape API-sourced strings before innerHTML (swiss_legs, tour names) |
-| 5 | 🟠 MODERATE | `app/index.html` (all fetches) | Add 30s `AbortController` timeout to every `fetch()` |
-| 6 | 🟠 MODERATE | `app/index.html:6916+` | Gate production `console.log` dumps behind `window._TRIPSTORE_DEBUG` |
-| 7 | 🟠 MODERATE | `app/index.html:3302` + `CLAUDE.md` | Fix `// DEV @18` comment → `// LIVE @18`; update CLAUDE.md URL fragments |
-| 8 | 🟠 MODERATE | `write_to_sheets.py:168,195` | Remove dead `row_count == 0` branch; add 500-row chunking |
-| 9 | 🟠 MODERATE | `app/index.html:4437,4512` | Move `getSavedList`/`searchItinerary` username+role to POST body |
-| 10 | 🟡 MINOR | `app/index.html:5397` | **NEW** Reset Swiss Pass class radio when optimizer runs without Swiss cities |
-| 11 | 🟡 MINOR | `qa/gen_scenarios.py:185–190` | **NEW** Bump stale seasonal pair `travelStartDate` values to 2027 |
-| 12 | 🟡 MINOR | `check_html.py` | Add `ADOBE_PDF_API` URL fragment to REQUIRED list |
-| 13 | 🟡 MINOR | `archive_to_input.py:32` | Add `--env` flag and confirmation prompt before live writes |
-| 14 | 🟡 MINOR | `check_pipeline.py:14` | Make `CLASP_LIVE_ROOT` configurable via `TRIPSTORE_PIPELINE` env var |
-| 15 | 🟡 MINOR | `qa/invariants.py` | Move `import re` in `_word_in()` to module top-level |
-| 16 | 🟡 MINOR | `qa/smoke.py` | Print stderr warning when critical column not found in Sightseeing tab |
+| # | Priority | File | Action | Days Open |
+|---|----------|------|--------|-----------|
+| 1 | 🔴 CRITICAL | `app/index.html:3730` | Move `checkLogin` credentials to POST body | **DAY 3** |
+| 2 | 🟠 MODERATE | `app/index.html:4946,4907` | **NEW** Clamp nights to `Math.max(1, …)` to reject negatives | Day 1 |
+| 3 | 🟠 MODERATE | `app/index.html:4319` | Move `validateSession` token to POST body | Day 3 |
+| 4 | 🟠 MODERATE | `app/index.html:5119–5125` | Convert `getSwissPassOptions` to POST (URL length risk) | Day 3 |
+| 5 | 🟠 MODERATE | `app/index.html:5179,5232,4939,4942,9190` | Escape API-sourced strings before innerHTML | Day 3 |
+| 6 | 🟠 MODERATE | `app/index.html` (all fetches) | Add 30s `AbortController` timeout to every `fetch()` | Day 3 |
+| 7 | 🟠 MODERATE | `app/index.html` (22 sites) | Gate production `console.log` dumps behind `window._TRIPSTORE_DEBUG` | Day 3 |
+| 8 | 🟠 MODERATE | `app/index.html:3302` | Fix `// DEV @18` comment → `// LIVE @18` | Day 3 |
+| 9 | 🟠 MODERATE | `write_to_sheets.py:168,195` | Remove dead `row_count == 0` branch; add 500-row chunking | Day 3 |
+| 10 | 🟠 MODERATE | `app/index.html:4437,4512` | Move `getSavedList`/`searchItinerary` username+role to POST body | Day 3 |
+| 11 | 🟡 MINOR | `app/index.html:4939,4942` | **NEW** Escape `intel.nextCity` + `r.city` in intelligence banner | Day 1 |
+| 12 | 🟡 MINOR | `app/index.html:5406` | Reset Swiss Pass class radio when optimizer runs without Swiss cities | Day 3 |
+| 13 | 🟡 MINOR | `qa/gen_scenarios.py:179,186,189` | Bump stale `travelStartDate` values to 2027 | Day 3 |
+| 14 | 🟡 MINOR | `check_html.py` | Add `ADOBE_PDF_API` URL fragment to REQUIRED list | Day 3 |
+| 15 | 🟡 MINOR | `archive_to_input.py:32` | Add `--env` flag and confirmation prompt before live writes | Day 3 |
+| 16 | 🟡 MINOR | `check_pipeline.py:14` | Make `CLASP_LIVE_ROOT` configurable via `TRIPSTORE_PIPELINE` env var | Day 3 |
+| 17 | 🟡 MINOR | `qa/invariants.py` | Move `import re` in `_word_in()` to module top-level | Day 3 |
+| 18 | 🟡 MINOR | `qa/smoke.py` | Print stderr warning when critical column not found in Sightseeing tab | Day 3 |
 
 ---
 
-## Positive findings from ac55738
+## Findings from c4fe4db (F10: Editable Nights + Date Cascade)
 
-- **Billing-hash grandTotal lockstep** (`app/index.html:8267`): Correctly excludes `grandTotal` from `computeFrontendHash` to prevent spurious re-bills when re-saving. Comment explains the lockstep contract clearly. ✅
-- **F06 cache-bust** (`app/index.html:14–19`): `Cache-Control: no-cache, must-revalidate` meta tag correctly forces browser revalidation on every load without busting CDN for unchanged files. ✅
-- **Swiss 1st/2nd class toggle**: UI implementation is correct — `getSwissPassClass()` reads from DOM state, re-fetch+re-apply flow is sound. Minor edge cases noted in m7 above.
-- **A3 Actual Spend**: `grandTotal` now stored in every save payload and surfaced in My Itineraries table. The `null`-guard `(typeof window._lastGrandTotal === 'number' ? ... : null)` is appropriate. ✅
+**What was added:** `_cascadeRouteDates(changedIndex)` + editable `<input type="number">` nights field + editable start-date for city-0 only in `renderRouteInputs()`.
+
+**Good patterns found:**
+- Cascade logic correctly propagates: sets `selectedRoute[i].cout`, then `selectedRoute[i+1].cin = selectedRoute[i].cout` ✅
+- IST-safe local midnight construction (`'T00:00:00'` suffix avoids UTC-shift off-by-one) ✅
+- NaN guard (`if (isNaN(cinMs)) continue`) prevents crash on missing cin ✅
+- `formatDateISO` is reused — no code duplication ✅
+- City-0 only gets the start-date field; all others are cascade-derived (correct UX) ✅
+
+**Issues found:**
+- M9 (MODERATE): Negative nights accepted (see above)
+- m8 (MINOR): `intel.nextCity` and `r.city` not escaped in the updated `renderRouteInputs()` (extension of M2)
 
 ---
 
 ## Not Changed This Run
 This report is read-only. No production code was modified. All items require Sumit's review before any fix is applied.
 
-*Generated: 2026-06-23 by automated daily code review routine.*
+*Generated: 2026-06-24 by automated daily code review routine.*
