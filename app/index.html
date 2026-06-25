@@ -4917,7 +4917,15 @@ function renderRouteInputs() {
     document.getElementById('routeList').innerHTML = selectedRoute.map((r, i) => {
         const fmt = d => d ? new Date(d).toLocaleDateString('en-GB', {day:'2-digit', month:'short'}) : '';
         const dates = (r.cin && r.cout) ? fmt(r.cin) + ' – ' + fmt(r.cout) : '';
-        const intel = cityIntelligenceCache[r.city.toLowerCase()] || null;
+        // F11 self-healing: fire the intelligence fetch for any city never fetched
+        // (=== undefined). null = loading/empty (don't re-fire). Covers all load paths
+        // (Quick Quote build, saved-itinerary open, revert) — fetchCityIntelligence
+        // re-renders on return; the !== undefined guard there stops any re-fetch loop.
+        const key = r.city.toLowerCase();
+        if (cityIntelligenceCache[key] === undefined) {
+            fetchCityIntelligence(r.city);  // async, re-renders on return
+        }
+        const intel = cityIntelligenceCache[key] || null;
         const _iq  = intel ? (parseInt(intel.quoteCount) || 0) : 0;
         const _fmtQ = _iq >= 100 ? (Math.ceil(_iq/50)*50)+'+'
                     : _iq >= 10  ? (Math.ceil(_iq/10)*10)+'+'
