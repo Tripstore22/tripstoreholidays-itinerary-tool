@@ -5065,7 +5065,7 @@ function checkSwissPass() {
         const c = String(r.city || '').toLowerCase().trim();
         return c && SWISS_CITIES_SET.has(c);
     });
-    if (swissCities.length < 2) {
+    if (swissCities.length < 1) {
         card.classList.add('hidden');
         swissPassEnabled = false;
         const toggle = document.getElementById('swissPassToggle');
