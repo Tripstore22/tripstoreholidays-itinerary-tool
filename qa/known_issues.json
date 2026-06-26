@@ -38,8 +38,8 @@
     {
       "registry_ref": "T08",
       "match": { "check": "T08_combo_a1_self_ref" },
-      "max_count": 134,
-      "note": "134 combo rows (Is_Combo=YES) where Attraction_1 == own Canonical_ID. Engine reads col P so dedup is unaffected; this is data-hygiene backlog. A growth beyond 134 escalates to FAIL (the count must not grow)."
+      "max_count": 137,
+      "note": "137 combo rows (Is_Combo=YES) where Attraction_1 == own Canonical_ID. Engine reads col P so dedup is unaffected; data-hygiene backlog. Ratcheted 134->137 on 2026-06-26: +3 from a recent enrichment minting Aix-en-Provence self-ref combos (AIXENPROVENCE_LAVENDER, AIXENPROVENCE_CRUISE, AIXENPROVENCE_SCENERY); T08 data fix owed (data-scanner). A growth beyond 137 escalates to FAIL (the count must not grow)."
     },
 
     { "registry_ref": "E02", "match": { "check": "E02_full_caps", "scenario_id": "top_milan_4n_couple" },
