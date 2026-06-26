@@ -283,14 +283,69 @@ def check_P10(resp, scn):
                   expected=f"totalSpent <= netBudget ({net})", got=round(spent, 2))
     return _r("P10_budget_bound", "P10", "PASS", sid)
 
+def _v4log_hotel_summary(resp):
+    return next((e for e in (resp.get("v4Log") or []) if e.get("pass") == "hotel_summary"), None)
+
+def _v4log_cities(resp):
+    return [e for e in (resp.get("v4Log") or []) if "city" in e]
+
 def check_P03(resp, scn):
-    """Step-1 hotel ceiling 45% of netBudget — NOT isolable from a bare response.
-    Final breakdown.hotels includes uncapped Pass-C upgrades and legitimately exceeds 45%,
-    so a naive check false-fails. The gross-bound part is covered by P10. SKIP with reason."""
+    """Step-1 hotel ceiling: Step-1 hotel spend <= 45% of NET budget.
+    Now testable via the G-07 v4Log 'hotel_summary' entry, which exposes the Step-1
+    spend (pre-2O; the ceiling is enforced in pickHotels_v2 Step-1 only) as a percentage
+    of netBudget (hotelPctOfNet) — NOT of allocation.hotel. Final breakdown.hotels can
+    still legitimately exceed 45% via uncapped Pass-C upgrades; that's why we read the
+    Step-1 figure here and leave the gross bound to P10."""
     sid = scn["id"]
-    return _r("P03_hotel_ceiling", "P03", "SKIP", sid,
-              reason="Step-1 pick not exposed; final hotels include uncapped Pass-C upgrades "
-                     "(>45% is legal). Gross bound covered by P10. Needs v4Log parse to test.")
+    hs = _v4log_hotel_summary(resp)
+    if not hs or hs.get("hotelPctOfNet") is None:
+        return _r("P03_hotel_ceiling", "P03", "SKIP", sid,
+                  reason="no v4Log hotel_summary entry (non-v4 path, degenerate bail, or pre-G-07 engine)")
+    pct = hs["hotelPctOfNet"]
+    ceil = (hs.get("hotelCeilPct") or 0.45) * 100.0
+    if pct > ceil + 0.1:   # 0.1pt slack for INR rounding in the summary figures
+        # When even the cheapest hotels exceed the cap, pickHotels_v2 picks anyway and
+        # flags budget_too_low — a legal >45% Step-1 spend. SKIP (P10 covers gross bound).
+        if _expects_graceful_fail(scn) or "budget_too_low" in _flags_text(resp):
+            return _r("P03_hotel_ceiling", "P03", "SKIP", sid, got=pct,
+                      reason="budget_too_low: cheapest hotels exceed 45% of net (legal; P10 covers gross bound)")
+        return _r("P03_hotel_ceiling", "P03", "FAIL", sid, expected=f"<= {ceil:.0f}% of netBudget", got=pct)
+    return _r("P03_hotel_ceiling", "P03", "PASS", sid, got=pct)
+
+def check_G02_headroom(resp, scn):
+    """V4_SIGHT_HEADROOM=0.95 — each city's sight budget is capped at 95% of its raw
+    proportional allocation. Verified from the G-07 v4Log per-city cityBudgetCapped /
+    cityBudgetRaw ratio (regression guard on the headroom constant)."""
+    sid = scn["id"]
+    checked = 0
+    for e in _v4log_cities(resp):
+        raw = e.get("cityBudgetRaw"); cap = e.get("cityBudgetCapped")
+        if not raw:           # zero-budget city (empty pool / weightSum=0) — ratio undefined
+            continue
+        ratio = cap / raw; checked += 1
+        if not (0.94 <= ratio <= 0.96):
+            return _r("G02_sight_headroom", "G02", "FAIL", sid,
+                      expected="cityBudgetCapped/cityBudgetRaw ≈ 0.95 (0.94–0.96)",
+                      got=f"{e.get('city')}={round(ratio, 4)}")
+    if checked == 0:
+        return _r("G02_sight_headroom", "G02", "SKIP", sid, reason="no city with positive sight budget in v4Log")
+    return _r("G02_sight_headroom", "G02", "PASS", sid)
+
+def check_G03_s3_trigger(resp, scn):
+    """V4_S3_TRIGGER=0.80 — Step 3 (same-canonical upgrade) only fires when the capped-budget
+    utilisation is below 80%. For every city where the G-07 s3Triggered flag is true, the
+    captured utilAtS3Eval (capped-budget util, pre-swap) must be present and < 0.80."""
+    sid = scn["id"]
+    fired = [e for e in _v4log_cities(resp) if e.get("s3Triggered")]
+    if not fired:
+        return _r("G03_s3_trigger", "G03", "SKIP", sid, reason="Step 3 did not fire in any city (no swaps to test)")
+    for e in fired:
+        ue = e.get("utilAtS3Eval")
+        if ue is None or ue >= 0.80:
+            return _r("G03_s3_trigger", "G03", "FAIL", sid,
+                      expected="utilAtS3Eval < 0.80 where s3Triggered",
+                      got=f"{e.get('city')}={ue}")
+    return _r("G03_s3_trigger", "G03", "PASS", sid)
 
 def check_P09(resp, scn):
     """INR ₹X,XX,XXX format — engine JSON carries numerics; formatting is FE-layer. SKIP."""
@@ -349,7 +404,8 @@ def _word_in(needle, hay):
 SINGLE_CHECKS = [
     check_shape, check_E01, check_E02, check_E03, check_E04, check_E05,
     check_E06, check_E09, check_E10, check_E11,
-    check_P01_single, check_P03, check_P06, check_P08, check_P09, check_P10,
+    check_P01_single, check_P03, check_G02_headroom, check_G03_s3_trigger,
+    check_P06, check_P08, check_P09, check_P10,
 ]
 
 def _expects_graceful_fail(scn):

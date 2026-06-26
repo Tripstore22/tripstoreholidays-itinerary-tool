@@ -28,7 +28,8 @@ E_CHECKS = {"shape", "E01_departure_empty", "E02_full_caps", "E03_arrival_caps",
             "E04_no_cross_city_dup", "E05_daytrip_guard", "E06_anchor_placed",
             "E09_empty_day_flagged", "E10_algorithm_stated", "E11_no_phantom_leg"}
 P_CHECKS = {"P01_child_factor", "P03_hotel_ceiling", "P06_markup_gst",
-            "P08_utilisation", "P09_inr_format", "P10_budget_bound"}
+            "P08_utilisation", "P09_inr_format", "P10_budget_bound",
+            "G02_sight_headroom", "G03_s3_trigger"}
 
 def engine_testable(s):
     f = s.get("flags", {})
